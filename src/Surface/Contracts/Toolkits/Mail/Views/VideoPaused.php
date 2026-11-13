@@ -1,0 +1,15 @@
+<?php
+
+namespace Surface\Contracts\Toolkits\Mail\Views;
+
+use Surface\Contracts\Toolkits\Mail\PrimitiveMail;
+readonly class VideoPaused extends PrimitiveEventOccurred implements PrimitiveMail
+{
+    /**
+     * @return string
+     */
+    public function name(): string
+    {
+        return "view.video-paused.{$this->window}.{$this->path}";
+    }
+}

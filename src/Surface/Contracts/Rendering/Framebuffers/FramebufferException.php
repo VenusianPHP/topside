@@ -1,0 +1,44 @@
+<?php
+
+namespace Surface\Contracts\Rendering\Framebuffers;
+
+use Surface\Contracts\Rendering\RenderingException;
+
+class FramebufferException extends RenderingException
+{
+    public static function unsupportedFormat(FormatSpec $spec, string $reason = ''): self
+    {
+        return new self(trim("{$spec->pixel_format->value} at {$spec->bit_depth->value} bpp is not supported here. {$reason}"));
+    }
+
+    public static function extensionMissing(string $extension, string $version = '0.10'): self
+    {
+        return new self("A framebuffer driver needs ext-{$extension} {$version} or newer loaded in this PHP (".PHP_BINARY.').');
+    }
+
+    /** @param list<string> $methods */
+    public static function extensionStale(string $extension, string $version, array $methods): self
+    {
+        return new self("ext-{$extension} {$version} is loaded but is an old build without ".implode(' and ', $methods).'(): rebuild ext-'.$extension.' ('.PHP_BINARY.').');
+    }
+
+    public static function outOfRange(int $x, int $y, int $width, int $height): self
+    {
+        return new self("({$x}, {$y}) is outside a {$width}x{$height} framebuffer.");
+    }
+
+    public static function outsideSurface(Region $region, int $width, int $height): self
+    {
+        return new self("The region {$region->width}x{$region->height} at ({$region->x}, {$region->y}) is empty or not inside a {$width}x{$height} framebuffer.");
+    }
+
+    public static function pageRows(int $page_rows, string $reason): self
+    {
+        return new self("page_rows {$page_rows}: {$reason}");
+    }
+
+    public static function notReady(): self
+    {
+        return new self('Every frame but the front is held; release one before drawing or presenting.');
+    }
+}

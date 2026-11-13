@@ -1,0 +1,393 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Venusian\Topside\Tests\Fixtures;
+
+use Surface\Contracts\Rendering\Framebuffers\CompletePixelStore;
+use Surface\Contracts\Rendering\Framebuffers\DamageGranularity;
+use Surface\Contracts\Rendering\Framebuffers\Filter;
+use Surface\Contracts\Rendering\Framebuffers\FormatSpec;
+use Surface\Contracts\Rendering\Framebuffers\FramebufferException;
+use Surface\Contracts\Rendering\Framebuffers\PaintingPixelStore;
+use Surface\Contracts\Rendering\Framebuffers\PixelMemory;
+use Surface\Contracts\Rendering\Framebuffers\PixelStore;
+use Surface\Contracts\Rendering\Framebuffers\PixelStoreMinter;
+use Surface\Contracts\Rendering\Framebuffers\Region;
+use Surface\Contracts\Rendering\Framebuffers\Spans;
+use Surface\VelvetGE\Drivers\Framebuffers\StoreFramebufferDriver;
+use Surface\VelvetGE\Framebuffers\CLand\CLandPixelStore;
+use Surface\VelvetGE\Framebuffers\DirtyFramebuffer;
+use Surface\VelvetGE\Framebuffers\ePaperFramebuffer;
+use Surface\VelvetGE\Framebuffers\FullFramebuffer;
+use Surface\VelvetGE\Framebuffers\PHPLand\PHPLandPixelStore;
+use Surface\VelvetGE\Framebuffers\PagedFramebuffer;
+use Surface\VelvetGE\Framebuffers\RingFramebuffer;
+
+/**
+ * A pixel store with no layout: one word per pixel in a PHP array, one byte
+ * per pixel on the way out, whatever the format says. It lets the kinds be
+ * tested for what they add (damage, pages, frames, paper) with no real store.
+ */
+final class FakePixelStore implements CompletePixelStore
+{
+    /** @var list<int> */
+    public array $words;
+
+    public function __construct(private readonly FormatSpec $format, private readonly int $width, private readonly int $height)
+    {
+        $this->words = array_fill(0, $width * $height, 0);
+    }
+
+    public function width(): int { return $this->width; }
+
+    public function height(): int { return $this->height; }
+
+    public function format(): FormatSpec { return $this->format; }
+
+    public function get(int $x, int $y): int { return $this->words[$y * $this->width + $x]; }
+
+    public function set(int $x, int $y, int $value): void { $this->words[$y * $this->width + $x] = $value & 0xFF; }
+
+    public function setPixels(array $pixels): ?Region
+    {
+        foreach ($pixels as [$x, $y, $value]) {
+            $this->set($x, $y, $value);
+        }
+
+        return $this->box($pixels);
+    }
+
+    public function setCoordinates(array $coordinates, int $value): ?Region
+    {
+        foreach ($coordinates as [$x, $y]) {
+            $this->set($x, $y, $value);
+        }
+
+        return $this->box($coordinates);
+    }
+
+    public function rect(Region $region, int $value): void
+    {
+        for ($y = $region->y; $y < $region->bottom(); $y++) {
+            for ($x = $region->x; $x < $region->right(); $x++) {
+                $this->set($x, $y, $value);
+            }
+        }
+    }
+
+    public function fill(int $value): void { $this->words = array_fill(0, $this->width * $this->height, $value & 0xFF); }
+
+    public function bytes(?int $layer = null): string { return is_null($layer) ? pack('C*', ...$this->words) : "layer {$layer}"; }
+
+    public function region(Region $region, FormatSpec $spec): string
+    {
+        $out = '';
+        for ($y = $region->y; $y < $region->bottom(); $y++) {
+            for ($x = $region->x; $x < $region->right(); $x++) {
+                $out .= chr($this->get($x, $y));
+            }
+        }
+
+        return $out;
+    }
+
+    /** One byte a pixel, as region() answers them. */
+    public function load(Region $region, string $bytes): void
+    {
+        for ($i = 0, $y = $region->y; $y < $region->bottom(); $y++) {
+            for ($x = $region->x; $x < $region->right(); $x++) {
+                $this->set($x, $y, ord($bytes[$i++]));
+            }
+        }
+    }
+
+    public function toRgba8(): string
+    {
+        return implode('', array_map(fn (int $word): string => str_repeat(chr($word), 3)."\xff", $this->words));
+    }
+
+    /** The red channel is the word. */
+    public function blitRgba8(string $rgba8, int $width, int $height, int $offset_x, int $offset_y, ?Region $clip = null): ?Region
+    {
+        $target = (new Region($offset_x, $offset_y, $width, $height))->intersect($clip ?? Region::wholeSurface($this->width, $this->height))
+            ?->intersect(Region::wholeSurface($this->width, $this->height));
+        if (is_null($target)) {
+            return null;
+        }
+        for ($y = $target->y; $y < $target->bottom(); $y++) {
+            for ($x = $target->x; $x < $target->right(); $x++) {
+                $this->set($x, $y, ord($rgba8[(($y - $offset_y) * $width + $x - $offset_x) * 4]));
+            }
+        }
+
+        return $target;
+    }
+
+    public function kawaseDown(PixelStore $source, Region $region): void {}
+
+    public function kawaseUp(PixelStore $source): void {}
+
+    /** Every pixel of the box inside the clip set to the look's tint, no blend: enough to see where a kind routes a pane. */
+    public function paintGlass(array $geometry, PixelStore $blur, int $scale, ?PixelStore $sharp, int $originX, int $originY, array $look, Region $clip): ?Region
+    {
+        $box = (new Region((int) floor($geometry[0]), (int) floor($geometry[1]), (int) ceil($geometry[2]) - (int) floor($geometry[0]), (int) ceil($geometry[3]) - (int) floor($geometry[1])))->intersect($clip);
+        if ($box !== null) {
+            $this->rect($box, $look[6]);
+        }
+
+        return $box;
+    }
+
+    /** Writes the colour's low byte wherever coverage is non-zero: enough to see where a kind routes spans. */
+    /** As paintSpans(): every pixel with coverage set to the colour, no blend. */
+    public function paintMasks(array $masks, int $rgba8, Region $clip): ?Region
+    {
+        $box = null;
+        foreach ($masks as [$coverage, $width, $left, $top]) {
+            for ($i = 0, $n = strlen($coverage); $i < $n; $i++) {
+                [$x, $y] = [$left + $i % $width, $top + intdiv($i, $width)];
+                if ($coverage[$i] !== "\0" && $x >= $clip->x && $x < $clip->right() && $y >= $clip->y && $y < $clip->bottom()) {
+                    $this->set($x, $y, $rgba8);
+                    $box = is_null($box) ? new Region($x, $y, 1, 1) : $box->union(new Region($x, $y, 1, 1));
+                }
+            }
+        }
+
+        return $box;
+    }
+
+    public function paintSpans(string $spans, int $rgba8): ?Region
+    {
+        $box = null;
+        foreach (Spans::unpack($spans) as [$y, $x, $length, $coverage]) {
+            for ($i = $x; $i < $x + $length; $i++) {
+                if ($coverage > 0) {
+                    $this->set($i, $y, $rgba8);
+                }
+            }
+            $span = new Region($x, $y, $length, 1);
+            $box = is_null($box) ? $span : $box->union($span);
+        }
+
+        return $box;
+    }
+
+    public function filter(\Surface\Contracts\Graphics\Effects\FilterChain $chain, Region $region, int $row = 0, bool $premultiplied = false): void
+    {
+        throw new FramebufferException('the fake filters nothing');
+    }
+
+    public function paintGradient(string $spans, string $ramp, string $kind, \Surface\NutsAndBolts\GradientSpread $spread, array $inverse, int $row = 0): ?Region
+    {
+        throw new FramebufferException('the fake paints no gradients');
+    }
+
+    /** Writes the red byte of the nearest source pixel wherever the point lands inside: enough to see where a kind routes an image. */
+    public function paintRgba8(string $rgba8, int $width, int $height, array $inverse, Region $target, int $opacity, Filter $filter, int $row = 0, int $tint = 0xFFFFFFFF, ?array $window = null, ?string $coverage = null): void
+    {
+        [$a, $b, $c, $d, $e, $f] = $inverse;
+        for ($y = $target->y; $y < $target->bottom(); $y++) {
+            for ($x = $target->x; $x < $target->right(); $x++) {
+                $u = $a * ($x + 0.5) + $c * ($y + $row + 0.5) + $e;
+                $v = $b * ($x + 0.5) + $d * ($y + $row + 0.5) + $f;
+                if ($u >= 0 && $u < $width && $v >= 0 && $v < $height) {
+                    $this->set($x, $y, ord($rgba8[((int) $v * $width + (int) $u) * 4]));
+                }
+            }
+        }
+    }
+
+    public function copy(PixelStore $source, Region $region): void
+    {
+        for ($y = $region->y; $y < $region->bottom(); $y++) {
+            for ($x = $region->x; $x < $region->right(); $x++) {
+                $this->set($x, $y, $source->get($x, $y));
+            }
+        }
+    }
+
+    public function plane(int $value): string { return "plane {$value}"; }
+
+    public function pointer(): int { return 0; }
+
+    public function spanSink(): ?object { return null; }
+
+    public function granularity(): DamageGranularity { return DamageGranularity::pixel($this->width, $this->height); }
+
+    private function box(array $points): ?Region
+    {
+        if ($points === []) {
+            return null;
+        }
+        $xs = array_column($points, 0);
+        $ys = array_column($points, 1);
+
+        return new Region(min($xs), min($ys), max($xs) - min($xs) + 1, max($ys) - min($ys) + 1);
+    }
+}
+
+/** Mints the fake store: what a kind is built over when the test is about the kind. */
+final class FakeMinter implements PixelStoreMinter
+{
+    public function mint(FormatSpec $format, int $width, int $height): PixelStore
+    {
+        return new FakePixelStore($format, $width, $height);
+    }
+}
+
+final class FakeFullFramebuffer extends FullFramebuffer
+{
+    public function __construct(FormatSpec $format, int $width, int $height)
+    {
+        parent::__construct(new FakeMinter(), $format, $width, $height);
+    }
+}
+
+final class FakeDirtyFramebuffer extends DirtyFramebuffer
+{
+    public function __construct(FormatSpec $format, int $width, int $height)
+    {
+        parent::__construct(new FakeMinter(), $format, $width, $height);
+    }
+}
+
+final class FakeePaperFramebuffer extends ePaperFramebuffer
+{
+    public function __construct(FormatSpec $format, int $width, int $height)
+    {
+        parent::__construct(new FakeMinter(), $format, $width, $height);
+    }
+}
+
+final class FakePagedFramebuffer extends PagedFramebuffer
+{
+    public function __construct(FormatSpec $format, int $width, int $height, int $page_rows)
+    {
+        parent::__construct(new FakeMinter(), $format, $width, $height, $page_rows);
+    }
+}
+
+final class FakeRingFramebuffer extends RingFramebuffer
+{
+    public function __construct(FormatSpec $format, int $width, int $height, int $frames)
+    {
+        parent::__construct(new FakeMinter(), $format, $width, $height, $frames);
+    }
+}
+
+/**
+ * A store with the core only: a PHP store behind it, its painting and effects hidden. What a
+ * library binding is on its first day. Completed by VelvetGE, it must draw byte for byte what
+ * the PHP store draws.
+ */
+class CoreOnlyPixelStore implements PixelStore
+{
+    protected CompletePixelStore $held;
+
+    public function __construct(FormatSpec $format, int $width, int $height)
+    {
+        $this->held = $this->hold($format, $width, $height);
+    }
+
+    /** The store behind this one. */
+    protected function hold(FormatSpec $format, int $width, int $height): CompletePixelStore
+    {
+        return new PHPLandPixelStore($format, $width, $height);
+    }
+
+    public function width(): int { return $this->held->width(); }
+
+    public function height(): int { return $this->held->height(); }
+
+    public function format(): FormatSpec { return $this->held->format(); }
+
+    public function get(int $x, int $y): int { return $this->held->get($x, $y); }
+
+    public function set(int $x, int $y, int $value): void { $this->held->set($x, $y, $value); }
+
+    public function setPixels(array $pixels): ?Region { return $this->held->setPixels($pixels); }
+
+    public function setCoordinates(array $coordinates, int $value): ?Region { return $this->held->setCoordinates($coordinates, $value); }
+
+    public function rect(Region $region, int $value): void { $this->held->rect($region, $value); }
+
+    public function fill(int $value): void { $this->held->fill($value); }
+
+    public function bytes(?int $layer = null): string { return $this->held->bytes($layer); }
+
+    public function region(Region $region, FormatSpec $spec): string { return $this->held->region($region, $spec); }
+
+    public function load(Region $region, string $bytes): void { $this->held->load($region, $bytes); }
+
+    public function toRgba8(): string { return $this->held->toRgba8(); }
+
+    public function blitRgba8(string $rgba8, int $width, int $height, int $offset_x, int $offset_y, ?Region $clip = null): ?Region { return $this->held->blitRgba8($rgba8, $width, $height, $offset_x, $offset_y, $clip); }
+
+    public function copy(PixelStore $source, Region $region): void { $this->held->copy($source instanceof self ? $source->held : $source, $region); }
+
+    public function plane(int $value): string { return $this->held->plane($value); }
+
+    public function pointer(): int { return 0; }
+
+    public function spanSink(): ?object { return null; }
+
+    public function granularity(): DamageGranularity { return $this->held->granularity(); }
+}
+
+/** The core and the painting tier, no effects: a library that blends but has no filters. */
+final class PaintingOnlyPixelStore extends CoreOnlyPixelStore implements PaintingPixelStore
+{
+    public function paintSpans(string $spans, int $rgba8): ?Region { return $this->held->paintSpans($spans, $rgba8); }
+
+    public function paintMasks(array $masks, int $rgba8, Region $clip): ?Region { return $this->held->paintMasks($masks, $rgba8, $clip); }
+
+    public function paintGradient(string $spans, string $ramp, string $kind, \Surface\NutsAndBolts\GradientSpread $spread, array $inverse, int $row = 0): ?Region { return $this->held->paintGradient($spans, $ramp, $kind, $spread, $inverse, $row); }
+
+    public function paintRgba8(string $rgba8, int $width, int $height, array $inverse, Region $target, int $opacity, Filter $filter, int $row = 0, int $tint = 0xFFFFFFFF, ?array $window = null, ?string $coverage = null): void { $this->held->paintRgba8($rgba8, $width, $height, $inverse, $target, $opacity, $filter, $row, $tint, $window, $coverage); }
+}
+
+/**
+ * A library store that keeps its pixels in native memory and only says where they are: it offers a
+ * PixelMemory, no buffer of its own. Core only, so painting through spans lends its pixels out and
+ * loads them back; $loads counts that. ext-fb's memory stands in for the library's.
+ */
+final class MemoryPixelStore extends CoreOnlyPixelStore
+{
+    public static int $loads = 0;
+
+    protected function hold(FormatSpec $format, int $width, int $height): CompletePixelStore
+    {
+        return new CLandPixelStore($format, $width, $height);
+    }
+
+    public function load(Region $region, string $bytes): void
+    {
+        self::$loads++;
+        parent::load($region, $bytes);
+    }
+
+    public function pointer(): int { return $this->held->pointer(); }
+
+    public function spanSink(): ?object
+    {
+        return new PixelMemory($this->pointer(), $this->width(), $this->height(), intdiv(strlen($this->bytes()), $this->height()), $this->format(), $this->held->spanSink());
+    }
+}
+
+/** A driver over a store that leaves tiers out, as a library binding registers one. */
+final class PartialFramebufferDriver extends StoreFramebufferDriver
+{
+    /** @param class-string<PixelStore> $store */
+    public function __construct(private readonly string $name, private readonly string $store) {}
+
+    public function driver(): string
+    {
+        return $this->name;
+    }
+
+    public function mint(FormatSpec $format, int $width, int $height): PixelStore
+    {
+        return new ($this->store)($format, $width, $height);
+    }
+}

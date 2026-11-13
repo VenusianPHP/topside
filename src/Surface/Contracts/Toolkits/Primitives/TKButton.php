@@ -1,0 +1,56 @@
+<?php
+
+namespace Surface\Contracts\Toolkits\Primitives;
+
+use Surface\Contracts\Toolkits\Primitives\ButtonRole;
+use Surface\Contracts\Toolkits\Primitives\HasButtonImage;
+use Surface\Contracts\Toolkits\Primitives\TKPrimitive;
+use Surface\Contracts\Toolkits\Styling\FontSpec;
+use Surface\Contracts\Toolkits\Styling\TextAlignment;
+use Surface\NutsAndBolts\Color;
+
+/**
+ * A push button. Posts ButtonClicked.
+ */
+interface TKButton extends TKPrimitive, HasButtonImage
+{
+    /**
+     * @return string
+     */
+    public function label(): string;
+
+    /**
+     * @param string $label
+     * @return $this
+     */
+    public function setLabel(string $label): static;
+
+    /**
+     * @param FontSpec $font
+     * @return $this
+     */
+    public function setFont(FontSpec $font): static;
+
+    /**
+     * @param Color|null $color null restores the toolkit's own
+     * @return $this
+     */
+    public function setTextColor(?Color $color): static;
+
+    /** The text's place inside the view; centre until set. */
+    public function setAlignment(TextAlignment $alignment): static;
+
+    /**
+     * Give the button a role, or remove its role. The window's previous holder of the role loses
+     * it; a button holds one role at most. Posts nothing.
+     *
+     * @param ButtonRole|null $role
+     * @return $this
+     */
+    public function setRole(?ButtonRole $role): static;
+
+    /**
+     * @return ButtonRole|null
+     */
+    public function role(): ?ButtonRole;
+}

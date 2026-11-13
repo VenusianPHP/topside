@@ -1,0 +1,263 @@
+<?php
+
+namespace Surface\Contracts\Toolkits\Primitives;
+
+use Surface\NutsAndBolts\Color;
+use Surface\Contracts\Toolkits\ToolkitWindow;
+use Surface\Contracts\Toolkits\Menus\ContextMenu;
+use Surface\Contracts\Toolkits\ToolkitRuntimeException;
+
+/**
+ * A native view inside a toolkit window. The toolkit owns layout; PHP declares
+ * properties and reads sizes back. Every setter throws ToolkitRuntimeException once removed.
+ */
+interface TKPrimitive
+{
+    /**
+     * The name, unique among its siblings.
+     * @return string
+     */
+    public function name(): string;
+
+    /**
+     * The dotted path from the window's content container, e.g. `main.toolbar.save`.
+     * @return string
+     */
+    public function path(): string;
+
+    /**
+     * @return string uuid4
+     */
+    public function uuid(): string;
+
+    /**
+     * @return ToolkitWindow
+     */
+    public function window(): ToolkitWindow;
+
+    /**
+     * The container this primitive was created in; null for the content container.
+     * @return TKPrimitiveGroup|null
+     */
+    public function parent(): ?TKPrimitiveGroup;
+
+    /**
+     * Where this primitive sits in its container: next, a grid cell, or its creation frame.
+     * @return Placement
+     */
+    public function placement(): Placement;
+
+    /**
+     * @return bool
+     */
+    public function isRemoved(): bool;
+
+    /**
+     * Terminal: destroy the native and the subtree, free the names and uuids.
+     * @return void
+     * @throws ToolkitRuntimeException When already removed.
+     */
+    public function remove(): void;
+
+    /**
+     * Native visibility; hiding a container hides its subtree. With an appear() transition set, showing
+     * plays it; with a disappear() transition set, hiding plays it and the view hides when it lands.
+     * isVisible() answers the new value at once either way.
+     * @param bool $visible
+     * @return $this
+     */
+    public function setVisible(bool $visible): static;
+
+    /**
+     * @return bool
+     */
+    public function isVisible(): bool;
+
+    /**
+     * @return $this
+     */
+    public function show(): static;
+
+    /**
+     * @return $this
+     */
+    public function hide(): static;
+
+    /**
+     * How opaque the view and its subtree draw: 0.0 (invisible, still laid out and hit) to 1.0.
+     * @param float $opacity
+     * @return $this
+     * @throws ToolkitRuntimeException When removed, or $opacity is outside 0.0..1.0.
+     */
+    public function setOpacity(float $opacity): static;
+
+    /**
+     * @return float
+     */
+    public function opacity(): float;
+
+    /**
+     * Play $transition each time setVisible(true) shows the view; null shows it at once.
+     * @param TKTransition|null $transition
+     * @param float $seconds how long it runs
+     * @return $this
+     * @throws ToolkitRuntimeException When removed, or $seconds is negative.
+     */
+    public function appear(?TKTransition $transition, float $seconds = 0.25): static;
+
+    /**
+     * Play $transition backwards each time setVisible(false) hides the view, then hide it; null hides it at once.
+     * @param TKTransition|null $transition
+     * @param float $seconds how long it runs
+     * @return $this
+     * @throws ToolkitRuntimeException When removed, or $seconds is negative.
+     */
+    public function disappear(?TKTransition $transition, float $seconds = 0.25): static;
+
+    /**
+     * Native sensitivity; containers cascade to their subtree.
+     * @param bool $enabled
+     * @return $this
+     */
+    public function setEnabled(bool $enabled): static;
+
+    /**
+     * @return bool
+     */
+    public function isEnabled(): bool;
+
+    /**
+     * @return $this
+     */
+    public function enable(): static;
+
+    /**
+     * @return $this
+     */
+    public function disable(): static;
+
+    /**
+     * The native takes keyboard focus. Posts nothing: FocusGained and FocusLost come only from
+     * the user's own focus changes.
+     * @return $this
+     * @throws ToolkitRuntimeException When the view or a container above it is hidden
+     *         ("not shown"), or disabled, or the native takes no focus.
+     */
+    public function focus(): static;
+
+    /**
+     * The native holds keyboard focus.
+     */
+    public function hasFocus(): bool;
+
+    /**
+     * The menu the toolkit opens where this view is right-clicked: a menu's nodes in the menu
+     * profile's item format, a parsed menu (one shared by many views), or null to take it off.
+     * A chosen item posts MenuActivated with its id, a toggle MenuToggled, a radio item
+     * MenuRadioChosen. The menu keeps the user's toggle and radio choices: the next open shows them.
+     * @param array|ContextMenu|null $menu
+     * @return $this
+     */
+    public function setContextMenu(array|ContextMenu|null $menu): static;
+
+    /** The menu set, with the user's toggle and radio choices since. */
+    public function contextMenu(): ?ContextMenu;
+
+    /**
+     * Open a menu now at ($x, $y), points from the view's top-left (as RightClicked gives them).
+     * An owned canvas press ends first, as for a right click. Choices post mail and are not kept:
+     * pass the menu each time. On AppKit the call returns when the menu closes; on GTK and Qt at once.
+     * @param array|ContextMenu $menu
+     * @return $this
+     * @throws ToolkitRuntimeException When removed, or not shown: hidden, under a hidden group, or in a window not shown.
+     */
+    public function popupMenu(array|ContextMenu $menu, float $x, float $y): static;
+
+    /**
+     * The current allocation, read from the toolkit.
+     * @return array{int, int} width, height
+     */
+    public function size(): array;
+
+    /**
+     * Opt in to (or out of) ViewResized mail for this view.
+     * @param bool $on
+     * @return $this
+     */
+    public function watchSize(bool $on = true): static;
+
+    /**
+     * @return bool
+     */
+    public function isWatchingSize(): bool;
+
+    /**
+     * Fill behind the view; null restores the toolkit's own.
+     * @param Color|null $color
+     * @return $this
+     */
+    public function setBackground(?Color $color): static;
+
+    /**
+     * Round the corners of the view's background (setBackground); its content is not clipped.
+     * 0.0 (the start) is square. Posts nothing.
+     * @param float $radius in points
+     * @return $this
+     * @throws \Surface\Contracts\Toolkits\ToolkitRuntimeException When the radius is negative.
+     */
+    public function setCornerRadius(float $radius): static;
+
+    /**
+     * @return float
+     */
+    public function cornerRadius(): float;
+
+    /**
+     * Expand into spare space along each axis.
+     * @param bool $horizontal
+     * @param bool $vertical
+     * @return $this
+     */
+    public function fill(bool $horizontal = true, bool $vertical = true): static;
+
+    /**
+     * Placement inside a slot larger than the view.
+     * @param Align $horizontal
+     * @param Align $vertical
+     * @return $this
+     */
+    public function align(Align $horizontal, Align $vertical = Align::FILL): static;
+
+    /**
+     * The floor the toolkit never shrinks the view below.
+     * @param int $width
+     * @param int $height
+     * @return $this
+     * @throws ToolkitRuntimeException When either is negative.
+     */
+    public function minSize(int $width, int $height): static;
+
+    /**
+     * Move this primitive just before $sibling inside their column or row.
+     * @param TKPrimitive $sibling
+     * @return $this
+     * @throws ToolkitRuntimeException When the parent is not a column or row, $sibling is not a sibling, or it is this primitive.
+     */
+    public function moveBefore(TKPrimitive $sibling): static;
+
+    /**
+     * Move this primitive just after $sibling inside their column or row.
+     * @param TKPrimitive $sibling
+     * @return $this
+     * @throws ToolkitRuntimeException When the parent is not a column or row, $sibling is not a sibling, or it is this primitive.
+     */
+    public function moveAfter(TKPrimitive $sibling): static;
+
+    /**
+     * Move this primitive to display position $index inside its column or row.
+     * @param int $index the position afterward, 0..count(children)-1
+     * @return $this
+     * @throws ToolkitRuntimeException When the parent is not a column or row, or the index is out of range.
+     */
+    public function moveTo(int $index): static;
+}

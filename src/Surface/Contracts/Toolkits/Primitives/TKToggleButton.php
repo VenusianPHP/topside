@@ -1,0 +1,35 @@
+<?php
+
+namespace Surface\Contracts\Toolkits\Primitives;
+
+use Surface\Contracts\Toolkits\Primitives\HasButtonImage;
+use Surface\Contracts\Toolkits\Primitives\TKPrimitive;
+
+/**
+ * A button that stays pressed. Posts Toggled.
+ */
+interface TKToggleButton extends TKPrimitive, HasButtonImage
+{
+    /**
+     * @return string
+     */
+    public function label(): string;
+
+    /**
+     * @param string $label
+     * @return $this
+     */
+    public function setLabel(string $label): static;
+
+    /**
+     * @return bool
+     */
+    public function isPressed(): bool;
+
+    /**
+     * Posts nothing: the app changed it, it knows.
+     * @param bool $pressed
+     * @return $this
+     */
+    public function setPressed(bool $pressed): static;
+}

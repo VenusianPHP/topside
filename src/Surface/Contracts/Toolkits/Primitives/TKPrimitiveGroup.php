@@ -1,0 +1,298 @@
+<?php
+
+namespace Surface\Contracts\Toolkits\Primitives;
+
+use DateTimeImmutable;
+use Surface\Contracts\Toolkits\Menus\ContextMenu;
+use Surface\Contracts\Toolkits\ToolkitRuntimeException;
+
+/**
+ * A container: the only place primitives are created, and the root of relative lookups.
+ * Every creation method throws ToolkitRuntimeException for a name with a dot, an empty name,
+ * a name a sibling holds, or a kind the engine lacks — before any native exists.
+ */
+interface TKPrimitiveGroup extends TKPrimitive
+{
+    /**
+     * @param string $name
+     * @param string $text
+     * @return TKLabel
+     */
+    public function label(string $name, string $text): TKLabel;
+
+    /**
+     * @param string $name
+     * @param string $text
+     * @param string $url with a scheme
+     * @return TKLink
+     */
+    public function link(string $name, string $text, string $url): TKLink;
+
+    /**
+     * @param string $name
+     * @param string $label
+     * @return TKButton
+     */
+    public function button(string $name, string $label): TKButton;
+
+    /**
+     * @param string $name
+     * @param string|null $file image file
+     * @return TKImage
+     */
+    public function image(string $name, ?string $file = null): TKImage;
+
+    /**
+     * A rectangle the application draws itself, through a framebuffer.
+     *
+     * @param string $name
+     * @return TKCanvas
+     */
+    public function canvas(string $name): TKCanvas;
+
+    /**
+     * @param string $name
+     * @param bool $horizontal
+     * @return TKSeparator
+     */
+    public function separator(string $name, bool $horizontal = true): TKSeparator;
+
+    /**
+     * @param string $name
+     * @return TKSpinner
+     */
+    public function spinner(string $name): TKSpinner;
+
+    /**
+     * @param string $name
+     * @param float|null $fraction 0..1, null = indeterminate
+     * @return TKProgressBar
+     */
+    public function progressBar(string $name, ?float $fraction = 0.0): TKProgressBar;
+
+    /**
+     * @param string $name
+     * @param string $value
+     * @param string|null $placeholder
+     * @param bool $secret masked entry
+     * @return TKTextInput
+     */
+    public function textInput(string $name, string $value = '', ?string $placeholder = null, bool $secret = false): TKTextInput;
+
+    /**
+     * @param string $name
+     * @param string $value
+     * @return TKTextArea
+     */
+    public function textArea(string $name, string $value = ''): TKTextArea;
+
+    /**
+     * @param string $name
+     * @param string $label
+     * @param bool $checked
+     * @return TKCheckbox
+     */
+    public function checkbox(string $name, string $label, bool $checked = false): TKCheckbox;
+
+    /**
+     * @param string $name
+     * @param bool $on
+     * @return TKToggle
+     */
+    public function toggle(string $name, bool $on = false): TKToggle;
+
+    /**
+     * @param string $name
+     * @param string $label
+     * @param bool $pressed
+     * @return TKToggleButton
+     */
+    public function toggleButton(string $name, string $label, bool $pressed = false): TKToggleButton;
+
+    /**
+     * @param string $name
+     * @param float $min
+     * @param float $max
+     * @param float $value
+     * @return TKSlider
+     */
+    public function slider(string $name, float $min, float $max, float $value): TKSlider;
+
+    /**
+     * @param string $name
+     * @param bool $vertical
+     * @return TKScrollBar
+     */
+    public function scrollBar(string $name, bool $vertical = true): TKScrollBar;
+
+    /**
+     * @param string $name
+     * @param list<string> $options
+     * @param int $selected
+     * @return TKDropdown
+     */
+    public function dropdown(string $name, array $options, int $selected = 0): TKDropdown;
+
+    /**
+     * @param string $name
+     * @param string $value
+     * @param list<string> $options
+     * @return TKComboBox
+     */
+    public function comboBox(string $name, string $value = '', array $options = []): TKComboBox;
+
+    /**
+     * @param string $name
+     * @param string $label
+     * @param array|ContextMenu $menu nodes as a context menu takes them
+     * @return TKMenuButton
+     */
+    public function menuButton(string $name, string $label, array|ContextMenu $menu): TKMenuButton;
+
+    /**
+     * @param string $name
+     * @param DateTimeImmutable|null $date
+     * @return TKDatepicker
+     */
+    public function datepicker(string $name, ?DateTimeImmutable $date = null): TKDatepicker;
+
+    /**
+     * @param string $name
+     * @param list<TableColumn> $columns
+     * @param list<array<string, scalar|null>> $rows keyed by column id
+     * @return TKTable
+     */
+    public function table(string $name, array $columns, array $rows = []): TKTable;
+
+    /**
+     * @param string $name
+     * @param list<string> $segments
+     * @param int $selected ignored when there are no segments
+     * @return TKSegmentedControl
+     */
+    public function segmentedControl(string $name, array $segments, int $selected = 0): TKSegmentedControl;
+
+    /**
+     * @param string $name
+     * @param list<CollectionItem> $items
+     * @return TKCollectionView
+     */
+    public function collectionView(string $name, array $items = []): TKCollectionView;
+
+    /**
+     * @param string $name
+     * @param list<ListRow> $items
+     * @return TKListView
+     */
+    public function listView(string $name, array $items = []): TKListView;
+
+    /**
+     * @param string $name
+     * @param list<TableColumn> $columns the first holds the expander
+     * @param list<TreeNode> $nodes
+     * @return TKTree
+     */
+    public function tree(string $name, array $columns, array $nodes = []): TKTree;
+
+    /**
+     * @param string $name
+     * @param string|null $file media file
+     * @return TKVideo
+     * @throws ToolkitRuntimeException When the engine has no media runtime.
+     */
+    public function video(string $name, ?string $file = null): TKVideo;
+
+    /**
+     * @param string $name
+     * @return TKWebView
+     * @throws ToolkitRuntimeException When the engine has no web engine.
+     */
+    public function webView(string $name): TKWebView;
+
+    /**
+     * @param string $name
+     * @param int $spacing between children
+     * @param int $padding around the children
+     * @return TKColumn
+     */
+    public function column(string $name, int $spacing = 0, int $padding = 0): TKColumn;
+
+    /**
+     * @param string $name
+     * @param int $spacing between children
+     * @param int $padding around the children
+     * @return TKRow
+     */
+    public function row(string $name, int $spacing = 0, int $padding = 0): TKRow;
+
+    /**
+     * @param string $name
+     * @param int $spacing between cells
+     * @param int $padding around the cells
+     * @return TKGrid
+     */
+    public function grid(string $name, int $spacing = 0, int $padding = 0): TKGrid;
+
+    /**
+     * @param string $name
+     * @return TKFixed
+     */
+    public function fixed(string $name): TKFixed;
+
+    /**
+     * @param string $name
+     * @return TKScrollView
+     */
+    public function scrollView(string $name): TKScrollView;
+
+    /**
+     * @param string $name
+     * @param bool $horizontal true: panes side by side
+     * @return TKSplitView
+     */
+    public function split(string $name, bool $horizontal = true): TKSplitView;
+
+    /**
+     * @param string $name
+     * @return TKTabView
+     */
+    public function tabs(string $name): TKTabView;
+
+    /**
+     * Look a descendant up by dotted path relative to this container.
+     * @param string $path
+     * @return TKPrimitive|null
+     */
+    public function view(string $path): ?TKPrimitive;
+
+    /**
+     * The direct children, in creation order (column/row: display order).
+     * @return list<TKPrimitive>
+     */
+    public function children(): array;
+
+    /**
+     * The placement the child being minted takes: the pending at() cell/frame, else the
+     * container's default. For factories, once per mint.
+     *
+     * @return Placement
+     * @throws ToolkitRuntimeException When the container needs at() and none is pending.
+     */
+    public function takePlacement(): Placement;
+
+    /**
+     * Whether a primary click on this group posts GroupClicked: a press and its release on the group
+     * itself or on passive content inside it (a label, image, separator, spinner, progress bar or inner
+     * group that is not clickable itself). A control inside keeps its own mail and posts no GroupClicked.
+     * Nothing while the group or one of its groups is disabled. Posts nothing.
+     *
+     * @param bool $on
+     * @return $this
+     */
+    public function setClickable(bool $on = true): static;
+
+    /**
+     * @return bool
+     */
+    public function isClickable(): bool;
+}

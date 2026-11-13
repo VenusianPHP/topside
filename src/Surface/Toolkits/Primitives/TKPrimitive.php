@@ -1,0 +1,551 @@
+<?php
+
+namespace Surface\Toolkits\Primitives;
+
+use Surface\Contracts\Toolkits\Primitives\Align;
+use Surface\Contracts\Toolkits\Primitives\HasEnabledState;
+use Surface\Contracts\Toolkits\Primitives\Placement;
+use Surface\Contracts\Toolkits\Primitives\PrimitiveRegistry;
+use Surface\Contracts\Toolkits\Primitives\TKPrimitive as PrimitiveContract;
+use Surface\Contracts\Toolkits\Primitives\TKTransition;
+use Closure;
+use Surface\Contracts\Toolkits\Menus\ContextMenu as ContextMenuContract;
+use Surface\Contracts\Toolkits\ToolkitWindow;
+use Surface\Contracts\Toolkits\ToolkitRuntimeException;
+use Surface\NutsAndBolts\Color;
+use Surface\Toolkits\Menus\ContextMenu;
+use Voyager\NutsAndBolts\Str;
+
+/**
+ * State, identity and the removed guard every primitive shares. The driver's concrete
+ * writes each change to its native through the apply* hooks and reads sizes back
+ * through nativeSize(); it never posts mail from a hook. Abstracts never call a hook from
+ * their constructor: a concrete calls parent::__construct() first (which validates the name
+ * and the kind's arguments) and then builds its native from the constructed state.
+ */
+abstract class TKPrimitive implements PrimitiveContract
+{
+    use HasEnabledState {
+        setEnabled as private storeEnabled;
+    }
+
+    protected readonly string $uuid;
+
+    protected bool $removed = false;
+
+    protected bool $visible = true;
+
+    protected bool $watching_size = false;
+
+    protected ?Color $background = null;
+
+    protected float $corner_radius = 0.0;
+
+    protected float $opacity = 1.0;
+
+    protected ?TKTransition $appear_as = null;
+
+    protected float $appear_seconds = 0.25;
+
+    protected ?TKTransition $disappear_as = null;
+
+    protected float $disappear_seconds = 0.25;
+
+    protected ?ContextMenuContract $context_menu = null;
+
+    protected bool $fill_horizontal = false;
+
+    protected bool $fill_vertical = false;
+
+    protected Align $align_horizontal = Align::FILL;
+
+    protected Align $align_vertical = Align::FILL;
+
+    /**
+     * @var array{int, int}|null
+     */
+    protected ?array $min_size = null;
+
+    /**
+     * @param string $name
+     * @param ToolkitWindow $window
+     * @param TKPrimitiveGroup|null $parent null for the window's content container
+     * @param Placement $placement
+     * @throws ToolkitRuntimeException When the name is not valid.
+     */
+    public function __construct(
+        protected readonly string $name,
+        protected readonly ToolkitWindow $window,
+        protected readonly ?TKPrimitiveGroup $parent,
+        protected readonly Placement $placement,
+    ) {
+        PrimitiveRegistry::guardName($name);
+        $this->uuid = Str::uuid()->toString();
+    }
+
+    public function name(): string
+    {
+        return $this->name;
+    }
+
+    public function path(): string
+    {
+        return is_null($this->parent) ? $this->name : $this->parent->path().'.'.$this->name;
+    }
+
+    public function uuid(): string
+    {
+        return $this->uuid;
+    }
+
+    public function window(): ToolkitWindow
+    {
+        return $this->window;
+    }
+
+    public function parent(): ?TKPrimitiveGroup
+    {
+        return $this->parent;
+    }
+
+    public function placement(): Placement
+    {
+        return $this->placement;
+    }
+
+    public function isRemoved(): bool
+    {
+        return $this->removed;
+    }
+
+    /**
+     * Terminal: stop size watching, destroy the native, drop the path and uuid, and leave
+     * the parent (or the window's content slot).
+     *
+     * @return void
+     * @throws ToolkitRuntimeException When already removed.
+     */
+    public function remove(): void
+    {
+        $this->live();
+        if ($this->watching_size) {
+            $this->watching_size = false;
+            $this->applyWatchSize(false);
+        }
+        $this->removed = true;
+        $this->destroyNative();
+        $this->window->registry()->forget($this);
+
+        if (is_null($this->parent)) {
+            $this->window->forgetContent($this);
+        } else {
+            $this->parent->forgetChild($this);
+        }
+    }
+
+    public function setVisible(bool $visible): static
+    {
+        $this->live();
+        if ($this->visible === $visible) {
+            return $this;
+        }
+
+        $this->visible = $visible;
+
+        if ($visible && ! is_null($this->appear_as)) {
+            $this->applyVisible(true);
+            $this->applyTransition($this->appear_as, true, $this->appear_seconds, null);
+        } elseif (! $visible && ! is_null($this->disappear_as)) {
+            // Hidden once the transition lands, unless something showed it again meanwhile.
+            $this->applyTransition($this->disappear_as, false, $this->disappear_seconds, function (): void {
+                if (! $this->visible && ! $this->removed) {
+                    $this->applyVisible(false);
+                }
+            });
+        } else {
+            $this->applyVisible($visible);
+        }
+
+        return $this;
+    }
+
+    public function setOpacity(float $opacity): static
+    {
+        $this->live();
+        if ($opacity < 0.0 || $opacity > 1.0) {
+            throw new ToolkitRuntimeException("Opacity must be between 0.0 and 1.0, {$opacity} given.");
+        }
+
+        $this->opacity = $opacity;
+        $this->applyOpacity($opacity);
+
+        return $this;
+    }
+
+    public function opacity(): float
+    {
+        return $this->opacity;
+    }
+
+    public function appear(?TKTransition $transition, float $seconds = 0.25): static
+    {
+        $this->live();
+        if ($seconds < 0.0) {
+            throw new ToolkitRuntimeException("A transition cannot last {$seconds} seconds.");
+        }
+
+        [$this->appear_as, $this->appear_seconds] = [$transition, $seconds];
+
+        return $this;
+    }
+
+    public function disappear(?TKTransition $transition, float $seconds = 0.25): static
+    {
+        $this->live();
+        if ($seconds < 0.0) {
+            throw new ToolkitRuntimeException("A transition cannot last {$seconds} seconds.");
+        }
+
+        [$this->disappear_as, $this->disappear_seconds] = [$transition, $seconds];
+
+        return $this;
+    }
+
+    public function isVisible(): bool
+    {
+        return $this->visible;
+    }
+
+    public function show(): static
+    {
+        return $this->setVisible(true);
+    }
+
+    public function hide(): static
+    {
+        return $this->setVisible(false);
+    }
+
+    public function setEnabled(bool $enabled): static
+    {
+        return $this->live()->storeEnabled($enabled);
+    }
+
+    /**
+     * @throws ToolkitRuntimeException When removed, not shown, or the native takes no focus.
+     */
+    public function focus(): static
+    {
+        $this->live();
+        // Shown and enabled means through every container too: a toolkit gives focus to a widget
+        // under a hidden or disabled container, which the user then cannot see or use.
+        $shown = $this->isVisible();
+        $enabled = $this->isEnabled();
+        for ($at = $this->parent(); ! is_null($at); $at = $at->parent()) {
+            $shown = $shown && $at->isVisible();
+            $enabled = $enabled && $at->isEnabled();
+        }
+        if (! $shown) {
+            throw new ToolkitRuntimeException("'{$this->path()}' cannot take focus: it is not shown.");
+        }
+        if (! $enabled || ! $this->applyFocus()) {
+            throw new ToolkitRuntimeException("'{$this->path()}' cannot take focus.");
+        }
+
+        return $this;
+    }
+
+    public function hasFocus(): bool
+    {
+        return $this->live()->nativeHasFocus();
+    }
+
+    public function size(): array
+    {
+        return $this->live()->nativeSize();
+    }
+
+    public function watchSize(bool $on = true): static
+    {
+        $this->live();
+        if ($this->watching_size !== $on) {
+            $this->watching_size = $on;
+            $this->applyWatchSize($on);
+        }
+
+        return $this;
+    }
+
+    public function isWatchingSize(): bool
+    {
+        return $this->watching_size;
+    }
+
+    /**
+     * The driver reads the menu when the view is right-clicked; nothing is written to the native.
+     * @throws ToolkitRuntimeException
+     */
+    public function setContextMenu(array|ContextMenuContract|null $menu): static
+    {
+        $this->live();
+        $this->context_menu = is_array($menu) ? ContextMenu::parse($menu) : $menu;
+
+        return $this;
+    }
+
+    public function contextMenu(): ?ContextMenuContract
+    {
+        return $this->context_menu;
+    }
+
+    public function popupMenu(array|ContextMenuContract $menu, float $x, float $y): static
+    {
+        $this->live();
+        $menu = is_array($menu) ? ContextMenu::parse($menu) : $menu;
+        $shown = $this->isVisible();
+        for ($at = $this->parent(); ! is_null($at); $at = $at->parent()) {
+            $shown = $shown && $at->isVisible();
+        }
+        if (! $shown || ! $this->applyPopupMenu($menu, $x, $y)) {
+            throw new ToolkitRuntimeException("'{$this->path()}' cannot open a menu: it is not shown.");
+        }
+
+        return $this;
+    }
+
+    /**
+     * Engine callback: the user flipped a toggle of the stored context menu; the menu keeps it.
+     *
+     * @param string $item
+     * @param bool $on
+     * @return void
+     */
+    public function nativeContextToggled(string $item, bool $on): void
+    {
+        if ($this->context_menu instanceof ContextMenu) {
+            $this->context_menu = $this->context_menu->withToggle($item, $on);
+        }
+    }
+
+    /**
+     * Engine callback: the user chose a radio item of the stored context menu; the menu keeps it.
+     *
+     * @param string $group
+     * @param string $item
+     * @return void
+     */
+    public function nativeContextRadio(string $group, string $item): void
+    {
+        if ($this->context_menu instanceof ContextMenu) {
+            $this->context_menu = $this->context_menu->withRadio($group, $item);
+        }
+    }
+
+    public function setBackground(?Color $color): static
+    {
+        $this->live();
+        $this->background = $color;
+        $this->applyBackground($color);
+
+        return $this;
+    }
+
+    public function setCornerRadius(float $radius): static
+    {
+        $this->live();
+        if ($radius < 0.0) {
+            throw new ToolkitRuntimeException("'{$this->path()}': a corner radius is not negative; got {$radius}.");
+        }
+        $this->corner_radius = $radius;
+        $this->applyCornerRadius($radius);
+
+        return $this;
+    }
+
+    public function cornerRadius(): float
+    {
+        return $this->corner_radius;
+    }
+
+    public function fill(bool $horizontal = true, bool $vertical = true): static
+    {
+        $this->live();
+        $this->fill_horizontal = $horizontal;
+        $this->fill_vertical = $vertical;
+        $this->applyFill($horizontal, $vertical);
+
+        return $this;
+    }
+
+    public function align(Align $horizontal, Align $vertical = Align::FILL): static
+    {
+        $this->live();
+        $this->align_horizontal = $horizontal;
+        $this->align_vertical = $vertical;
+        $this->applyAlign($horizontal, $vertical);
+
+        return $this;
+    }
+
+    public function minSize(int $width, int $height): static
+    {
+        $this->live();
+        if ($width < 0 || $height < 0) {
+            throw new ToolkitRuntimeException("A minimum size needs width and height >= 0, got {$width}x{$height}.");
+        }
+        $this->min_size = [$width, $height];
+        $this->applyMinSize($width, $height);
+
+        return $this;
+    }
+
+    public function moveBefore(PrimitiveContract $sibling): static
+    {
+        $stack = $this->stack();
+        $stack->reorder($this, $stack->positionOf($sibling, $this));
+
+        return $this;
+    }
+
+    public function moveAfter(PrimitiveContract $sibling): static
+    {
+        $stack = $this->stack();
+        $stack->reorder($this, $stack->positionOf($sibling, $this) + 1);
+
+        return $this;
+    }
+
+    public function moveTo(int $index): static
+    {
+        $stack = $this->stack();
+        $count = count($stack->children());
+        if ($index < 0 || $index >= $count) {
+            throw new ToolkitRuntimeException("Index {$index} is out of range for '{$stack->path()}' (0..".($count - 1).').');
+        }
+        $stack->reorder($this, $index);
+
+        return $this;
+    }
+
+    /**
+     * The column or row this primitive reorders in.
+     *
+     * @return TKColumn|TKRow
+     * @throws ToolkitRuntimeException Once removed, or when the parent is not a column or row.
+     */
+    protected function stack(): TKColumn|TKRow
+    {
+        $this->live();
+        if (! $this->parent instanceof TKColumn && ! $this->parent instanceof TKRow) {
+            throw new ToolkitRuntimeException("'{$this->path()}' is not in a column or row; only their children reorder.");
+        }
+
+        return $this->parent;
+    }
+
+    /**
+     * @return $this
+     * @throws ToolkitRuntimeException Once removed.
+     */
+    protected function live(): static
+    {
+        if ($this->removed) {
+            throw new ToolkitRuntimeException("Primitive '{$this->path()}' was removed.");
+        }
+
+        return $this;
+    }
+
+    /**
+     * Destroy the native view. Called once, children first.
+     * @return void
+     */
+    abstract protected function destroyNative(): void;
+
+    /**
+     * @param bool $visible
+     * @return void
+     */
+    abstract protected function applyVisible(bool $visible): void;
+
+    /**
+     * @param Color|null $color null restores the toolkit's own
+     * @return void
+     */
+    abstract protected function applyBackground(?Color $color): void;
+
+    /** Round the background's corners, without clipping the content; 0.0 is square. */
+    abstract protected function applyCornerRadius(float $radius): void;
+
+    /**
+     * @param float $opacity 0.0..1.0, already checked
+     * @return void
+     */
+    abstract protected function applyOpacity(float $opacity): void;
+
+    /**
+     * Run $transition in the toolkit over $seconds: entering, from transparent at TKTransition::offset()
+     * to opacity() in place (the native is already shown); leaving, the reverse. Call $done once it lands,
+     * on the thread PHP runs on. A driver whose native cannot animate lands at once and calls $done.
+     * @param TKTransition $transition
+     * @param bool $entering
+     * @param float $seconds
+     * @param Closure(): void|null $done
+     * @return void
+     */
+    abstract protected function applyTransition(TKTransition $transition, bool $entering, float $seconds, ?Closure $done): void;
+
+    /**
+     * @param bool $horizontal
+     * @param bool $vertical
+     * @return void
+     */
+    abstract protected function applyFill(bool $horizontal, bool $vertical): void;
+
+    /**
+     * @param Align $horizontal
+     * @param Align $vertical
+     * @return void
+     */
+    abstract protected function applyAlign(Align $horizontal, Align $vertical): void;
+
+    /**
+     * @param int $width
+     * @param int $height
+     * @return void
+     */
+    abstract protected function applyMinSize(int $width, int $height): void;
+
+    /**
+     * Start or stop reporting this view's size to the session (ViewResized via postLatest).
+     * Stopping also forgetLatest()s the view's pending key, so nothing goes out after remove().
+     * @param bool $on
+     * @return void
+     */
+    abstract protected function applyWatchSize(bool $on): void;
+
+    /**
+     * @return array{int, int} the current allocation, from the toolkit
+     */
+    abstract protected function nativeSize(): array;
+
+    /**
+     * Move keyboard focus to the native's focus target, posting nothing.
+     * @return bool Whether the native took focus.
+     */
+    abstract protected function applyFocus(): bool;
+
+    /** The native's focus target holds keyboard focus. */
+    abstract protected function nativeHasFocus(): bool;
+
+    /**
+     * Open $menu at ($x, $y) in the view; false, opening nothing, when the native is not on screen
+     * (its window is not shown).
+     *
+     * @param ContextMenuContract $menu
+     * @param float $x
+     * @param float $y
+     * @return bool
+     */
+    abstract protected function applyPopupMenu(ContextMenuContract $menu, float $x, float $y): bool;
+}

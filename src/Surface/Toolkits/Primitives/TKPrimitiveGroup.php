@@ -1,0 +1,432 @@
+<?php
+
+namespace Surface\Toolkits\Primitives;
+
+use Closure;
+use DateTimeImmutable;
+use Surface\Contracts\Toolkits\Primitives\Placement;
+use Surface\Contracts\Toolkits\Primitives\PrimitiveFactory;
+use Surface\Contracts\Toolkits\Primitives\PrimitiveRegistry;
+use Surface\Contracts\Toolkits\Primitives\TKButton;
+use Surface\Contracts\Toolkits\Primitives\TKCanvas;
+use Surface\Contracts\Toolkits\Primitives\TKCheckbox;
+use Surface\Contracts\Toolkits\Primitives\TKCollectionView;
+use Surface\Contracts\Toolkits\Primitives\TKColumn;
+use Surface\Contracts\Toolkits\Primitives\TKDatepicker;
+use Surface\Contracts\Toolkits\Menus\ContextMenu as ContextMenuContract;
+use Surface\Contracts\Toolkits\Primitives\TKComboBox;
+use Surface\Contracts\Toolkits\Primitives\TKDropdown;
+use Surface\Contracts\Toolkits\Primitives\TKMenuButton;
+use Surface\Toolkits\Menus\ContextMenu;
+use Surface\Contracts\Toolkits\Primitives\TKFixed;
+use Surface\Contracts\Toolkits\Primitives\TKGrid;
+use Surface\Contracts\Toolkits\Primitives\TKImage;
+use Surface\Contracts\Toolkits\Primitives\TKLabel;
+use Surface\Contracts\Toolkits\Primitives\TKLink;
+use Surface\Contracts\Toolkits\Primitives\TKListView;
+use Surface\Contracts\Toolkits\Primitives\TKPrimitive as Child;
+use Surface\Contracts\Toolkits\Primitives\TKPrimitiveGroup as PrimitiveContract;
+use Surface\Contracts\Toolkits\Primitives\TKProgressBar;
+use Surface\Contracts\Toolkits\Primitives\TKRow;
+use Surface\Contracts\Toolkits\Primitives\TKScrollView;
+use Surface\Contracts\Toolkits\Primitives\TKSegmentedControl;
+use Surface\Contracts\Toolkits\Primitives\TKSeparator;
+use Surface\Contracts\Toolkits\Primitives\TKScrollBar;
+use Surface\Contracts\Toolkits\Primitives\TKSlider;
+use Surface\Contracts\Toolkits\Primitives\TKSplitView;
+use Surface\Contracts\Toolkits\Primitives\TKSpinner;
+use Surface\Contracts\Toolkits\Primitives\TKTable;
+use Surface\Contracts\Toolkits\Primitives\TKTree;
+use Surface\Contracts\Toolkits\Primitives\TKTabView;
+use Surface\Contracts\Toolkits\Primitives\TKTextArea;
+use Surface\Contracts\Toolkits\Primitives\TKTextInput;
+use Surface\Contracts\Toolkits\Primitives\TKToggle;
+use Surface\Contracts\Toolkits\Primitives\TKToggleButton;
+use Surface\Contracts\Toolkits\Primitives\TKVideo;
+use Surface\Contracts\Toolkits\Primitives\TKWebView;
+use Surface\Contracts\Toolkits\ToolkitRuntimeException;
+
+/**
+ * A container. Every creation call admits the name and placement first, then asks the
+ * window's factory to mint, then registers the child and hands it to insertNative().
+ * Nothing native exists for a refused child.
+ */
+abstract class TKPrimitiveGroup extends TKPrimitive implements PrimitiveContract
+{
+    /**
+     * @var array<string, Child> children by name, in display order
+     */
+    protected array $children = [];
+
+    /**
+     * The cell or frame the next creation call takes (grid and fixed set it with at()).
+     */
+    protected ?Placement $pending = null;
+
+    protected bool $clickable = false;
+
+    public function setClickable(bool $on = true): static
+    {
+        $this->live();
+        $this->clickable = $on;
+
+        return $this;
+    }
+
+    public function isClickable(): bool
+    {
+        return $this->clickable;
+    }
+
+    /**
+     * The group a primary press on $hit (the innermost primitive under it) clicks: the nearest
+     * clickable group from $hit up, through passive content only; null when a control is in the way,
+     * when none is clickable, or when the group or one of its groups is disabled.
+     */
+    public static function clickTarget(Child $hit): ?self
+    {
+        $target = null;
+        for ($at = $hit; ! is_null($at); $at = $at->parent()) {
+            if (is_null($target)) {
+                if ($at instanceof self && $at->clickable) {
+                    $target = $at;
+                } elseif (! ($at instanceof self || $at instanceof TKLabel || $at instanceof TKImage
+                    || $at instanceof TKSeparator || $at instanceof TKSpinner || $at instanceof TKProgressBar)) {
+                    return null;
+                }
+            }
+            if (! $at->isEnabled()) {
+                return null;
+            }
+        }
+
+        return $target;
+    }
+
+    public function label(string $name, string $text): TKLabel
+    {
+        return $this->create($name, false, fn (PrimitiveFactory $factory) => $factory->mintLabel($this, $name, $text));
+    }
+
+    public function link(string $name, string $text, string $url): TKLink
+    {
+        return $this->create($name, false, fn (PrimitiveFactory $factory) => $factory->mintLink($this, $name, $text, $url));
+    }
+
+    public function button(string $name, string $label): TKButton
+    {
+        return $this->create($name, false, fn (PrimitiveFactory $factory) => $factory->mintButton($this, $name, $label));
+    }
+
+    public function image(string $name, ?string $file = null): TKImage
+    {
+        return $this->create($name, false, fn (PrimitiveFactory $factory) => $factory->mintImage($this, $name, $file));
+    }
+
+    public function canvas(string $name): TKCanvas
+    {
+        return $this->create($name, false, fn (PrimitiveFactory $factory) => $factory->mintCanvas($this, $name));
+    }
+
+    public function separator(string $name, bool $horizontal = true): TKSeparator
+    {
+        return $this->create($name, false, fn (PrimitiveFactory $factory) => $factory->mintSeparator($this, $name, $horizontal));
+    }
+
+    public function spinner(string $name): TKSpinner
+    {
+        return $this->create($name, false, fn (PrimitiveFactory $factory) => $factory->mintSpinner($this, $name));
+    }
+
+    public function progressBar(string $name, ?float $fraction = 0.0): TKProgressBar
+    {
+        return $this->create($name, false, fn (PrimitiveFactory $factory) => $factory->mintProgressBar($this, $name, $fraction));
+    }
+
+    public function textInput(string $name, string $value = '', ?string $placeholder = null, bool $secret = false): TKTextInput
+    {
+        return $this->create($name, false, fn (PrimitiveFactory $factory) => $factory->mintTextInput($this, $name, $value, $placeholder, $secret));
+    }
+
+    public function textArea(string $name, string $value = ''): TKTextArea
+    {
+        return $this->create($name, false, fn (PrimitiveFactory $factory) => $factory->mintTextArea($this, $name, $value));
+    }
+
+    public function checkbox(string $name, string $label, bool $checked = false): TKCheckbox
+    {
+        return $this->create($name, false, fn (PrimitiveFactory $factory) => $factory->mintCheckbox($this, $name, $label, $checked));
+    }
+
+    public function toggle(string $name, bool $on = false): TKToggle
+    {
+        return $this->create($name, false, fn (PrimitiveFactory $factory) => $factory->mintToggle($this, $name, $on));
+    }
+
+    public function toggleButton(string $name, string $label, bool $pressed = false): TKToggleButton
+    {
+        return $this->create($name, false, fn (PrimitiveFactory $factory) => $factory->mintToggleButton($this, $name, $label, $pressed));
+    }
+
+    public function slider(string $name, float $min, float $max, float $value): TKSlider
+    {
+        return $this->create($name, false, fn (PrimitiveFactory $factory) => $factory->mintSlider($this, $name, $min, $max, $value));
+    }
+
+    public function scrollBar(string $name, bool $vertical = true): TKScrollBar
+    {
+        return $this->create($name, false, fn (PrimitiveFactory $factory) => $factory->mintScrollBar($this, $name, $vertical));
+    }
+
+    public function dropdown(string $name, array $options, int $selected = 0): TKDropdown
+    {
+        return $this->create($name, false, fn (PrimitiveFactory $factory) => $factory->mintDropdown($this, $name, $options, $selected));
+    }
+
+    public function comboBox(string $name, string $value = '', array $options = []): TKComboBox
+    {
+        return $this->create($name, false, fn (PrimitiveFactory $factory) => $factory->mintComboBox($this, $name, $value, $options));
+    }
+
+    public function menuButton(string $name, string $label, array|ContextMenuContract $menu): TKMenuButton
+    {
+        $menu = is_array($menu) ? ContextMenu::parse($menu) : $menu;
+
+        return $this->create($name, false, fn (PrimitiveFactory $factory) => $factory->mintMenuButton($this, $name, $label, $menu));
+    }
+
+    public function datepicker(string $name, ?DateTimeImmutable $date = null): TKDatepicker
+    {
+        return $this->create($name, false, fn (PrimitiveFactory $factory) => $factory->mintDatepicker($this, $name, $date));
+    }
+
+    public function table(string $name, array $columns, array $rows = []): TKTable
+    {
+        return $this->create($name, false, fn (PrimitiveFactory $factory) => $factory->mintTable($this, $name, $columns, $rows));
+    }
+
+    public function segmentedControl(string $name, array $segments, int $selected = 0): TKSegmentedControl
+    {
+        return $this->create($name, false, fn (PrimitiveFactory $factory) => $factory->mintSegmentedControl($this, $name, $segments, $selected));
+    }
+
+    public function collectionView(string $name, array $items = []): TKCollectionView
+    {
+        return $this->create($name, false, fn (PrimitiveFactory $factory) => $factory->mintCollectionView($this, $name, $items));
+    }
+
+    public function listView(string $name, array $items = []): TKListView
+    {
+        return $this->create($name, false, fn (PrimitiveFactory $factory) => $factory->mintListView($this, $name, $items));
+    }
+
+    public function tree(string $name, array $columns, array $nodes = []): TKTree
+    {
+        return $this->create($name, false, fn (PrimitiveFactory $factory) => $factory->mintTree($this, $name, $columns, $nodes));
+    }
+
+    public function video(string $name, ?string $file = null): TKVideo
+    {
+        return $this->create($name, false, fn (PrimitiveFactory $factory) => $factory->mintVideo($this, $name, $file));
+    }
+
+    public function webView(string $name): TKWebView
+    {
+        return $this->create($name, false, fn (PrimitiveFactory $factory) => $factory->mintWebView($this, $name));
+    }
+
+    public function column(string $name, int $spacing = 0, int $padding = 0): TKColumn
+    {
+        return $this->create($name, true, fn (PrimitiveFactory $factory) => $factory->mintColumn($this, $name, $spacing, $padding));
+    }
+
+    public function row(string $name, int $spacing = 0, int $padding = 0): TKRow
+    {
+        return $this->create($name, true, fn (PrimitiveFactory $factory) => $factory->mintRow($this, $name, $spacing, $padding));
+    }
+
+    public function grid(string $name, int $spacing = 0, int $padding = 0): TKGrid
+    {
+        return $this->create($name, true, fn (PrimitiveFactory $factory) => $factory->mintGrid($this, $name, $spacing, $padding));
+    }
+
+    public function fixed(string $name): TKFixed
+    {
+        return $this->create($name, true, fn (PrimitiveFactory $factory) => $factory->mintFixed($this, $name));
+    }
+
+    public function scrollView(string $name): TKScrollView
+    {
+        return $this->create($name, false, fn (PrimitiveFactory $factory) => $factory->mintScrollView($this, $name));
+    }
+
+    public function split(string $name, bool $horizontal = true): TKSplitView
+    {
+        return $this->create($name, true, fn (PrimitiveFactory $factory) => $factory->mintSplit($this, $name, $horizontal));
+    }
+
+    public function tabs(string $name): TKTabView
+    {
+        return $this->create($name, false, fn (PrimitiveFactory $factory) => $factory->mintTabs($this, $name));
+    }
+
+    public function view(string $path): ?Child
+    {
+        [$head, $rest] = array_pad(explode('.', $path, 2), 2, null);
+        $child = $this->children[$head] ?? null;
+
+        if (is_null($rest) || is_null($child)) {
+            return $child;
+        }
+
+        return $child instanceof PrimitiveContract ? $child->view($rest) : null;
+    }
+
+    public function children(): array
+    {
+        return array_values($this->children);
+    }
+
+    /**
+     * The placement the child being minted takes: the pending cell/frame, else the
+     * container's default. For factories, which call it once per mint.
+     *
+     * @return Placement
+     * @throws ToolkitRuntimeException When the container needs at() and none is pending.
+     */
+    public function takePlacement(): Placement
+    {
+        $placement = $this->pending ?? $this->defaultPlacement();
+        $this->pending = null;
+
+        return $placement;
+    }
+
+    /**
+     * Drop a removed child. Called by the child's remove().
+     *
+     * @param Child $child
+     * @return void
+     * @throws ToolkitRuntimeException When $child is not a child here or is not removed.
+     */
+    public function forgetChild(Child $child): void
+    {
+        $this->own($child);
+        if (! $child->isRemoved()) {
+            throw new ToolkitRuntimeException("'{$child->path()}' is not removed; call its remove().");
+        }
+        unset($this->children[$child->name()]);
+    }
+
+    /**
+     * Terminal: remove every child (deepest first), then this container.
+     *
+     * @return void
+     * @throws ToolkitRuntimeException When already removed.
+     */
+    public function remove(): void
+    {
+        $this->live();
+        foreach (array_reverse($this->children) as $child) {
+            $child->remove();
+        }
+        parent::remove();
+    }
+
+    /**
+     * Admit, mint, adopt. A refusal or a factory exception clears the pending at().
+     *
+     * @template T of Child
+     * @param string $name
+     * @param bool $group whether the kind is a column, row, grid or fixed
+     * @param Closure(PrimitiveFactory): T $mint
+     * @return T
+     * @throws ToolkitRuntimeException
+     */
+    protected function create(string $name, bool $group, Closure $mint): Child
+    {
+        try {
+            $this->admit($name, $group);
+            $child = $mint($this->window->factory());
+        } finally {
+            $this->pending = null;
+        }
+
+        return $this->adopt($child);
+    }
+
+    /**
+     * Refuse before the factory mints: removed container, bad name, sibling collision,
+     * then the container kind's own rule.
+     *
+     * @param string $name
+     * @param bool $group
+     * @return void
+     * @throws ToolkitRuntimeException
+     */
+    protected function admit(string $name, bool $group): void
+    {
+        $this->live();
+        PrimitiveRegistry::guardName($name);
+        if (isset($this->children[$name])) {
+            throw new ToolkitRuntimeException("'{$this->path()}' already has a child named '{$name}'.");
+        }
+
+        $this->admitChild($name, $group, $this->pending ?? $this->defaultPlacement());
+    }
+
+    /**
+     * The container kind's own refusal (grid cell taken, scroll view already full, …).
+     *
+     * @param string $name
+     * @param bool $group
+     * @param Placement $placement the placement the child would take
+     * @return void
+     * @throws ToolkitRuntimeException
+     */
+    protected function admitChild(string $name, bool $group, Placement $placement): void {}
+
+    /**
+     * Register a freshly minted child and hand it to the engine.
+     *
+     * @template T of Child
+     * @param T $child
+     * @return T
+     */
+    protected function adopt(Child $child): Child
+    {
+        $this->window->registry()->register($child);
+        $this->children[$child->name()] = $child;
+        $this->insertNative($child);
+
+        return $child;
+    }
+
+    /**
+     * @param Child $child
+     * @return void
+     * @throws ToolkitRuntimeException When $child is not a child of this container.
+     */
+    protected function own(Child $child): void
+    {
+        if (($this->children[$child->name()] ?? null) !== $child) {
+            throw new ToolkitRuntimeException("'{$child->path()}' is not a child of '{$this->path()}'.");
+        }
+    }
+
+    /**
+     * Column, row and scroll view: Placement::next(); grid and fixed: throw, at() is required.
+     *
+     * @return Placement
+     * @throws ToolkitRuntimeException
+     */
+    abstract protected function defaultPlacement(): Placement;
+
+    /**
+     * Put the child's native into this container's native at its placement.
+     *
+     * @param Child $child
+     * @return void
+     */
+    abstract protected function insertNative(Child $child): void;
+}
