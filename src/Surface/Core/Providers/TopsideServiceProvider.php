@@ -2,8 +2,10 @@
 
 namespace Surface\Core\Providers;
 
+use Surface\Graphics\GraphicsServiceProvider;
 use Surface\Rendering\RenderingServiceProvider;
 use Surface\Toolkits\ToolkitsServiceProvider;
+use Surface\Typography\TypographyServiceProvider;
 use Surface\VelvetGE\VelvetGEServiceProvider;
 use Voyager\NutsAndBolts\AggregateServiceProvider;
 
@@ -12,6 +14,9 @@ class TopsideServiceProvider extends AggregateServiceProvider
     protected array $providers = [
         ToolkitsServiceProvider::class,
         RenderingServiceProvider::class,
+        TypographyServiceProvider::class,
+        GraphicsServiceProvider::class,
+        // after Rendering and Graphics: it registers its drivers and its engine with their managers
         VelvetGEServiceProvider::class,
     ];
 
@@ -39,6 +44,7 @@ class TopsideServiceProvider extends AggregateServiceProvider
         $dir = dirname(__DIR__, 4).'/config';
 
         return [
+            'graphics' => "{$dir}/graphics.php",
             'rendering' => "{$dir}/rendering.php",
             'toolkits' => "{$dir}/toolkits.php",
             'windows' => "{$dir}/windows.php",

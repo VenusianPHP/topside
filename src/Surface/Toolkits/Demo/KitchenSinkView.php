@@ -59,8 +59,12 @@ class KitchenSinkView implements Composition
         $this->input($page, $state, $refresh);
         $this->rows($page);
         $this->cards($page);
+        $this->search($page, $state, $refresh);
+        $this->tabs($page, $state);
+        $this->reveal($page, $state, $refresh);
+        $this->overlay($ui, $page, $state);
 
-        $page->label('later', 'Not on this page yet: image (it needs a file), search, tabs, reveal and overlay.', 'footnote');
+        $page->label('later', 'Not on this page: image, which needs an image file.', 'footnote');
     }
 
     /** A row: its children go left to right. A spacer takes the spare width, so the help button sits at the right edge. */
@@ -163,5 +167,77 @@ class KitchenSinkView implements Composition
         $two = $row->card('two', 'A card with a link');
         $two->label('body', 'Guides and the package reference:', 'body');
         $two->link('site', 'venusian.projectsaturnstudios.com', 'https://venusian.projectsaturnstudios.com');
+    }
+
+    /** search(): a field whose list fills as the user types. A pick from the list becomes the value. */
+    private function search(ViewBuilder $page, KitchenSinkState $state, \Closure $refresh): void
+    {
+        $card = $page->card('search', 'Search');
+
+        $card->label('picked', fn () => $state->fruit === '' ? 'Type a fruit, pick one, press Return.' : "You chose {$state->fruit}.");
+
+        // $matches is given what was typed and answers the list to show under the field.
+        $fruits = ['Apple', 'Apricot', 'Banana', 'Blackberry', 'Cherry', 'Grape', 'Lemon', 'Mango', 'Orange', 'Peach', 'Pear', 'Plum'];
+        $matches = fn (string $query): array => array_values(array_filter($fruits, fn (string $fruit): bool => stripos($fruit, $query) === 0));
+
+        // Like input(), it gives back a Field, and Return runs $onSubmit.
+        $field = $card->search('fruit', '', 'A fruit', $matches, function () use (&$field, $state, $refresh): void {
+            $state->fruit = trim($field->value());
+            $refresh();
+        });
+    }
+
+    /** tabs(): a toolbar over one page per item. It gives back a Closure that shows a page, as a click on its item does. */
+    private function tabs(ViewBuilder $page, KitchenSinkState $state): void
+    {
+        $card = $page->card('tabs', 'Tabs');
+
+        // A Closure item is a label read again on each refresh, like a live label.
+        $items = ['First', 'Second', fn () => "Clicks: {$state->clicks}"];
+
+        // $page builds each page into its own builder; $i is the page's index.
+        $show = $card->tabs('pages', $items, function (ViewBuilder $tab, int $i): void {
+            $tab->label('text', match ($i) {
+                0 => 'The first page. Click an item above to change pages.',
+                1 => 'The second page. Pages cross-fade when they change.',
+                default => "The third item's label counts the Buttons card's clicks.",
+            }, 'body');
+        });
+
+        // The returned Closure, from a handler: it moves the toolbar too.
+        $card->button('last', 'Show the last page', fn () => $show(count($items) - 1));
+    }
+
+    /** reveal(): a section that opens and closes smoothly. Its Closure is read now and on each refresh. */
+    private function reveal(ViewBuilder $page, KitchenSinkState $state, \Closure $refresh): void
+    {
+        $card = $page->card('reveal', 'Reveal');
+
+        $card->button('toggle', 'Open or close', function () use ($state, $refresh): void {
+            $state->open = ! $state->open;
+            $refresh();
+        });
+
+        // Closed at first. A refresh that changes what the Closure answers opens or closes it.
+        $more = $card->reveal('more', fn () => $state->open);
+        $more->label('text', 'This section opens and closes. What is under it moves with its height.', 'body');
+        $more->label('note', 'It is built once, closed: opening it shows what is already there.', 'footnote');
+    }
+
+    /** overlay(): a pane over the whole view. hide() on its builder closes it. */
+    private function overlay(ViewBuilder $ui, ViewBuilder $page, KitchenSinkState $state): void
+    {
+        $card = $page->card('overlay', 'Overlay');
+        $card->label('text', 'An overlay covers the page until it is closed.', 'body');
+
+        // Built when clicked, on the view's own builder ($ui). Names are unique in a container, so each
+        // overlay gets its own; a closed overlay is hidden and takes no space.
+        $card->button('open', 'Open an overlay', function () use ($ui, $state): void {
+            $state->overlays++;
+            $pane = $ui->overlay('notice-'.$state->overlays);
+            $pane->label('title', 'An overlay', 'title');
+            $pane->label('text', 'It sits over the page. Close it to go back.', 'body');
+            $pane->button('close', 'Close', fn () => $pane->hide());
+        });
     }
 }

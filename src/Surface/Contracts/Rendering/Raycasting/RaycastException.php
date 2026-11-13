@@ -41,6 +41,11 @@ class RaycastException extends RenderingException
         return new self("Wall {$wall} has no colour or texture in the scenery.");
     }
 
+    public static function outside(int $x, int $y, int $width, int $height, int $surfaceWidth, int $surfaceHeight): self
+    {
+        return new self("A view of {$width}x{$height} at ({$x}, {$y}) is not inside the {$surfaceWidth}x{$surfaceHeight} framebuffer.");
+    }
+
     public static function disabled(): self
     {
         return new self("Raycasting is off. Turn it on with 'enabled' => true under 'raycaster' in config/rendering.php, or RENDERING_RAYCASTER=true in the environment.");

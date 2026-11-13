@@ -2,6 +2,9 @@
 
 namespace Surface\Contracts\Rendering\Raycasting;
 
+use Surface\Contracts\Rendering\Framebuffers\Framebuffer;
+use Surface\Contracts\Rendering\Framebuffers\Region;
+
 /**
  * Rays through one Grid. A ray walks from cell to cell and stops at the first
  * wall it enters: the cell it starts in is not looked at, and a ray that
@@ -51,4 +54,13 @@ interface Raycaster
      * @throws RaycastException When a side is out of range, the reach is not above 0, or a ray hits a wall the scenery has no entry for.
      */
     public function view(Camera $camera, int $width, int $height, Scenery $scenery, float $reach = INF): string;
+
+    /**
+     * view()'s picture put on a framebuffer: over the whole surface, or over $where, which must be inside it.
+     * Each pixel replaces the one there, mapped into the framebuffer's format, and the framebuffer records the
+     * rect as written. A raycaster may draw straight into the framebuffer's memory when it can, the same pixels.
+     *
+     * @throws RaycastException As view(), and when $where is empty or not inside the framebuffer; nothing is then written.
+     */
+    public function paint(Camera $camera, Scenery $scenery, Framebuffer $target, ?Region $where = null, float $reach = INF): void;
 }

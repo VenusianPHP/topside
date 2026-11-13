@@ -3,6 +3,7 @@
 namespace Surface\Contracts\Graphics;
 
 use Surface\Contracts\Core\TopsideException;
+use Surface\Contracts\Rendering\Painting\Painter;
 
 class DrawingException extends TopsideException
 {
@@ -63,11 +64,17 @@ class DrawingException extends TopsideException
 
     public static function pastLimit(string $what, float $value): self
     {
-        return new self("{$what} {$value} is past ±".RenderingEngine::LIMIT.' once transformed.');
+        return new self("{$what} {$value} is past ±".Painter::LIMIT.' once transformed.');
     }
 
     public static function notAPoint(int $position): self
     {
         return new self("Point {$position} is not [x, y].");
+    }
+
+    /** An engine was asked for a part it does not have. */
+    public static function notOffered(string $engine, Part $part, string $why = ''): self
+    {
+        return new self("The {$engine} engine has no {$part->value}.".($why === '' ? '' : ' '.$why));
     }
 }

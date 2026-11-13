@@ -86,11 +86,11 @@ interface PixelStore
     public function pointer(): int;
 
     /**
-     * What a rasterizer paints straight into, as paintSpans() would: the store's own native buffer
-     * (ext-fb's FbBuffer), or a PixelMemory that says where the bytes are, which a rasterizer of
-     * any library can take. Null when spans must go through paintSpans(). See Framebuffer::spanSink().
+     * Where the bytes are in native memory, so that a rasterizer or raycaster of any library can
+     * draw into them in place. Every store that keeps its pixels outside PHP answers it; null when
+     * PHP owns the bytes. See Framebuffer::memory().
      */
-    public function spanSink(): ?object;
+    public function memory(): ?PixelMemory;
 
     public function granularity(): DamageGranularity;
 }

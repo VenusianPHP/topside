@@ -3,13 +3,14 @@
 namespace Surface\VelvetGE\Drivers\Rasterization;
 
 use RasterScanner;
-use Surface\VelvetGE\Rasterize\CLandRasterizer;
-use Surface\Contracts\Rendering\Rasterization\RasterizeException;
 use Surface\Contracts\Rendering\Framebuffers\Region;
 use Surface\Contracts\Rendering\Rasterization\Edges;
-use Surface\Rendering\Rasterization\RasterizationDriver;
+use Surface\Contracts\Rendering\Rasterization\RasterizeException;
+use Surface\Contracts\Rendering\Rasterization\Scanner;
+use Surface\VelvetGE\Rasterize\CLandScanner;
 
-class CLandRasterizationDriver extends RasterizationDriver
+/** The scanning in C, through ext-rasterize. */
+class CLandRasterizationDriver extends ScannerRasterizationDriver
 {
     /** @throws RasterizeException When ext-rasterize is not loaded in this PHP. */
     public function __construct()
@@ -24,8 +25,8 @@ class CLandRasterizationDriver extends RasterizationDriver
         return 'ext';
     }
 
-    public function rasterizer(Region $clip, Edges $edges): CLandRasterizer
+    protected function scanner(Region $clip, Edges $edges): Scanner
     {
-        return new CLandRasterizer($clip, $edges);
+        return new CLandScanner($clip, $edges);
     }
 }

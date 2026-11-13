@@ -7,6 +7,7 @@ use Surface\Contracts\Rendering\Framebuffers\Filter;
 use Surface\Contracts\Rendering\Framebuffers\FormatSpec;
 use Surface\Contracts\Rendering\Framebuffers\Framebuffer;
 use Surface\Contracts\Rendering\Framebuffers\FramebufferException;
+use Surface\Contracts\Rendering\Framebuffers\PixelMemory;
 use Surface\Contracts\Rendering\Framebuffers\CompletePixelStore;
 use Surface\Contracts\Rendering\Framebuffers\PixelStore;
 use Surface\Contracts\Rendering\Framebuffers\PixelStoreMinter;
@@ -125,13 +126,16 @@ abstract class StoreFramebuffer implements Framebuffer
         return $frame instanceof self ? $frame->store : throw new FramebufferException('Glass levels are frames of a store-backed framebuffer.');
     }
 
-    public function spanSink(): ?object
+    public function memory(): ?PixelMemory
     {
-        return $this->store->spanSink();
+        return $this->store->memory();
     }
 
-    public function paintedSpans(array $regions): static
+    public function drewInto(?Region ...$regions): static
     {
+        if (is_null($this->store->memory())) {
+            throw new FramebufferException('This framebuffer has no memory to have been written into.');
+        }
         foreach ($regions as $region) {
             $this->wrote($region);
         }

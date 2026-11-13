@@ -9,9 +9,10 @@ use Surface\Rendering\Rasterization\RasterizationDriver;
 use Surface\VelvetGE\Rasterize\ScannerRasterizer;
 
 /**
- * A rasterization driver that only says how its scanner is made. Strokes, joins, validation and
- * every op the scanner leaves out come from VelvetGE. A library binding is this class and a
- * scanner:
+ * A rasterization driver of VelvetGE: it says how its scanner is made, and that is all. Strokes,
+ * joins, validation, every op the scanner leaves out and the way a batch reaches a framebuffer
+ * come from VelvetGE. VelvetGE's own two drivers are this class and a scanner, and so is a
+ * library binding:
  *
  *     class PlutoVGRasterizationDriver extends ScannerRasterizationDriver
  *     {
@@ -26,7 +27,7 @@ use Surface\VelvetGE\Rasterize\ScannerRasterizer;
  *
  *         protected function scanner(Region $clip, Edges $edges): Scanner
  *         {
- *             return new PlutoVGScanner($clip, $edges);    // Scanner alone is enough; add tiers it can do
+ *             return new PlutoVGScanner($clip, $edges);
  *         }
  *     }
  *
@@ -34,8 +35,10 @@ use Surface\VelvetGE\Rasterize\ScannerRasterizer;
  *
  *     Rasterization::manager()->extend('plutovg', fn () => new PlutoVGRasterizationDriver());
  *
- * A scanner that also implements DirectScanner paints a batch straight into a framebuffer whose
- * spanSink() it knows (its sister store's native image, say), with no span bytes in between.
+ * A scanner is Scanner (paths) and whichever of these it can also do, each an interface:
+ * ShapeScanner, PixelScanner and BatchScanner for more ops; DirectScanner to blend straight into
+ * a pixel store's memory; MaskScanner to answer coverage as bytes when it has no span list.
+ * VelvetGE's DirectDraw picks the way for each framebuffer, so a scanner never names a store.
  *
  * A scanner may also answer VelvetGE's own for a clip or edges the library cannot do (hard edges,
  * say): return new PHPLandScanner($clip, $edges) from scanner() for those.

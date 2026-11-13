@@ -9,11 +9,13 @@ use Surface\Contracts\Rendering\Framebuffers\Region;
  * Rasterizer, answered as span bytes (see
  * Surface\Contracts\Rendering\Framebuffers\Spans) inside the clip.
  *
- * This is the core every scanner has: filling a path. Three more tiers are
- * optional, each its own interface: ShapeScanner (curves by formula),
+ * This is the core every scanner has: filling a path. More is optional, each
+ * its own interface. Three add ops: ShapeScanner (curves by formula),
  * PixelScanner (work defined pixel by pixel) and BatchScanner (many ops in
- * one call). A scanner that leaves a tier out is completed with the engine's
- * own, so a rasterizer always has every op.
+ * one call); a scanner that leaves one out is completed with the engine's
+ * own, so a rasterizer always has every op. Two add ways onto a framebuffer:
+ * DirectScanner (blend straight into a pixel store's memory) and MaskScanner
+ * (coverage as bytes, for a library with no span list).
  *
  * The engine's own scanners answer the same bytes for the same input. A library
  * binding answers its own coverage: the same shape, with its own arithmetic

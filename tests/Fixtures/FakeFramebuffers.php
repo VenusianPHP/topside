@@ -211,7 +211,7 @@ final class FakePixelStore implements CompletePixelStore
 
     public function pointer(): int { return 0; }
 
-    public function spanSink(): ?object { return null; }
+    public function memory(): ?PixelMemory { return null; }
 
     public function granularity(): DamageGranularity { return DamageGranularity::pixel($this->width, $this->height); }
 
@@ -330,7 +330,7 @@ class CoreOnlyPixelStore implements PixelStore
 
     public function pointer(): int { return 0; }
 
-    public function spanSink(): ?object { return null; }
+    public function memory(): ?PixelMemory { return null; }
 
     public function granularity(): DamageGranularity { return $this->held->granularity(); }
 }
@@ -348,13 +348,22 @@ final class PaintingOnlyPixelStore extends CoreOnlyPixelStore implements Paintin
 }
 
 /**
- * A library store that keeps its pixels in native memory and only says where they are: it offers a
- * PixelMemory, no buffer of its own. Core only, so painting through spans lends its pixels out and
+ * A library store that keeps its pixels in native memory and says where they are. Core only, so painting through spans lends its pixels out and
  * loads them back; $loads counts that. ext-fb's memory stands in for the library's.
  */
 final class MemoryPixelStore extends CoreOnlyPixelStore
 {
     public static int $loads = 0;
+
+    /** How many times pixels were handed to it as RGBA8 bytes, which drawing in place never does. */
+    public static int $blits = 0;
+
+    public function blitRgba8(string $rgba8, int $width, int $height, int $offset_x, int $offset_y, ?Region $clip = null): ?Region
+    {
+        self::$blits++;
+
+        return parent::blitRgba8($rgba8, $width, $height, $offset_x, $offset_y, $clip);
+    }
 
     protected function hold(FormatSpec $format, int $width, int $height): CompletePixelStore
     {
@@ -369,9 +378,10 @@ final class MemoryPixelStore extends CoreOnlyPixelStore
 
     public function pointer(): int { return $this->held->pointer(); }
 
-    public function spanSink(): ?object
+    /** Where the library keeps its pixels. Its own object owns them; nothing here names ext-fb to the caller. */
+    public function memory(): ?PixelMemory
     {
-        return new PixelMemory($this->pointer(), $this->width(), $this->height(), intdiv(strlen($this->bytes()), $this->height()), $this->format(), $this->held->spanSink());
+        return $this->held->memory();
     }
 }
 

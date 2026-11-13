@@ -3,6 +3,7 @@
 namespace Surface\NutsAndBolts;
 
 use InvalidArgumentException;
+use WeakMap;
 
 /**
  * A colour that changes with the position, to paint a fill or a stroke with instead of a Color: SVG's linearGradient
@@ -77,8 +78,21 @@ abstract readonly class Gradient
         return (int) floor($t * (self::STEPS - 1) + 0.5);
     }
 
-    /** @return string 256 colours of 4 bytes, RGBA, straight alpha. */
+    /**
+     * A gradient never changes, so its ramp is worked out once and kept for as long as the gradient lives. A readonly
+     * class cannot hold the copy itself: it is kept beside it, in a map that lets go of it with the gradient.
+     *
+     * @return string 256 colours of 4 bytes, RGBA, straight alpha.
+     */
     public function ramp(): string
+    {
+        static $kept = null;
+        $kept ??= new WeakMap();
+
+        return $kept[$this] ??= $this->bake();
+    }
+
+    private function bake(): string
     {
         $bytes = array_map(fn (array $stop): array => [(float) $stop[0], self::bytes($stop[1])], $this->stops);
         $out = '';

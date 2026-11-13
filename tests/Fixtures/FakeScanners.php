@@ -6,10 +6,12 @@ namespace Venusian\Topside\Tests\Fixtures;
 
 use Surface\Contracts\Rendering\Framebuffers\PixelMemory;
 use Surface\Contracts\Rendering\Framebuffers\Region;
+use Surface\Contracts\Rendering\Framebuffers\Spans;
 use Surface\Contracts\Rendering\Rasterization\BatchScanner;
 use Surface\Contracts\Rendering\Rasterization\DirectScanner;
 use Surface\Contracts\Rendering\Rasterization\Edges;
 use Surface\Contracts\Rendering\Rasterization\FillRule;
+use Surface\Contracts\Rendering\Rasterization\MaskScanner;
 use Surface\Contracts\Rendering\Rasterization\Scanner;
 use Surface\Contracts\Rendering\Rasterization\ShapeScanner;
 use Surface\VelvetGE\Drivers\Rasterization\ScannerRasterizationDriver;
@@ -87,41 +89,50 @@ class ShapesAndBatchScanner extends CoreOnlyScanner implements BatchScanner, Sha
 }
 
 /**
- * A library scanner that fills paths and paints them straight into an ext-fb buffer, and has no other tier:
- * a batch that mixes paths with other shapes is painted part direct, part through spans. Needs ext-rasterize
- * and ext-fb, which stand in for the library here.
+ * A library scanner that fills paths and blends them straight into a store's memory, and has no other tier:
+ * a batch that mixes paths with other shapes is painted part in place, part through spans. It takes any memory
+ * ext-rasterize can blend into; ext-rasterize stands in for the library's own drawing.
  */
 class DirectPathScanner extends CoreOnlyScanner implements DirectScanner
 {
-    public function paintsInto(object $sink): bool
+    public function drawsInto(PixelMemory $memory): bool
     {
-        return $sink instanceof \FbBuffer;
+        return class_exists(\RasterScanner::class) && (new CLandScanner($this->clip(), $this->edges()))->drawsInto($memory);
     }
 
-    public function fill(array $ops, array $colours, object $sink): array
+    public function fill(array $ops, array $colours, PixelMemory $memory): array
     {
         self::$asked[] = 'fill:'.count($ops);
 
-        return (new CLandScanner($this->clip(), $this->edges()))->fill($ops, $colours, $sink);
+        return (new CLandScanner($this->clip(), $this->edges()))->fill($ops, $colours, $memory);
     }
 }
 
 /**
- * A library scanner that knows nothing of ext-fb's buffer: it paints paths into any store's memory, given where
- * the bytes are. ext-rasterize over that memory stands in for the library's own drawing.
+ * A library scanner with no span list of its own to give cheaply: it answers a path's coverage as a block of
+ * bytes, as a library that draws into a surface does.
  */
-class MemoryPathScanner extends CoreOnlyScanner implements DirectScanner
+class MaskPathScanner extends CoreOnlyScanner implements MaskScanner
 {
-    public function paintsInto(object $sink): bool
+    public function mask(array $op): ?array
     {
-        return $sink instanceof PixelMemory;
-    }
+        self::$asked[] = 'mask';
+        $spans = Spans::unpack($this->inner->path($op[1], $op[2] === 1 ? FillRule::EVEN_ODD : FillRule::NON_ZERO));
+        if ($spans === []) {
+            return null;
+        }
 
-    public function fill(array $ops, array $colours, object $sink): array
-    {
-        self::$asked[] = 'fill:'.count($ops);
+        [$left, $top, $right, $bottom] = [PHP_INT_MAX, PHP_INT_MAX, 0, 0];
+        foreach ($spans as [$y, $x, $length]) {
+            [$left, $top, $right, $bottom] = [min($left, $x), min($top, $y), max($right, $x + $length), max($bottom, $y + 1)];
+        }
+        $width = $right - $left;
+        $coverage = str_repeat("\0", $width * ($bottom - $top));
+        foreach ($spans as [$y, $x, $length, $value]) {
+            $coverage = substr_replace($coverage, str_repeat(chr($value), $length), ($y - $top) * $width + $x - $left, $length);
+        }
 
-        return (new CLandScanner($this->clip(), $this->edges()))->fill($ops, $colours, $sink);
+        return [$coverage, $width, $left, $top];
     }
 }
 

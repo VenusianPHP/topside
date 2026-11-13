@@ -2,12 +2,12 @@
 
 namespace Surface\Toolkits\Drivers;
 
-use ArrayObject;
 use ReflectionException;
 use Surface\Toolkits\Toolkits;
 use Surface\Contracts\Toolkits\Composition;
 use Surface\Toolkits\Factory\ToolkitUIBuilder;
 use Surface\Toolkits\Support\Live;
+use Surface\Toolkits\Support\Reveals;
 use Surface\Contracts\Toolkits\Primitives\TKButton;
 use Surface\Contracts\Toolkits\Primitives\TKColumn;
 use Surface\Contracts\Toolkits\ToolkitWindow;
@@ -33,12 +33,12 @@ class ToolkitTreeDriver extends ContentTreeDriver
 
 
     /** Widgets the builders made hidden, waiting for the window to show. */
-    protected ArrayObject $reveals;
+    protected Reveals $reveals;
 
     public function __construct(
         protected TheServiceContainer $app
     ) {
-        $this->reveals = new ArrayObject();
+        $this->reveals = new Reveals();
     }
 
     /**
@@ -84,7 +84,8 @@ class ToolkitTreeDriver extends ContentTreeDriver
         $content = $root->column('content', 12, 24);
         $content->fill();
 
-        $view->compose(new ToolkitUIBuilder($content), $args);
+        // The view's root holds its content, and (while one is open) an overlay in the content's place.
+        $view->compose(new ToolkitUIBuilder($content, $root, $content, null, $this->reveals), $args);
 
         $this->views[$view::class] = $root;
     }
@@ -97,14 +98,11 @@ class ToolkitTreeDriver extends ContentTreeDriver
     }
 
     /**
-     * Make every waiting widget visible: each plays its appear transition.
+     * Make every waiting widget visible: each plays its appear transition. Widgets built after
+     * this show at once.
      */
     protected function reveal(): void
     {
-        foreach ($this->reveals as $widget) {
-            $widget->setVisible(true);
-        }
-
-        $this->reveals->exchangeArray([]);
+        $this->reveals->show();
     }
 }

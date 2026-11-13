@@ -13,4 +13,13 @@ class KitchenSinkState
 
     /** The name last submitted in the input. */
     public string $name = '';
+
+    /** The fruit last submitted in the search field. */
+    public string $fruit = '';
+
+    /** Whether the reveal section is open. */
+    public bool $open = false;
+
+    /** How many overlays have been opened: each gets its own name. */
+    public int $overlays = 0;
 }

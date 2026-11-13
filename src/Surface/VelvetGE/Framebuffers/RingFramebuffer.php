@@ -7,6 +7,7 @@ use Surface\Contracts\Rendering\Framebuffers\Filter;
 use Surface\Contracts\Rendering\Framebuffers\FormatSpec;
 use Surface\Contracts\Rendering\Framebuffers\Framebuffer;
 use Surface\Contracts\Rendering\Framebuffers\FramebufferException;
+use Surface\Contracts\Rendering\Framebuffers\PixelMemory;
 use Surface\Contracts\Rendering\Framebuffers\PixelStoreMinter;
 use Surface\Contracts\Rendering\Framebuffers\Region;
 use Surface\Contracts\Rendering\Framebuffers\RingFramebuffer as RingFramebufferContract;
@@ -275,14 +276,15 @@ class RingFramebuffer implements RingFramebufferContract
         return $this;
     }
 
-    public function spanSink(): ?object
+    /** The frame being drawn. */
+    public function memory(): ?PixelMemory
     {
-        return $this->slots[$this->drawable()]->spanSink();
+        return $this->slots[$this->drawable()]->memory();
     }
 
-    public function paintedSpans(array $regions): static
+    public function drewInto(?Region ...$regions): static
     {
-        $this->slots[$this->drawable()]->paintedSpans($regions);
+        $this->slots[$this->drawable()]->drewInto(...$regions);
 
         return $this;
     }

@@ -47,7 +47,7 @@ it('names itself and keeps its grid', function (RaycastDriver $driver): void {
     $grid = raycastRoom();
     $caster = $driver->caster($grid);
 
-    expect($caster->driver())->toBe($driver->driver())->toBeIn(['native', 'ext'])
+    expect($caster->driver())->toBe($driver->driver())->not->toBe('')
         ->and($caster->grid())->toBe($grid);
 })->with('raycast drivers');
 

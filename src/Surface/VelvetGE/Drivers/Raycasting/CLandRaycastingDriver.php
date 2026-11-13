@@ -5,12 +5,11 @@ namespace Surface\VelvetGE\Drivers\Raycasting;
 use RaycastGrid;
 use Surface\Contracts\Rendering\Raycasting\Grid;
 use Surface\Contracts\Rendering\Raycasting\RaycastException;
-use Surface\Contracts\Rendering\Raycasting\Raycaster;
-use Surface\Rendering\Raycasting\RaycastingDriver;
-use Surface\VelvetGE\Raycasting\CLandRaycaster;
+use Surface\Contracts\Rendering\Raycasting\Marcher;
+use Surface\VelvetGE\Raycasting\CLandMarcher;
 
 /** The casting in C, through ext-raycast. */
-class CLandRaycastingDriver extends RaycastingDriver
+class CLandRaycastingDriver extends MarcherRaycastingDriver
 {
     /** The oldest ext-raycast this driver runs on. */
     public const string MINIMUM = '0.11.0';
@@ -18,7 +17,8 @@ class CLandRaycastingDriver extends RaycastingDriver
     /** Whether this PHP has an ext-raycast of at least MINIMUM loaded. */
     public static function available(): bool
     {
-        return class_exists(RaycastGrid::class, false) && version_compare((string) phpversion('raycast'), self::MINIMUM, '>=');
+        return class_exists(RaycastGrid::class, false) && version_compare((string) phpversion('raycast'), self::MINIMUM, '>=')
+            && method_exists(RaycastGrid::class, 'viewInto');    // a 0.11.0 built before viewInto() is too old, with the same version
     }
 
     /** @throws RaycastException When this PHP has no ext-raycast, or one older than MINIMUM. */
@@ -34,9 +34,8 @@ class CLandRaycastingDriver extends RaycastingDriver
         return 'ext';
     }
 
-    /** Typed as the contract's: a narrower return would load the ext raycaster's class with the driver. */
-    public function caster(Grid $grid): Raycaster
+    protected function marcher(Grid $grid): Marcher
     {
-        return new CLandRaycaster($grid);
+        return new CLandMarcher($grid);
     }
 }

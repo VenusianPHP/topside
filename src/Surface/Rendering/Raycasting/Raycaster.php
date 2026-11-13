@@ -2,6 +2,8 @@
 
 namespace Surface\Rendering\Raycasting;
 
+use Surface\Contracts\Rendering\Framebuffers\Framebuffer;
+use Surface\Contracts\Rendering\Framebuffers\Region;
 use Surface\Contracts\Rendering\Raycasting\Camera;
 use Surface\Contracts\Rendering\Raycasting\Grid;
 use Surface\Contracts\Rendering\Raycasting\Hit;
@@ -56,6 +58,40 @@ abstract class Raycaster implements RaycasterContract
 
     public function view(Camera $camera, int $width, int $height, Scenery $scenery, float $reach = INF): string
     {
+        return $this->picture(...self::pictureOf($camera, $width, $height, $scenery, $reach));
+    }
+
+    /** Through view() and Framebuffer::writeRgba8(), which every framebuffer has. A driver that can draw in place overrides this. */
+    public function paint(Camera $camera, Scenery $scenery, Framebuffer $target, ?Region $where = null, float $reach = INF): void
+    {
+        $where = self::inside($target, $where);
+
+        $target->writeRgba8($this->view($camera, $where->width, $where->height, $scenery, $reach), $where->width, $where->height, $where->x, $where->y);
+    }
+
+    /**
+     * Where a view goes on a framebuffer: $where, or the whole surface.
+     *
+     * @throws RaycastException When $where is empty or not inside the framebuffer.
+     */
+    protected static function inside(Framebuffer $target, ?Region $where): Region
+    {
+        [$width, $height] = [$target->viewportWidth(), $target->viewportHeight()];
+        $where ??= Region::wholeSurface($width, $height);
+        if ($where->isEmpty() || $where->x < 0 || $where->y < 0 || $where->right() > $width || $where->bottom() > $height) {
+            throw RaycastException::outside($where->x, $where->y, $where->width, $where->height, $width, $height);
+        }
+
+        return $where;
+    }
+
+    /**
+     * A view's arguments, checked, as picture() takes them.
+     *
+     * @return array{float, float, float, float, float, float, int, int, array, int, int, int, float}
+     */
+    protected static function pictureOf(Camera $camera, int $width, int $height, Scenery $scenery, float $reach): array
+    {
         if ($width < 1 || $width > self::MAX_VIEW) {
             throw RaycastException::side("A view's width", $width, self::MAX_VIEW);
         }
@@ -64,10 +100,7 @@ abstract class Raycaster implements RaycasterContract
         }
         self::checkReach($reach);
 
-        return $this->picture(
-            $camera->x, $camera->y, ...$camera->direction(), ...$camera->plane(),
-            ...[$width, $height, $scenery->table(), $scenery->ceiling, $scenery->floor, $scenery->shade, $reach],
-        );
+        return [$camera->x, $camera->y, ...$camera->direction(), ...$camera->plane(), ...[$width, $height, $scenery->table(), $scenery->ceiling, $scenery->floor, $scenery->shade, $reach]];
     }
 
     /**

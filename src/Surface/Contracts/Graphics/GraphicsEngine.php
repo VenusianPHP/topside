@@ -2,245 +2,63 @@
 
 namespace Surface\Contracts\Graphics;
 
-use Surface\Contracts\Graphics\GraphicsException;
-use Surface\Contracts\Graphics\Effects\FilterChain;
-use Surface\Contracts\Graphics\Effects\Glass;
-use Surface\Contracts\Graphics\RenderingEngine;
-use Surface\Contracts\Graphics\StrokeStyle;
-use Surface\Contracts\Fonts\Font;
-use Surface\Contracts\Framebuffers\Filter;
-use Surface\Contracts\Framebuffers\Framebuffer;
-use Surface\Contracts\Framebuffers\Region;
-use Surface\Contracts\Rasterize\FillRule;
-use Surface\NutsAndBolts\Gradient;
-use Surface\NutsAndBolts\Path;
+use Surface\Contracts\Rendering\Framebuffers\Framebuffer;
+use Surface\Contracts\Rendering\Framebuffers\Region;
+use Surface\Contracts\Rendering\Painting\Painter;
+use Surface\Contracts\Rendering\Rasterization\Edges;
+use Surface\Contracts\Rendering\Rasterization\ShapeRasterizer;
+use Surface\Contracts\Rendering\Raycasting\Grid;
+use Surface\Contracts\Rendering\Raycasting\Raycaster;
 
+/**
+ * One graphics library, and the way in to it: 'velvet' on the CPU, 'metal', 'opengl', 'vulkan',
+ * 'sdl3' on a GPU. An engine hands out its own parts, each behind the contract the others share:
+ * a framebuffer, a rasterizer, a raycaster and a painter.
+ *
+ *     $engine = Engines::engine('metal');
+ *     $frame = $engine->framebuffer(640, 480);
+ *     $engine->rasterizer($frame->whole())->fillBatch($shapes, $frame);
+ *     $engine->painter(['framebuffer' => $frame])->frame(fn (Painter $g) => $g->clear($black));
+ *
+ * An engine's parts work with each other. A GPU engine's rasterizer and raycaster paint only into
+ * that engine's framebuffers; pixels from anywhere else reach one through the Framebuffer contract
+ * (writeRgba8(), paintImage()), which uploads. Velvet's parts are Rendering's drivers, so any of
+ * them works with any other.
+ *
+ * A part an engine does not have throws DrawingException naming it: ask offers() first.
+ */
 interface GraphicsEngine
 {
-    /** 2²⁴: the furthest a transformed coordinate may land. */
-    public const float LIMIT = 16777216.0;
-
     public function name(): string;
 
-    /** Where this engine draws: the one it was given, or the one its graphics library made. */
-    public function framebuffer(): Framebuffer;
-
-    public function width(): int;
-
-    public function height(): int;
-
-    /** Start a frame: identity transform, no clip, nothing recorded. */
-    public function begin(): static;
+    public function offers(Part $part): bool;
 
     /**
-     * Draw what was recorded into the framebuffer, and keep it for replay().
+     * A framebuffer this engine owns, $width by $height pixels.
      *
-     * A frame that begins with clear() is compared with the last one, command
-     * by command: only where they differ is drawn, and that is what damage()
-     * answers. The first frame, the one after invalidate(), and a paged
-     * framebuffer's frames are drawn and reported whole. A frame that does
-     * not begin with clear() draws over what is there: all of it is drawn,
-     * and the boxes of its commands are reported.
+     * @param  array<string, mixed>  $args  What the engine takes besides the size; each engine names its own.
+     *
+     * @throws DrawingException When the engine cannot make it, or does not take an argument.
      */
-    public function end(): static;
+    public function framebuffer(int $width, int $height, array $args = []): Framebuffer;
 
     /**
-     * Where the last ended frame changed the framebuffer, snapped to its
-     * damageGranularity(). Nothing for a frame identical to the one before.
+     * Paints shapes, cut to $clip, into this engine's framebuffers.
      *
-     * @return list<Region>
+     * @param  Edges|null  $edges  Null: the engine's default.
      */
-    public function damage(): array;
+    public function rasterizer(Region $clip, ?Edges $edges = null): ShapeRasterizer;
+
+    /** Casts rays through $grid, and paints its views into this engine's framebuffers. */
+    public function raycaster(Grid $grid): Raycaster;
 
     /**
-     * Draw the next frame whole. For when the framebuffer was written outside
-     * this engine, so the last frame no longer says what it holds.
+     * The drawing API over one of this engine's framebuffers: 'framebuffer' names one it made,
+     * 'width' and 'height' have it make one, 'output' draws for a canvas, a window or a display.
+     *
+     * @param  array<string, mixed>  $args  Each engine names what else it takes.
+     *
+     * @throws DrawingException When the painter cannot be built from $args.
      */
-    public function invalidate(): static;
-
-    /**
-     * Whether scroll() can move the framebuffer's pixels: it keeps its frame between frames.
-     */
-    public function canScroll(): bool;
-
-    /**
-     * Between frames, move the pixels of $region by ($dx, $dy) as Framebuffer::scroll() does,
-     * and add the region to the next end()'s damage. The next frame then draws what the scroll
-     * exposed and what changed; one that does not clear draws only that.
-     *
-     * @throws GraphicsException While canScroll() is false, or inside an open frame.
-     */
-    public function scroll(Region $region, int $dx, int $dy): static;
-
-    /**
-     * begin(), $draw($this), end(). If $draw throws, the frame is dropped: nothing is drawn and the last frame stays the one replay() repeats.
-     *
-     * @param  callable(RenderingEngine): void  $draw
-     */
-    public function frame(callable $draw): static;
-
-    /** Draw the last ended frame again, into the framebuffer as it stands now. */
-    public function replay(): static;
-
-    /** True between begin() and end(). */
-    public function drawing(): bool;
-
-    /** Remember the transform and the clip. */
-    public function push(): static;
-
-    /** Return to the transform and clip of the matching push(). */
-    public function pop(): static;
-
-    public function translate(float $x, float $y): static;
-
-    /** $y defaults to $x. */
-    public function scale(float $x, ?float $y = null): static;
-
-    /** Turns +x towards +y: clockwise on screen. */
-    public function rotate(float $radians): static;
-
-    /** Apply $matrix inside the current transform: what is drawn next goes through $matrix first. */
-    public function transform(Affine $matrix): static;
-
-    /** The current transform; identity outside a frame. */
-    public function matrix(): Affine;
-
-    /** Keep drawing inside $region, in framebuffer pixels whatever the transform; null lifts it. */
-    public function clip(?Region $region): static;
-
-    /** The clip as it applies: inside the surface, empty when nothing can be drawn. The whole surface when none is set. */
-    public function clipRegion(): Region;
-
-    /** Replace every pixel of the surface with $color, whatever the clip. */
-    public function clear(Color $color): static;
-
-    public function fillRect(float $x, float $y, float $width, float $height, Color $color): static;
-
-    public function strokeRect(float $x, float $y, float $width, float $height, Color $color, float $stroke = 1.0): static;
-
-    public function line(float $x0, float $y0, float $x1, float $y1, Color $color, float $stroke = 1.0): static;
-
-    /** @param list<array{float, float}> $points */
-    public function polyline(array $points, Color $color, float $stroke = 1.0, bool $closed = false): static;
-
-    public function fillTriangle(float $x0, float $y0, float $x1, float $y1, float $x2, float $y2, Color $color): static;
-
-    /** @param list<array{float, float}> $points */
-    public function fillPolygon(array $points, Color $color, FillRule $rule = FillRule::NON_ZERO): static;
-
-    /** @param list<list<array{float, float}>> $contours */
-    public function fillPath(array $contours, Color $color, FillRule $rule = FillRule::NON_ZERO): static;
-
-    /**
-     * Fill a path, curves included, with a colour or a gradient (given in the path's units, through the transform
-     * with it). The path goes through the transform and is flattened to straight pieces within a quarter pixel
-     * (Path::flatten), so every engine fills the same polygon; an open subpath is closed for the fill.
-     *
-     * @throws GraphicsException When a point passes the limit of the surface.
-     */
-    public function fill(Path $path, Color|Gradient $paint, FillRule $rule = FillRule::NON_ZERO): static;
-
-    /**
-     * Stroke a path as SVG, Canvas 2D and Skia do: the width, caps, joins, miter limit and dash of $style, in
-     * the units the path is given in. The path is flattened within a quarter pixel after the transform. A
-     * subpath that was only moved to draws nothing; one that was drawn but has no length draws a dot under a
-     * round cap and a square under a square one, as SVG 2 says.
-     *
-     * @throws GraphicsException Under a transform that does not scale x and y alike or that shears, or when a point passes the limit.
-     */
-    public function stroke(Path $path, Color|Gradient $paint, StrokeStyle $style): static;
-
-    public function fillEllipse(float $cx, float $cy, float $rx, float $ry, Color $color): static;
-
-    public function strokeEllipse(float $cx, float $cy, float $rx, float $ry, Color $color, float $stroke = 1.0): static;
-
-    /**
-     * A rect with per-corner radii [top-left, top-right, bottom-right, bottom-left], each held to
-     * 0..min(w, h)/2, and an optional border drawn inside the rect.
-     *
-     * @param  array{float, float, float, float}  $radii
-     */
-    public function roundRect(float $x, float $y, float $width, float $height, array $radii, Color $fill, ?Color $border = null, float $borderWidth = 0.0): static;
-
-    /**
-     * A soft shadow of a rounded rect, spread by blur and moved by ($dx, $dy), in the units the box is given in.
-     *
-     * @throws GraphicsException Under a turn, shear or uneven scale.
-     */
-    public function shadow(float $x, float $y, float $width, float $height, float $radius, float $blur, Color $color, float $dx = 0.0, float $dy = 0.0): static;
-
-    /**
-     * Draw another framebuffer's pixels with their top-left at (x, y), at the
-     * source's own size unless a width and height are given. The source is
-     * read when the frame is drawn, not when this is called.
-     *
-     * Three optional parts shape the image. $tint is multiplied into every source
-     * pixel, alpha included (a tint's alpha is an opacity that multiplies $opacity).
-     * $radii, [tl, tr, br, bl], cut the image to a rounded rect of the destination
-     * box, each radius held to 0..min(width, height) / 2 and the edge covered as
-     * roundRect()'s is; it needs an upright transform that scales x and y alike.
-     * $sourceRect, [x, y, w, h] in source pixels, draws only that part: its left
-     * and top edges land on the destination's, its right and bottom edges on the
-     * other side, and a negative w or h mirrors that axis (x or y is then the edge
-     * the destination's left or top shows). It must be non-empty and inside the
-     * source. The width and height default to the source rect's size. Smooth
-     * sampling still reads the pixels beside the rect and holds only at the edges
-     * of the whole source (as a texture atlas does).
-     *
-     * @param  float  $opacity  0..1
-     * @param  array{float, float, float, float}|null  $radii
-     * @param  array{float, float, float, float}|null  $sourceRect
-     *
-     * @throws GraphicsException When the radii or the source rect are malformed, or radii are given under a turn, shear or uneven scale.
-     */
-    public function image(Framebuffer $source, float $x, float $y, ?float $width = null, ?float $height = null, float $opacity = 1.0, Filter $filter = Filter::NEAREST, ?array $radii = null, ?Color $tint = null, ?array $sourceRect = null): static;
-
-    /**
-     * Draws a group of things apart, then lays it down in one piece: a layer, as SVG's group with opacity, CSS's
-     * stacking context or Skia's saveLayer. $draw is called with this engine and draws what the layer holds, under the
-     * transform in force (and any it adds); it is clipped to the box. The box is [$x, $y, $width, $height], under an
-     * upright transform that scales x and y alike.
-     *
-     * The group is drawn over nothing, then passes through $filter (a chain over the box's pixels: a blur of the group, noise
-     * made where there is none), then lands inside the box at $opacity (0..1) through the rounded box ($radii, as for
-     * roundRect()). With $backdrop, before the group lands the pixels already drawn under the box are read (the box and a
-     * margin of the chain's reach), put through the chain, and laid back inside the rounded box: CSS's backdrop-filter, Skia's
-     * saveLayer with a backdrop. The chains work in device pixels, and the group lands at the layer's opacity but the
-     * filtered backdrop does not fade with it.
-     *
-     * A frame that clears, drawn again, redraws a backdrop layer whole whenever anything under its read area changes.
-     * A framebuffer that holds one page of the surface cannot draw layers. An image or a displacement map inside a layer is
-     * read each frame, so such a layer is redrawn every frame.
-     *
-     * @param  callable(static): void  $draw
-     * @param  float  $opacity  0..1
-     * @param  array{float, float, float, float}|null  $radii  top-left, top-right, bottom-right, bottom-left
-     *
-     * @throws GraphicsException When the transform is not upright and even, the radii are malformed, or $draw leaves a push() open.
-     */
-    public function layer(float $x, float $y, float $width, float $height, callable $draw, float $opacity = 1.0, ?array $radii = null, ?FilterChain $filter = null, ?FilterChain $backdrop = null): static;
-
-    /**
-     * A glass pane: what is drawn under the rounded box so far, blurred and seen through it as $glass says (see Glass),
-     * at $opacity. Every engine blurs one shared backdrop region by a dual-filter pyramid and draws each pane as one
-     * pass over its own box. Needs an upright transform that scales x and y alike, as layer() does.
-     *
-     * @param  array{float, float, float, float}|null  $radii  [tl, tr, br, bl], held to 0..min(w, h)/2
-     */
-    public function glass(float $x, float $y, float $width, float $height, ?array $radii, Glass $glass, float $opacity = 1.0): static;
-
-    /**
-     * Text. ($x, $y) is the top-left of the first line box; "\n" starts a new
-     * line, "\r" is ignored. A bitmap face draws its own glyphs, codes outside
-     * it skipped, one glyph pixel to one unit. A TrueType face is shaped at its
-     * size in units. Both scale and turn through the transform.
-     */
-    public function text(string $text, float $x, float $y, Color $color, Font $font): static;
-
-    /**
-     * The ink box of a text, relative to its origin, before any transform.
-     *
-     * @return array{float, float, float, float} [x, y, width, height]; all zero when nothing inks.
-     */
-    public function textBounds(string $text, Font $font): array;
+    public function painter(array $args = []): Painter;
 }

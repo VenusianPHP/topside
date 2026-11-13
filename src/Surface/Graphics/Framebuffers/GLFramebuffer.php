@@ -3,16 +3,19 @@
 namespace Surface\Graphics\Framebuffers;
 
 use Closure;
-use Surface\Contracts\Framebuffers\DamageGranularity;
-use Surface\Contracts\Framebuffers\Filter;
-use Surface\Contracts\Framebuffers\FormatSpec;
-use Surface\Contracts\Framebuffers\Framebuffer;
-use Surface\Contracts\Framebuffers\FramebufferException;
-use Surface\Contracts\Framebuffers\GLFramebuffer as GLFramebufferContract;
-use Surface\Contracts\Framebuffers\Region;
-use Surface\Framebuffers\Native\NativeDirtyFramebuffer;
-use Surface\Framebuffers\Native\NativeFullFramebuffer;
-use Surface\Contracts\Drawing\Effects\FilterChain;
+use Surface\Contracts\Rendering\Framebuffers\DamageGranularity;
+use Surface\Contracts\Rendering\Framebuffers\Filter;
+use Surface\Contracts\Rendering\Framebuffers\FormatSpec;
+use Surface\Contracts\Rendering\Framebuffers\Framebuffer;
+use Surface\Contracts\Rendering\Framebuffers\FramebufferException;
+use Surface\Contracts\Graphics\Framebuffers\GLFramebuffer as GLFramebufferContract;
+use Surface\Contracts\Rendering\Framebuffers\PixelMemory;
+use Surface\Contracts\Rendering\Framebuffers\Region;
+use Surface\VelvetGE\Framebuffers\DamageRecord;
+use Surface\VelvetGE\Framebuffers\DirtyFramebuffer;
+use Surface\VelvetGE\Framebuffers\PixelMapper;
+use Surface\VelvetGE\Framebuffers\StoreFramebuffer;
+use Surface\Contracts\Graphics\Effects\FilterChain;
 use Surface\NutsAndBolts\Affine;
 use Surface\NutsAndBolts\GradientSpread;
 
@@ -28,16 +31,16 @@ use Surface\NutsAndBolts\GradientSpread;
  */
 abstract class GLFramebuffer implements GLFramebufferContract
 {
-    protected \Surface\Framebuffers\DamageRecord $record;
+    protected DamageRecord $record;
 
     /** The target's pixels on the CPU while they are current; null once the engine has drawn past them. */
-    private ?NativeDirtyFramebuffer $shadow = null;
+    private ?DirtyFramebuffer $shadow = null;
 
     private ?Framebuffer $staging = null;
 
     public function __construct()
     {
-        $this->record = new \Surface\Framebuffers\DamageRecord();
+        $this->record = new DamageRecord();
     }
 
     abstract public function width(): int;
@@ -116,7 +119,7 @@ abstract class GLFramebuffer implements GLFramebufferContract
         }
         $rgba = $this->readRgba8(new Region($x, $y, 1, 1));
 
-        return \Surface\Framebuffers\PixelMapper::for(FormatSpec::rgba8())->fromRgba8(ord($rgba[0]), ord($rgba[1]), ord($rgba[2]), ord($rgba[3]));
+        return PixelMapper::for(FormatSpec::rgba8())->fromRgba8(ord($rgba[0]), ord($rgba[1]), ord($rgba[2]), ord($rgba[3]));
     }
 
     public function setPixel(int $x, int $y, int $value): static
@@ -159,15 +162,15 @@ abstract class GLFramebuffer implements GLFramebufferContract
         return $this->through(fn (Framebuffer $copy) => $copy->paintGlass($geometry, $blur, $scale, $sharp, $originX, $originY, $look, $clip));
     }
 
-    /** None: its pixels are a copy of a GPU target, so spans go through paintSpans(). */
-    public function spanSink(): ?object
+    /** None: its pixels are a copy of a GPU target, so drawing goes through the painting calls. */
+    public function memory(): ?PixelMemory
     {
         return null;
     }
 
-    public function paintedSpans(array $regions): static
+    public function drewInto(?Region ...$regions): static
     {
-        throw new FramebufferException('This framebuffer has no span sink to have painted into.');
+        throw new FramebufferException('This framebuffer has no memory to have been written into.');
     }
 
     public function paintMasks(array $masks, int $rgba8, Region $clip): static
@@ -182,7 +185,7 @@ abstract class GLFramebuffer implements GLFramebufferContract
 
     public function scratch(int $width, int $height): Framebuffer
     {
-        return new NativeFullFramebuffer(FormatSpec::rgba8(), $width, $height);
+        return Scratch::full($width, $height);
     }
 
     public function filter(FilterChain $chain, ?Region $region = null, bool $premultiplied = false): static
@@ -223,7 +226,7 @@ abstract class GLFramebuffer implements GLFramebufferContract
     public function scroll(Region $region, int $dx, int $dy): void
     {
         $clip = $region->intersect($this->whole());
-        $source = is_null($clip) ? null : \Surface\Framebuffers\StoreFramebuffer::scrollSource($clip, $dx, $dy);
+        $source = is_null($clip) ? null : StoreFramebuffer::scrollSource($clip, $dx, $dy);
         if (is_null($source)) {
             return;
         }
@@ -250,11 +253,11 @@ abstract class GLFramebuffer implements GLFramebufferContract
         }
         $rgba8 = $this->readRgba8($region);
         if ($spec->equals(FormatSpec::rgba8())) {
-            return \Surface\Framebuffers\StoreFramebuffer::answer($rgba8, $as_array);
+            return StoreFramebuffer::answer($rgba8, $as_array);
         }
 
         // Packed as a native framebuffer packs: the region alone, as its own surface.
-        $part = new NativeFullFramebuffer(FormatSpec::rgba8(), $region->width, $region->height);
+        $part = Scratch::full($region->width, $region->height);
         $part->writeRgba8($rgba8, $region->width, $region->height);
 
         return $part->flush($spec, $as_array);
@@ -294,7 +297,7 @@ abstract class GLFramebuffer implements GLFramebufferContract
     private function through(Closure $write): static
     {
         if (is_null($this->shadow)) {
-            $this->shadow = new NativeDirtyFramebuffer(FormatSpec::rgba8(), $this->width(), $this->height());
+            $this->shadow = Scratch::dirty($this->width(), $this->height());
             $this->shadow->writeRgba8($this->readRgba8($this->whole()), $this->width(), $this->height());
             $this->shadow->beginEpoch();
         }

@@ -13,6 +13,7 @@ use Surface\Contracts\Rendering\Framebuffers\PaintingPixelStore;
 use Surface\Contracts\Rendering\Framebuffers\PixelStore;
 use Surface\Contracts\Rendering\Framebuffers\PixelStoreMinter;
 use Surface\Contracts\Rendering\Framebuffers\Region;
+use Surface\Contracts\Rendering\Framebuffers\PixelMemory;
 use Surface\NutsAndBolts\GradientSpread;
 
 /**
@@ -124,9 +125,9 @@ final class CompletingPixelStore implements CompletePixelStore
         return $this->store->pointer();
     }
 
-    public function spanSink(): ?object
+    public function memory(): ?PixelMemory
     {
-        return $this->store->spanSink();
+        return $this->store->memory();
     }
 
     public function granularity(): DamageGranularity

@@ -7,6 +7,7 @@ use Surface\Contracts\Rendering\Framebuffers\Filter;
 use Surface\Contracts\Rendering\Framebuffers\FormatSpec;
 use Surface\Contracts\Rendering\Framebuffers\Framebuffer;
 use Surface\Contracts\Rendering\Framebuffers\FramebufferException;
+use Surface\Contracts\Rendering\Framebuffers\PixelMemory;
 use Surface\Contracts\Rendering\Framebuffers\PageAxis;
 use Surface\Contracts\Rendering\Framebuffers\PagedFramebuffer as PagedFramebufferContract;
 use Surface\Contracts\Rendering\Framebuffers\PixelFormat;
@@ -203,15 +204,15 @@ class PagedFramebuffer implements PagedFramebufferContract
         throw new FramebufferException('A framebuffer that holds one page of the surface cannot draw glass.');
     }
 
-    /** None: it holds one page at an offset, so spans go through paintSpans(). */
-    public function spanSink(): ?object
+    /** None: it holds one page at an offset, so drawing goes through the painting calls. */
+    public function memory(): ?PixelMemory
     {
         return null;
     }
 
-    public function paintedSpans(array $regions): static
+    public function drewInto(?Region ...$regions): static
     {
-        throw new FramebufferException('This framebuffer has no span sink to have painted into.');
+        throw new FramebufferException('This framebuffer has no memory to have been written into.');
     }
 
     public function paintMasks(array $masks, int $rgba8, Region $clip): static

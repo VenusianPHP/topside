@@ -5,6 +5,7 @@ namespace Surface\VelvetGE\Rasterize;
 use FbBuffer;
 use ValueError;
 use RasterScanner;
+use Surface\Contracts\Rendering\Framebuffers\FramebufferException;
 use Surface\Contracts\Rendering\Framebuffers\PixelMemory;
 use Surface\VelvetGE\Framebuffers\CLand\FbFormats;
 use Surface\Contracts\Rendering\Framebuffers\Region;
@@ -112,41 +113,43 @@ class CLandScanner implements CompleteScanner, DirectScanner
     }
 
     /**
-     * ext-fb's FbBuffer, when this ext-rasterize was built with ext-fb's span sink. Also any store's
-     * memory that ext-fb can stand over: a format ext-fb has, rows packed with no padding.
+     * Any memory ext-fb can blend into: a format ext-fb has, rows packed with no padding. That is
+     * ext-fb's own store, and a library's store that keeps its pixels that way.
      */
-    public function paintsInto(object $sink): bool
+    public function drawsInto(PixelMemory $memory): bool
     {
-        return RasterScanner::fills() && ($sink instanceof FbBuffer || ($sink instanceof PixelMemory && ! is_null(self::over($sink))));
+        return RasterScanner::fills() && ! is_null(self::buffer($memory));
     }
 
-    /** An FbBuffer over a store's own bytes, so they are blended exactly as ext-fb blends its own; null when ext-fb cannot. */
-    private static function over(PixelMemory $memory): ?FbBuffer
+    /** batch()'s ops painted in C through ext-fb's span sink, each at its colour, blended as ext-fb blends. */
+    public function fill(array $ops, array $colours, PixelMemory $memory): array
     {
+        try {
+            return array_map(fn (?array $r): ?Region => $r === null ? null : new Region(...$r), $this->scanner->fill($ops, $colours, self::buffer($memory)));
+        } catch (ValueError $e) {
+            throw new RasterizeException($e->getMessage(), previous: $e);
+        }
+    }
+
+    /** The FbBuffer whose bytes these are: the one that owns them, or one standing over another library's. Null when ext-fb cannot. */
+    private static function buffer(PixelMemory $memory): ?FbBuffer
+    {
+        $owner = $memory->owner;
+        if ($owner instanceof FbBuffer && $owner->pointer() === $memory->address) {
+            return $owner;
+        }
         if (! method_exists(FbBuffer::class, 'over')) {
-            return null;    // an ext-fb from before FbBuffer::over()
+            return null;    // an ext-fb from before FbBuffer::over(): it draws into its own buffers only
         }
         try {
             $format = FbFormats::from($memory->format);
-        } catch (\Throwable) {
-            return null;
+        } catch (FramebufferException) {
+            return null;    // a layout ext-fb does not have
         }
         if ($format->size($memory->width, $memory->height) !== $memory->stride * $memory->height) {
             return null;    // padded rows: ext-fb's are packed
         }
 
-        return FbBuffer::over($format, $memory->width, $memory->height, $memory->address, $memory->owner);
-    }
-
-    /** batch()'s ops painted through ext-fb's span sink, each at its colour: into an FbBuffer, or over a store's memory. */
-    public function fill(array $ops, array $colours, object $sink): array
-    {
-        try {
-            $buffer = $sink instanceof PixelMemory ? self::over($sink) : $sink;
-
-            return array_map(fn (?array $r): ?Region => $r === null ? null : new Region(...$r), $this->scanner->fill($ops, $colours, $buffer));
-        } catch (ValueError $e) {
-            throw new RasterizeException($e->getMessage(), previous: $e);
-        }
+        return FbBuffer::over($format, $memory->width, $memory->height, $memory->address, $owner);
     }
 }

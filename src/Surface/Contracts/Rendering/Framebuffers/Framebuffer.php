@@ -40,11 +40,11 @@ interface Framebuffer
     public function paintSpans(string $spans, int $rgba8): static;
 
     /**
-     * What a rasterizer may paint spans straight into, as paintSpans() would: the store's native buffer (ext-fb's
-     * FbBuffer) or a PixelMemory, or null when spans must go through paintSpans(). Whoever paints into it reports
-     * what it touched with paintedSpans().
+     * Where the pixels are in native memory, for drawing into them in place, or null when there is no such
+     * place: PHP holds the bytes, or the framebuffer holds one page of a larger surface. Whoever writes there
+     * reports the rects with drewInto().
      */
-    public function spanSink(): ?object;
+    public function memory(): ?PixelMemory;
 
     /**
      * Glass (drawing-path spec G4), on RGBA8 scratch frames of one driver: this frame, ceil(w / 2) x ceil(h / 2), as one
@@ -65,12 +65,12 @@ interface Framebuffer
     public function paintGlass(array $geometry, Framebuffer $blur, int $scale, ?Framebuffer $sharp, int $originX, int $originY, array $look, Region $clip): static;
 
     /**
-     * Records what spans painted into spanSink() touched, as paintSpans() records what it paints: one region a
-     * span list, null for one that painted nothing.
+     * Records rects written straight into memory(), as every painting call records what it paints. A null is a
+     * draw that touched nothing. Whoever draws into memory() calls this; nothing else knows the bytes changed.
      *
-     * @param  list<Region|null>  $regions
+     * @throws FramebufferException When the framebuffer has no memory() to have been written into.
      */
-    public function paintedSpans(array $regions): static;
+    public function drewInto(?Region ...$regions): static;
 
     /**
      * Paint coverage masks in one 0xRRGGBBAA colour, in list order, each cut to

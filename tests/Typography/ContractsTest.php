@@ -1,0 +1,175 @@
+<?php
+
+use Surface\Contracts\Core\TopsideException;
+use Surface\Contracts\Typography\FontEncoding;
+use Surface\Contracts\Typography\FontException;
+use Surface\Contracts\Typography\GFXFont;
+use Surface\Contracts\Typography\Glyph;
+use Surface\Contracts\Typography\YOffsetMode;
+
+it('Glyph is a readonly value', function () {
+    $g = new Glyph(12, 3, 4, 5, 1, -2);
+
+    expect($g->bitmap_offset)->toBe(12)->and($g->x_offset)->toBe(1)->and($g->y_offset)->toBe(-2)
+        ->and((new ReflectionClass($g))->isReadOnly())->toBeTrue();
+});
+
+it('an Adafruit face answers glyphs by code and null outside its range', function () {
+    $face = new class extends GFXFont {
+        protected int $first = 0x41;
+        protected int $last = 0x42;
+        protected int $y_advance = 10;
+        protected array $bitmaps = [0xFF];
+        protected array $glyphs = [[0, 3, 4, 5, 0, -4], [0, 2, 2, 3, 1, -2]];
+    };
+
+    expect($face->encoding())->toBe(FontEncoding::ADAFRUIT)
+        ->and($face->yOffsetMode())->toBe(YOffsetMode::RAW)
+        ->and($face->lineHeight())->toBe(10)
+        ->and($face->glyph(0x41))->toEqual(new Glyph(0, 3, 4, 5, 0, -4))
+        ->and($face->glyph(0x42)?->x_offset)->toBe(1)
+        ->and($face->glyph(0x40))->toBeNull()
+        ->and($face->glyph(0x43))->toBeNull()
+        ->and($face->hasBitmapData())->toBeTrue()
+        ->and($face->byte(0))->toBe(0xFF)
+        ->and($face->byte(99))->toBe(0);
+});
+
+it('detects LVGL from the reserved glyph 0 and applies the +1 shift', function () {
+    $face = new class extends GFXFont {
+        protected int $first = 0x41;
+        protected int $last = 0x41;
+        protected array $bitmaps = [0xF0];
+        protected array $glyphs = [[0, 0, 0, 0, 0, 0], [0, 2, 2, 3, 0, 1]];
+    };
+
+    expect($face->encoding())->toBe(FontEncoding::LVGL)
+        ->and($face->yOffsetMode())->toBe(YOffsetMode::LINE)
+        ->and($face->glyph(0x41))->toEqual(new Glyph(0, 2, 2, 3, 0, 1));
+});
+
+it('an LVGL face with a negative offset is RAW', function () {
+    $face = new class extends GFXFont {
+        protected int $first = 0x41;
+        protected int $last = 0x42;
+        protected array $bitmaps = [0xF0];
+        protected array $glyphs = [[0, 0, 0, 0, 0, 0], [0, 2, 2, 3, 0, 0], [0, 2, 2, 3, 0, -1]];
+    };
+
+    expect($face->encoding())->toBe(FontEncoding::LVGL)->and($face->yOffsetMode())->toBe(YOffsetMode::RAW);
+});
+
+it('an explicit encoding wins over detection', function () {
+    $face = new class extends GFXFont {
+        protected int $first = 0x41;
+        protected int $last = 0x41;
+        protected ?FontEncoding $encoding = FontEncoding::LVGL;
+        protected ?YOffsetMode $y_offset_mode = YOffsetMode::RAW;
+        protected array $bitmaps = [0xF0];
+        protected array $glyphs = [[0, 0, 0, 0, 0, 0], [0, 2, 2, 3, 0, 5]];
+    };
+
+    expect($face->encoding())->toBe(FontEncoding::LVGL)->and($face->yOffsetMode())->toBe(YOffsetMode::RAW);
+});
+
+it('a column-major face with data synthesises the classic 5x8 glyph', function () {
+    $face = new class extends GFXFont {
+        protected int $first = 0;
+        protected int $last = 255;
+        protected bool $column_major = true;
+        protected array $bitmaps = [0x01, 0x02, 0x03, 0x04, 0x05];
+    };
+    $empty = new class extends GFXFont {
+        protected bool $column_major = true;
+    };
+
+    expect($face->glyph(1))->toEqual(new Glyph(5, 5, 8, 6, 0, 0))
+        ->and($empty->glyph(0x41))->toBeNull()
+        ->and($empty->hasBitmapData())->toBeFalse();
+});
+
+it('capHeight is the tallest capital, falling back to the line height', function () {
+    $face = new class extends GFXFont {
+        protected int $first = 0x41;
+        protected int $last = 0x43;
+        protected int $y_advance = 9;
+        protected array $bitmaps = [0xFF];
+        protected array $glyphs = [[0, 2, 5, 3, 0, -5], [0, 2, 7, 3, 0, -7], [0, 2, 6, 3, 0, -6]];
+    };
+    $symbols = new class extends GFXFont {
+        protected int $first = 0x21;
+        protected int $last = 0x21;
+        protected int $y_advance = 9;
+        protected array $bitmaps = [0xFF];
+        protected array $glyphs = [[0, 1, 3, 2, 0, -3]];
+    };
+
+    expect($face->capHeight())->toBe(7)->and($symbols->capHeight())->toBe(9);
+});
+
+it('FontException is a Surface exception with three shapes', function () {
+    expect(FontException::unknown('nope'))->toBeInstanceOf(TopsideException::class)
+        ->and(FontException::unknown('nope')->getMessage())->toContain('nope')
+        ->and(FontException::notAFont('Foo')->getMessage())->toContain('Foo')
+        ->and(FontException::invalidHeader('no Bitmaps[]')->getMessage())->toBe('no Bitmaps[]');
+});
+
+function spyFontDriver(): Surface\Contracts\Typography\FontDriver
+{
+    return new class implements Surface\Contracts\Typography\FontDriver {
+        public array $calls = [];
+
+        public function driver(): string
+        {
+            return 'spy';
+        }
+
+        public function shape(string $pattern, float $pixelSize, string $utf8): Surface\Contracts\Typography\ShapedRun
+        {
+            $this->calls[] = ['shape', $pattern, $pixelSize, $utf8];
+
+            return new Surface\Contracts\Typography\ShapedRun($utf8, [], 0.0, 0.0, 0.0, 0.0);
+        }
+
+        public function mask(string $face, float $pixelSize, int $glyph, int $style): Surface\Contracts\Typography\GlyphMask
+        {
+            $this->calls[] = ['mask', $face, $pixelSize, $glyph, $style];
+
+            return new Surface\Contracts\Typography\GlyphMask('', 0, 0, 0, 0);
+        }
+
+        public function outline(string $face, float $pixelSize, int $glyph, int $style): array
+        {
+            return [];
+        }
+
+        public function close(): void {}
+    };
+}
+
+it('marks a GFXFont as a bitmap font', function () {
+    expect((new Surface\Typography\ClassicFont)->type())->toBe(Surface\Contracts\Typography\FontType::Bitmap);
+});
+
+it('keeps a TrueType font\'s pattern and size, and resizes with at()', function () {
+    $font = new Surface\Contracts\Typography\TrueTypeFont('sans-serif', 13, spyFontDriver());
+
+    expect($font->type())->toBe(Surface\Contracts\Typography\FontType::TrueType)
+        ->and($font->pattern)->toBe('sans-serif')
+        ->and($font->size)->toBe(13.0)
+        ->and($font->at(20)->size)->toBe(20.0)
+        ->and($font->at(20)->pattern)->toBe('sans-serif');
+});
+
+it('refuses a TrueType size that is not above zero', function (float $size) {
+    new Surface\Contracts\Typography\TrueTypeFont('sans-serif', $size, spyFontDriver());
+})->with([0.0, -1.0, NAN, INF])->throws(FontException::class);
+
+it('passes shape and mask through to its driver', function () {
+    $driver = spyFontDriver();
+    $font = new Surface\Contracts\Typography\TrueTypeFont('sans-serif', 13, $driver);
+    $font->shape(26.0, 'Hi');
+    $font->mask('a#0', 26.0, 5, 1);
+
+    expect($driver->calls)->toBe([['shape', 'sans-serif', 26.0, 'Hi'], ['mask', 'a#0', 26.0, 5, 1]]);
+});

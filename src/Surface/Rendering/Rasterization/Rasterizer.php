@@ -147,7 +147,7 @@ abstract class Rasterizer implements RasterizerContract
      * @param  list<array<int, mixed>>  $shapes
      * @return array{list<list<mixed>>, list<int>}
      */
-    protected function lower(array $shapes): array
+    public function lower(array $shapes): array
     {
         [$ops, $colours] = [[], []];
         foreach ($shapes as $i => $c) {

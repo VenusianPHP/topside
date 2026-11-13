@@ -12,6 +12,7 @@ use Surface\Contracts\Rendering\Framebuffers\FormatSpec;
 use Surface\Contracts\Rendering\Framebuffers\FramebufferException;
 use Surface\Contracts\Rendering\Framebuffers\PixelStore;
 use Surface\Contracts\Rendering\Framebuffers\Region;
+use Surface\Contracts\Rendering\Framebuffers\PixelMemory;
 use Surface\VelvetGE\Framebuffers\Layout;
 use Surface\VelvetGE\Framebuffers\PHPLand\PHPLandPixelStore;
 use ValueError;
@@ -196,16 +197,10 @@ final class CLandPixelStore implements CompletePixelStore
         return $store instanceof self ? $store->buffer : throw new FramebufferException('Glass levels and the target are stores of one driver.');
     }
 
-    /** The FbBuffer itself: the span sink ext-rasterize paints into (Framebuffer::spanSink()). */
-    public function buffer(): FbBuffer
+    /** Its FbBuffer's bytes, with the buffer as their owner: ext-fb packs rows with no padding. */
+    public function memory(): ?PixelMemory
     {
-        return $this->buffer;
-    }
-
-    /** Typed as the contract's: a narrower FbBuffer return would stop this class loading in a PHP without ext-fb. */
-    public function spanSink(): ?object
-    {
-        return $this->buffer;
+        return new PixelMemory($this->buffer->pointer(), $this->width, $this->height, intdiv($this->buffer->size(), $this->height), $this->format, $this->buffer);
     }
 
     public function paintSpans(string $spans, int $rgba8): ?Region

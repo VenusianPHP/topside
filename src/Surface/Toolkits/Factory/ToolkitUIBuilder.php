@@ -4,10 +4,14 @@ namespace Surface\Toolkits\Factory;
 
 use Closure;
 use Surface\Contracts\Toolkits\Field;
+use Surface\Contracts\Toolkits\Mail\Views\SelectionChanged;
+use Surface\Contracts\Toolkits\Mail\Views\TextChanged;
 use Surface\Contracts\Toolkits\Primitives\Align;
 use Surface\Contracts\Toolkits\Primitives\ImageScaling;
+use Surface\Contracts\Toolkits\Primitives\TKColumn;
 use Surface\Contracts\Toolkits\Primitives\TKPrimitiveGroup;
 use Surface\Contracts\Toolkits\Primitives\TKRow;
+use Surface\Contracts\Toolkits\Primitives\TKTransition;
 use Surface\Contracts\Toolkits\Styling\FontSpec;
 use Surface\Contracts\Toolkits\Styling\FontWeight;
 use Surface\Contracts\Toolkits\Styling\TextAlignment;
@@ -15,6 +19,8 @@ use Surface\Contracts\Toolkits\ToolkitRuntimeException;
 use Surface\Contracts\Toolkits\ViewBuilder;
 use Surface\NutsAndBolts\Color;
 use Surface\Toolkits\Support\Live;
+use Surface\Toolkits\Support\Reveals;
+use Surface\Toolkits\Support\Tween;
 use Surface\Toolkits\Support\ViewActions;
 
 /**
@@ -23,20 +29,35 @@ use Surface\Toolkits\Support\ViewActions;
 class ToolkitUIBuilder implements ViewBuilder
 {
     /**
-     * @param TKPrimitiveGroup $group where calls build
+     * @param TKPrimitiveGroup        $group   where calls build
+     * @param TKColumn|null           $root    the view's root column, where an overlay goes
+     * @param TKColumn|null           $content the view's content column, hidden while an overlay shows
+     * @param TKColumn|null           $frame   what hide() hides when that is not $group: an overlay's whole pane
+     * @param Reveals|null            $reveals where widgets built hidden wait for the window, so their appear
+     *                                         transitions play when they show
      */
     public function __construct(
         protected TKPrimitiveGroup $group,
+        protected ?TKColumn $root = null,
+        protected ?TKColumn $content = null,
+        protected ?TKColumn $frame = null,
+        protected ?Reveals $reveals = null,
     ) {}
+
+    /** A builder for $group in the same view: the same root, content and reveal list. */
+    protected function inside(TKPrimitiveGroup $group): self
+    {
+        return new self($group, $this->root, $this->content, null, $this->reveals);
+    }
 
     public function column(string $name, int $spacing = 0, int $padding = 0): ViewBuilder
     {
-        return new self($this->group->column($name, $spacing, $padding));
+        return $this->inside($this->group->column($name, $spacing, $padding));
     }
 
     public function row(string $name, int $spacing = 0, int $padding = 0): ViewBuilder
     {
-        return new self($this->group->row($name, $spacing, $padding));
+        return $this->inside($this->group->row($name, $spacing, $padding));
     }
 
     /**
@@ -71,7 +92,7 @@ class ToolkitUIBuilder implements ViewBuilder
         // named so that a view's own 'title' inside the card does not meet it
         $card->label('card-title', $title)->setFont(new FontSpec(15, FontWeight::BOLD));
 
-        return new self($card);
+        return $this->inside($card);
     }
 
     public function link(string $name, string $text, string $url): void
@@ -95,12 +116,20 @@ class ToolkitUIBuilder implements ViewBuilder
         $column = $scroll->column('content', 12);
         $column->align(Align::FILL, Align::START);
 
-        return new self($column);
+        return $this->inside($column);
     }
 
     public function hide(): void
     {
-        $this->group->setVisible(false);
+        if (is_null($this->frame)) {
+            $this->group->setVisible(false);
+
+            return;
+        }
+
+        // An overlay: it goes at once, and the content fades back into its place.
+        $this->frame->setVisible(false);
+        $this->content?->appear(TKTransition::FADE, 0.25)->setVisible(true);
     }
 
     /**
@@ -169,22 +198,151 @@ class ToolkitUIBuilder implements ViewBuilder
         $panel->setBackground(Color::rgba(128, 128, 128, 0.14));
         $panel->setCornerRadius(10);
 
-        return new self($panel);
+        return $this->inside($panel);
     }
 
+    /** A combo box. TK's combo box has no placeholder, so $placeholder is not shown. */
     public function search(string $name, string $value, string $placeholder, Closure $matches, Closure|array|string|null $onSubmit = null): Field
     {
-        $this->later(__FUNCTION__);
+        $box = $this->group->comboBox($name, $value);
+        $box->fill(true, false);
+
+        // Typing fills the list. An empty field, or one that already holds the only match, closes it.
+        app(ViewActions::class)->onChange($box->uuid(), function (object $mail) use ($box, $matches): void {
+            if (! $mail instanceof TextChanged) {
+                return;
+            }
+            $query = trim($mail->value);
+            $found = $query === '' ? [] : $matches($query);
+            $box->setCompletions($found === [$query] ? [] : $found);
+        });
+        if (! is_null($onSubmit)) {
+            app(ViewActions::class)->bind($box->uuid(), $onSubmit);
+        }
+
+        return new Field(fn (): string => $box->value(), fn () => $box->setValue(''));
     }
 
+    /**
+     * The toolkit's segmented control centred over one column per item. A user's choice and the
+     * returned Closure swap the pages with a cross-fade; the Closure also moves the control, which
+     * posts nothing.
+     */
     public function tabs(string $name, array $items, Closure $page): Closure
     {
-        $this->later(__FUNCTION__);
+        $wrap = $this->group->column($name, 16);
+        $wrap->fill();
+        $labels = array_map(fn (string|Closure $item): string => is_string($item) ? $item : (string) $item(), array_values($items));
+        $control = $wrap->segmentedControl('toolbar', $labels, 0);
+        $control->align(Align::CENTER, Align::START);
+        $stack = $wrap->column('pages');
+        $stack->fill();
+
+        $pages = [];
+        foreach (array_values($items) as $i => $item) {
+            is_string($item) || app(Live::class)->watch($item, fn (string $label) => $control->setSegment($i, $label));
+            $content = $stack->column('page-'.$i, 12);
+            $content->fill();
+            $content->setVisible($i === 0);
+            $pages[] = $content;
+            $page($this->inside($content), $i);
+        }
+
+        $shown = 0;
+        $swap = function (int $i) use (&$shown, $pages, $stack): void {
+            if ($i === $shown) {
+                return;
+            }
+            [$old, $new] = [$pages[$shown], $pages[$i]];
+            $shown = $i;
+            $key = 'tabs.'.$stack->uuid();
+            Tween::run($key, 0.12, fn (float $t) => $old->setOpacity(Tween::between(1.0, 0.0, $t)), function () use ($key, $old, $new): void {
+                $old->setVisible(false)->setOpacity(1.0);
+                $new->setOpacity(0.0)->setVisible(true);
+                Tween::run($key, 0.2, fn (float $t) => $new->setOpacity(Tween::between(0.0, 1.0, $t)));
+            });
+        };
+        app(ViewActions::class)->onChange($control->uuid(), function (object $mail) use ($swap): void {
+            $mail instanceof SelectionChanged && $swap($mail->index);
+        });
+
+        return function (int $i) use ($control, $swap): void {
+            $control->select($i);
+            $swap($i);
+        };
     }
 
+    /**
+     * Toolkits do not clip a column to a height, and minSize() only sets a floor. So closing fades
+     * the body out, holds its height with the floor, hides it, then lowers the floor to nothing.
+     * Opening raises the floor to the body's height, then shows the body and fades it in.
+     */
     public function reveal(string $name, Closure $shown): ViewBuilder
     {
-        $this->later(__FUNCTION__);
+        $outer = $this->group->column($name);
+        $outer->align(Align::FILL, Align::START);
+        $body = $outer->column('body', 12);
+        $body->align(Align::FILL, Align::START);
+
+        $open = (bool) app(Live::class)->watch($shown, fn (bool $open) => self::toggle($outer, $body, $open));
+        if (! $open) {
+            self::measureClosed($body);
+        }
+
+        return $this->inside($body);
+    }
+
+    /** @var array<string, int> the open height of each reveal's body, by uuid: what opening grows the floor to */
+    private static array $heights = [];
+
+    private static function toggle(TKColumn $outer, TKColumn $body, bool $open): void
+    {
+        $key = 'reveal.'.$outer->uuid();
+        app('event-loop')->forget("{$key}.measure");
+
+        if (! $open) {
+            $height = $body->isVisible() ? $body->size()[1] : 0;
+            $height > 0 && self::$heights[$body->uuid()] = $height;
+            $outer->minSize(0, $height);
+            $from = $body->opacity();
+            Tween::run($key, 0.2, fn (float $t) => $body->setOpacity(Tween::between($from, 0.0, $t)), function () use ($key, $outer, $body, $height): void {
+                $body->setVisible(false);
+                Tween::run($key, 0.3, fn (float $t) => $outer->minSize(0, (int) round(Tween::between($height, 0, $t))));
+            });
+
+            return;
+        }
+
+        $height = self::$heights[$body->uuid()] ?? 0;
+        $from = (int) ($outer->size()[1] ?? 0);
+        $fadeIn = function () use ($key, $outer, $body): void {
+            $body->setOpacity(0.0)->setVisible(true);
+            Tween::run($key, 0.25, fn (float $t) => $body->setOpacity(Tween::between(0.0, 1.0, $t)), fn () => $outer->minSize(0, 0));
+        };
+        // A body that was never measured opens at once and only fades. measureClosed() makes that rare.
+        $height > 0
+            ? Tween::run($key, 0.3, fn (float $t) => $outer->minSize(0, (int) round(Tween::between($from, $height, $t))), $fadeIn)
+            : $fadeIn();
+    }
+
+    /**
+     * A body built closed has never been laid out, so its open height is not known. It stays laid
+     * out but transparent until the toolkit gives it a height (its page may be hidden until shown),
+     * then it is hidden.
+     */
+    private static function measureClosed(TKColumn $body): void
+    {
+        $body->setOpacity(0.0);
+        // The same key toggle() forgets: the parent is the reveal's outer column.
+        $key = 'reveal.'.$body->parent()?->uuid().'.measure';
+        app('event-loop')->every(0.25, function () use ($body, $key): void {
+            $height = $body->size()[1];
+            if ($height > 0) {
+                self::$heights[$body->uuid()] = $height;
+                $body->setVisible(false);
+                app('event-loop')->forget($key);
+            }
+        }, $key);
     }
 
     /** A clickable row with a chevron at its right edge, and a separator above it when it is not its group's first. */
@@ -246,16 +404,43 @@ class ToolkitUIBuilder implements ViewBuilder
         app(ViewActions::class)->bind($button->uuid(), $onClick);
     }
 
+    /**
+     * Toolkits have no layers here, so the overlay takes the content's place while it shows: a
+     * column over the whole view with a dimmed background, and a card centred in it.
+     *
+     * @throws ToolkitRuntimeException When the builder was made without the view's root and content columns.
+     */
     public function overlay(string $name): ViewBuilder
     {
-        $this->later(__FUNCTION__);
-    }
+        if (is_null($this->root) || is_null($this->content)) {
+            throw new ToolkitRuntimeException("ViewBuilder::overlay('{$name}') needs the view's root and content columns: build the view through the tree driver.");
+        }
 
-    /**
-     * @throws ToolkitRuntimeException Always: this builder does not have the method yet.
-     */
-    protected function later(string $method): never
-    {
-        throw new ToolkitRuntimeException("ViewBuilder::{$method}() is not in Topside's ToolkitBuilder yet.");
+        $overlay = $this->root->column($name);
+        $overlay->fill();
+        $overlay->setBackground(Color::rgba(0, 0, 0, 0.35));
+
+        // Two columns that take the spare height, one above and one below, centre the card.
+        $overlay->column('above')->fill(false, true);
+
+        $card = $overlay->column('card', 12, 24);
+        $card->align(Align::CENTER);
+        $card->minSize(420, 0);
+        $card->setBackground(Color::rgba(128, 128, 128, 0.22));
+
+        $overlay->column('below')->fill(false, true);
+
+        $this->content->setVisible(false);
+
+        // Built hidden: a transition plays only on the change from hidden to visible. Reveals shows
+        // both when the window is presented, or at once if it already is.
+        $overlay->appear(TKTransition::FADE, 0.25);
+        $card->appear(TKTransition::SLIDE_UP, 0.3);
+        $overlay->setVisible(false);
+        $card->setVisible(false);
+        $this->reveals?->add($overlay);
+        $this->reveals?->add($card);
+
+        return new self($card, $this->root, $this->content, $overlay, $this->reveals);
     }
 }

@@ -2,20 +2,21 @@
 
 namespace Surface\VelvetGE\Drivers\Rasterization;
 
-use Surface\VelvetGE\Rasterize\PHPLandRasterizer;
 use Surface\Contracts\Rendering\Framebuffers\Region;
 use Surface\Contracts\Rendering\Rasterization\Edges;
-use Surface\Rendering\Rasterization\RasterizationDriver;
+use Surface\Contracts\Rendering\Rasterization\Scanner;
+use Surface\VelvetGE\Rasterize\PHPLandScanner;
 
-class PHPLandRasterizationDriver extends RasterizationDriver
+/** The scanning in PHP: runs anywhere. */
+class PHPLandRasterizationDriver extends ScannerRasterizationDriver
 {
     public function driver(): string
     {
         return 'native';
     }
 
-    public function rasterizer(Region $clip, Edges $edges): PHPLandRasterizer
+    protected function scanner(Region $clip, Edges $edges): Scanner
     {
-        return new PHPLandRasterizer($clip, $edges);
+        return new PHPLandScanner($clip, $edges);
     }
 }

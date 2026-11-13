@@ -9,6 +9,7 @@ use Surface\Contracts\Rendering\Framebuffers\FormatSpec;
 use Surface\Contracts\Rendering\Framebuffers\FramebufferException;
 use Surface\Contracts\Rendering\Framebuffers\PixelStore;
 use Surface\Contracts\Rendering\Framebuffers\Region;
+use Surface\Contracts\Rendering\Framebuffers\PixelMemory;
 use Surface\Contracts\Rendering\Framebuffers\ScanDirection;
 use Surface\Contracts\Rendering\Framebuffers\Spans;
 use Surface\Contracts\Graphics\Effects\FilterChain;
@@ -579,8 +580,8 @@ final class PHPLandPixelStore implements CompletePixelStore
         return 0;
     }
 
-    /** None: the bytes are a PHP string, so spans go through paintSpans(). */
-    public function spanSink(): ?object
+    /** None: the bytes are a PHP string, with no address to draw at. */
+    public function memory(): ?PixelMemory
     {
         return null;
     }

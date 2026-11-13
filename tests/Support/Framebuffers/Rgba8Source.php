@@ -57,7 +57,7 @@ final class Rgba8Source implements Framebuffer
 
     public function paintMasks(array $masks, int $rgba8, Region $clip): static { throw new LogicException('read-only source'); }
 
-    public function spanSink(): ?object { return null; }
+    public function memory(): ?\Surface\Contracts\Rendering\Framebuffers\PixelMemory { return null; }
 
     public function kawaseDown(Framebuffer $source, Region $region): static { throw new LogicException('read-only source'); }
 
@@ -65,7 +65,7 @@ final class Rgba8Source implements Framebuffer
 
     public function paintGlass(array $geometry, Framebuffer $blur, int $scale, ?Framebuffer $sharp, int $originX, int $originY, array $look, Region $clip): static { throw new LogicException('read-only source'); }
 
-    public function paintedSpans(array $regions): static { throw new LogicException('read-only source'); }
+    public function drewInto(?\Surface\Contracts\Rendering\Framebuffers\Region ...$regions): static { throw new LogicException('read-only source'); }
 
     public function paintImage(Framebuffer $source, Affine $placement, int $opacity = 255, Filter $filter = Filter::NEAREST, ?Region $clip = null, int $tint = 0xFFFFFFFF, ?array $window = null, ?string $coverage = null): static { throw new LogicException('read-only source'); }
 

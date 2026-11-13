@@ -5,13 +5,14 @@ declare(strict_types=1);
 use Surface\Contracts\Rendering\Framebuffers\Region;
 use Surface\Contracts\Rendering\Framebuffers\Spans;
 use Surface\Contracts\Rendering\Rasterization\Edges;
-use Surface\VelvetGE\Rasterize\PHPLandRasterizer;
+use Surface\Contracts\Rendering\Rasterization\Rasterizer;
+use Surface\VelvetGE\Drivers\Rasterization\PHPLandRasterizationDriver;
 
 /* Rounded rects in the native scanner: one interval a sample line, each corner cut by its own radius. */
 
-function roundRaster(Edges $edges, int $w = 32, int $h = 32, int $x = 0, int $y = 0): PHPLandRasterizer
+function roundRaster(Edges $edges, int $w = 32, int $h = 32, int $x = 0, int $y = 0): Rasterizer
 {
-    return new PHPLandRasterizer(new Region($x, $y, $w, $h), $edges);
+    return (new PHPLandRasterizationDriver)->rasterizer(new Region($x, $y, $w, $h), $edges);
 }
 
 /** @return array<string, int> "x,y" => coverage */

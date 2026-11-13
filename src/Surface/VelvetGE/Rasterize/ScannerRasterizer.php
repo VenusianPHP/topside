@@ -3,20 +3,20 @@
 namespace Surface\VelvetGE\Rasterize;
 
 use Closure;
+use Surface\Contracts\Rendering\Framebuffers\Framebuffer;
 use Surface\Contracts\Rendering\Framebuffers\Region;
 use Surface\Contracts\Rendering\Rasterization\CompleteScanner;
 use Surface\Contracts\Rendering\Rasterization\Edges;
 use Surface\Rendering\Rasterization\Rasterizer;
+use Surface\VelvetGE\DirectDraw;
 
 /**
- * A rasterizer over any scanner: the scanner a driver mints, completed with VelvetGE's own for
- * the tiers it leaves out. A DirectScanner paints its own ops straight into a target whose sink
- * it can paint into.
+ * VelvetGE's rasterizer: the one every rasterization driver mints, VelvetGE's own two and each
+ * library's. It works over the driver's scanner, completed with VelvetGE's for the tiers the
+ * scanner leaves out, and it paints a batch through DirectDraw.
  */
 class ScannerRasterizer extends Rasterizer
 {
-    use PaintsDirect;
-
     /**
      * @param string $driver the minting driver's name
      * @param Closure(Region, Edges): \Surface\Contracts\Rendering\Rasterization\Scanner $minter
@@ -38,5 +38,12 @@ class ScannerRasterizer extends Rasterizer
     protected function mint(Region $clip, Edges $edges): CompleteScanner
     {
         return CompletingScanner::over(($this->minter)($clip, $edges));
+    }
+
+    public function fillBatch(array $shapes, Framebuffer $target, bool $direct = true): void
+    {
+        [$ops, $colours] = $this->lower($shapes);
+
+        DirectDraw::shapes($this->scanner, $ops, $colours, $target, $direct);
     }
 }

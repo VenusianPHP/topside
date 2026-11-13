@@ -15,17 +15,10 @@ use Surface\Contracts\Rendering\Framebuffers\Region;
  * Every number is finite with magnitude at most LIMIT; anything else, or a
  * point that is not [x, y], throws RasterizeException.
  */
-interface Rasterizer
+interface Rasterizer extends ShapeRasterizer
 {
     /** 2²⁴: room for a shape's derived points (strokes, miters) under Scanner::LIMIT. */
     public const float LIMIT = 16777216.0;
-
-    /** The name of the driver that minted it. */
-    public function driver(): string;
-
-    public function edges(): Edges;
-
-    public function clip(): Region;
 
     public function fillRect(float $x, float $y, float $width, float $height): string;
 
@@ -79,17 +72,4 @@ interface Rasterizer
 
     /** A blurred rounded box: coverage 1 − smoothstep(−blur, blur, d) at each pixel centre. A blur ≤ 0 is the hard box. */
     public function shadow(float $x, float $y, float $width, float $height, float $radius, float $blur): string;
-
-    /**
-     * Many shapes painted in order, their geometry scanned in one call: each shape is a drawing command
-     * (Surface\Drawing\RenderingEngine) of kind path, polyline, ellipse, ring, roundrect, roundring or shadow, whose
-     * entries after its colour (the clip) are not read; the rasterizer's own clip cuts. Each shape paints what the
-     * method of its kind would answer, through $target->paintSpans() at its colour. A bad shape throws before any
-     * shape of the batch is painted. With $direct, a rasterizer whose scanner is a DirectScanner
-     * paints straight into $target->spanSink() when the scanner can paint into it, the same pixels and damage;
-     * without, or with any other scanner or sink, every shape goes through paintSpans().
-     *
-     * @param  list<array<int, mixed>>  $shapes
-     */
-    public function fillBatch(array $shapes, Framebuffer $target, bool $direct = true): void;
 }

@@ -6,7 +6,7 @@ use Surface\Contracts\Graphics\DrawingException;
 use Surface\NutsAndBolts\Color;
 
 /**
- * A glass pane's look, for RenderingEngine::glass(): what is under the pane, blurred by $blur and seen through it.
+ * A glass pane's look, for Painter::glass(): what is under the pane, blurred by $blur and seen through it.
  * Lengths are in the caller's units, scaled with the transform. Per pixel, from the rounded box's signed distance d
  * and outward normal n (every engine, the same steps; the drawing-path spec's G4):
  *
