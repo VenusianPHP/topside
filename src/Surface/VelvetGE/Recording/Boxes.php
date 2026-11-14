@@ -5,7 +5,7 @@ namespace Surface\VelvetGE\Recording;
 use Surface\Contracts\Graphics\Effects\Displace;
 use Surface\Contracts\Graphics\Effects\Glass;
 use Surface\Contracts\Rendering\Framebuffers\DamageGranularity;
-use Surface\Contracts\Rendering\Framebuffers\Framebuffer;
+use Surface\Contracts\Rendering\Painting\PaintTarget;
 use Surface\Contracts\Rendering\Framebuffers\Region;
 use Surface\NutsAndBolts\Affine;
 
@@ -64,7 +64,6 @@ final class Boxes
             'spans' => self::spansExtent($command[1]),
             'roundrect', 'roundring' => [$command[1] - 1.0, $command[2] - 1.0, $command[3] + 1.0, $command[4] + 1.0],
             'shadow' => [$command[1] - $command[6] - 1.0, $command[2] - $command[6] - 1.0, $command[3] + $command[6] + 1.0, $command[4] + $command[6] + 1.0],
-            'glyphs' => [$command[5]->x, $command[5]->y, $command[5]->right(), $command[5]->bottom()],
             'layer', 'glass' => [$command[1]->x, $command[1]->y, $command[1]->right(), $command[1]->bottom()],
         };
     }
@@ -249,9 +248,22 @@ final class Boxes
      */
     public static function scissor(array $commands, array $regions): array
     {
+        if ($regions === []) {
+            return [];
+        }
+        // What each command can write, worked out once: a command is drawn only into the regions
+        // it can reach, not into every region its clip covers. A frame cut into many regions
+        // would otherwise be drawn once whole for each of them.
+        $all = array_reduce($regions, fn (?Region $union, Region $region) => is_null($union) ? $region : $union->union($region));
+        $surface = new Region(0, 0, $all->x + $all->width, $all->y + $all->height);
+        $boxes = array_map(fn (array $command) => $command[0] === 'clear' || $command[0] === 'glass' ? $surface : self::box($command, $surface), $commands);
+
         $out = [];
         foreach ($regions as $region) {
-            foreach ($commands as $command) {
+            foreach ($commands as $i => $command) {
+                if (is_null($boxes[$i]) || is_null($boxes[$i]->intersect($region))) {
+                    continue;
+                }
                 if ($command[0] === 'clear') {
                     $area = isset($command[2]) ? $command[2]->intersect($region) : $region;
                     if (! is_null($area)) {
@@ -315,7 +327,7 @@ final class Boxes
      * @param  array{float, float, float, float}|null  $window  The part of the source that paints; null for all of it.
      * @return list<array{float, float}> An image source's corners (or the window's), placed.
      */
-    private static function placedCorners(Framebuffer $source, Affine $placement, ?array $window = null): array
+    private static function placedCorners(PaintTarget $source, Affine $placement, ?array $window = null): array
     {
         [$u0, $v0, $u1, $v1] = $window ?? [0.0, 0.0, (float) $source->viewportWidth(), (float) $source->viewportHeight()];
 

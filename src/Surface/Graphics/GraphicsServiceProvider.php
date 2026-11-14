@@ -9,7 +9,7 @@ class GraphicsServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
-        $this->app->registerSingleton('graphics', fn (FrameworkCore $app) => new GraphicsManager($app->make('config')));
-        $this->app->alias('graphics', GraphicsManager::class);
+        $this->app->registerSingleton('gfx', fn (FrameworkCore $app) => new GraphicsEngineDeviceManager($app));
+        $this->app->alias('gfx', GraphicsEngineDeviceManager::class);
     }
 }

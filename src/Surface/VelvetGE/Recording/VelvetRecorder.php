@@ -2,6 +2,7 @@
 
 namespace Surface\VelvetGE\Recording;
 
+use Surface\Contracts\Rendering\Painting\PaintTarget;
 use Surface\Contracts\Graphics\DrawingException;
 use Surface\Contracts\Graphics\Effects\FilterChain;
 use Surface\Contracts\Graphics\Effects\Glass;
@@ -15,16 +16,10 @@ use Surface\Contracts\Rendering\Rasterization\FillRule;
 use Surface\Contracts\Rendering\Recording\Queue;
 use Surface\Contracts\Rendering\Recording\Recorder;
 use Surface\Contracts\Rendering\Recording\ShapeQueue;
-use Surface\Contracts\Typography\Font;
-use Surface\Contracts\Typography\GFXFont;
-use Surface\Contracts\Typography\ShapedGlyph;
-use Surface\Contracts\Typography\TrueTypeFont;
 use Surface\NutsAndBolts\Affine;
 use Surface\NutsAndBolts\Color;
 use Surface\NutsAndBolts\Gradient;
 use Surface\NutsAndBolts\Path;
-use Surface\Rendering\Painters\Text\PlacedGlyph;
-use Surface\Rendering\Painters\Text\Typesetter;
 use Surface\Rendering\Rasterization\Stroker;
 
 /**
@@ -45,7 +40,6 @@ class VelvetRecorder implements Recorder
 
     private ?Region $surface = null;
 
-    private ?Typesetter $typesetter = null;
 
     public function __construct(private Queue $queue)
     {
@@ -330,7 +324,7 @@ class VelvetRecorder implements Recorder
         }
     }
 
-    public function image(Framebuffer $source, float $x, float $y, ?float $width = null, ?float $height = null, float $opacity = 1.0, Filter $filter = Filter::NEAREST, ?array $radii = null, ?Color $tint = null, ?array $sourceRect = null): void
+    public function image(PaintTarget $source, float $x, float $y, ?float $width = null, ?float $height = null, float $opacity = 1.0, Filter $filter = Filter::NEAREST, ?array $radii = null, ?Color $tint = null, ?array $sourceRect = null): void
     {
         $this->open('image');
         [$sx, $sy, $sw, $sh, $window] = self::sourceRect($sourceRect, (float) $source->viewportWidth(), (float) $source->viewportHeight());
@@ -532,32 +526,6 @@ class VelvetRecorder implements Recorder
         $this->queue->append(['glass', $area, [$x0, $y0, $x1, $y1, $device], $look, $glass->blur * $s, $shadow, $area]);
     }
 
-    public function text(string $text, float $x, float $y, Color $color, Font $font): void
-    {
-        $this->open('text');
-        self::finite(['x' => $x, 'y' => $y]);
-
-        match (true) {
-            $font instanceof GFXFont => $this->bitmapText($text, $x, $y, $color, $font),
-            $font instanceof TrueTypeFont => $this->trueTypeText($text, $x, $y, $color, $font),
-            default => throw DrawingException::unknownFont($font::class),
-        };
-    }
-
-    public function textBounds(string $text, Font $font): array
-    {
-        if ($font instanceof TrueTypeFont) {
-            $box = self::placeGlyphs($font, $font->size, $text, 0.0, 0.0)[1];
-
-            return is_null($box) ? [0.0, 0.0, 0.0, 0.0] : [(float) $box->x, (float) $box->y, (float) $box->width, (float) $box->height];
-        }
-        if (! $font instanceof GFXFont) {
-            throw DrawingException::unknownFont($font::class);
-        }
-
-        return array_map(floatval(...), ($this->typesetter ??= new Typesetter)->bounds($font, $text));
-    }
-
     public function drawn(Region $surface, DamageGranularity $granularity, array $also = []): array
     {
         return $this->queue->drawn($surface, $granularity, $also);
@@ -713,147 +681,6 @@ class VelvetRecorder implements Recorder
         }
 
         return $points;
-    }
-
-    private function bitmapText(string $text, float $x, float $y, Color $color, GFXFont $font): void
-    {
-        $typesetter = $this->typesetter ??= new Typesetter;
-        $placed_glyphs = $typesetter->layout($font, $text);
-
-        // Upright, at a whole-number scale, on whole pixels, in an opaque
-        // colour: every glyph pixel is a block of whole framebuffer pixels,
-        // so the spans are written here and nothing is rasterised.
-        $m = $this->queue->matrix();
-        [$left, $top] = $this->point($x, $y);
-        if ($m->b === 0.0 && $m->c === 0.0 && $m->a >= 1.0 && $m->d >= 1.0 && $color->alpha >= 1.0
-            && floor($m->a) === $m->a && floor($m->d) === $m->d && floor($left) === $left && floor($top) === $top) {
-            $this->blocks($placed_glyphs, $font, (int) $left, (int) $top, (int) $m->a, (int) $m->d, $color);
-
-            return;
-        }
-
-        // Otherwise every run of inked pixels in every glyph is one rectangle
-        // of one path, so a text is rasterised once, under the transform.
-        $contours = [];
-        foreach ($placed_glyphs as $placed) {
-            foreach ($typesetter->runs($font, $placed->glyph) as [$row, $first, $last]) {
-                $contours[] = $this->corners($x + $placed->x + $first, $y + $placed->y + $row, $last - $first + 1, 1);
-            }
-        }
-        if ($contours !== []) {
-            $this->path($contours, FillRule::NON_ZERO, $color);
-        }
-    }
-
-    /**
-     * @param  list<PlacedGlyph>  $placed_glyphs
-     */
-    private function blocks(array $placed_glyphs, GFXFont $font, int $left, int $top, int $sx, int $sy, Color $color): void
-    {
-        $clip = $this->queue->clipRegion();
-        $clip_right = $clip->x + $clip->width;
-        $clip_bottom = $clip->y + $clip->height;
-        /** @var array<int, list<string>> $rows spans by row, so the list runs top to bottom */
-        $rows = [];
-
-        foreach ($placed_glyphs as $placed) {
-            foreach ($this->typesetter->runs($font, $placed->glyph) as [$row, $first, $last]) {
-                $x0 = max($left + ($placed->x + $first) * $sx, $clip->x);
-                $x1 = min($left + ($placed->x + $last + 1) * $sx, $clip_right);
-                $y0 = max($top + ($placed->y + $row) * $sy, $clip->y);
-                $y1 = min($top + ($placed->y + $row + 1) * $sy, $clip_bottom);
-                if ($x1 <= $x0) {
-                    continue;
-                }
-                for ($line = $y0; $line < $y1; $line++) {
-                    $rows[$line][] = pack('vvvC', $line, $x0, $x1 - $x0, 255);
-                }
-            }
-        }
-
-        if ($rows !== []) {
-            ksort($rows);
-            $this->queue->append(['spans', implode('', array_merge(...$rows)), self::rgba($color), $clip]);
-        }
-    }
-
-    /**
-     * Upright at an even scale, one 'glyphs' command: the font shaped at its size times the scale, each
-     * glyph origin on a whole pixel. Otherwise one path of every glyph's outline, through the transform.
-     */
-    private function trueTypeText(string $text, float $x, float $y, Color $color, TrueTypeFont $font): void
-    {
-        $m = $this->queue->matrix();
-        if ($m->b !== 0.0 || $m->c !== 0.0 || $m->a !== $m->d || $m->a <= 0.0) {
-            $contours = [];
-            foreach (self::trueTypeLayout($font, $font->size, $text) as [$g, $baseline]) {
-                foreach ($font->outline($g->face, $font->size, $g->glyph, $g->style) as $contour) {
-                    $contours[] = $this->points(array_map(fn (array $p): array => [$x + $g->x + $p[0], $y + $baseline + $g->y + $p[1]], $contour));
-                }
-            }
-            if ($contours !== []) {
-                $this->path($contours, FillRule::NON_ZERO, $color);
-            }
-
-            return;
-        }
-
-        $pixelSize = $font->size * $m->a;
-        [$left, $top] = $this->point($x, $y);
-        [$glyphs, $box] = self::placeGlyphs($font, $pixelSize, $text, $left, $top);
-        $clip = $this->queue->clipRegion();
-        if ($glyphs !== [] && ! $clip->isEmpty()) {
-            $this->queue->append(['glyphs', $font, $pixelSize, $glyphs, self::rgba($color), $box, $clip]);
-        }
-    }
-
-    /**
-     * shortcut: glyph origins are rounded to whole pixels (no subpixel positioning); upgrade when text must sit between pixels.
-     *
-     * @return array{list<array{string, int, int, int, int}>, ?Region} the glyphs with ink, and the union of their masks
-     */
-    private static function placeGlyphs(TrueTypeFont $font, float $pixelSize, string $text, float $left, float $top): array
-    {
-        $glyphs = [];
-        $box = null;
-        foreach (self::trueTypeLayout($font, $pixelSize, $text) as [$g, $baseline]) {
-            $mask = $font->mask($g->face, $pixelSize, $g->glyph, $g->style);
-            if ($mask->width === 0 || $mask->height === 0) {
-                continue;
-            }
-            $mx = (int) round($left + $g->x) + $mask->left;
-            $my = (int) round($top + $baseline + $g->y) - $mask->top;
-            $glyphs[] = [$g->face, $g->glyph, $mx, $my, $g->style];
-            $placed = new Region($mx, $my, $mask->width, $mask->height);
-            $box = $box?->union($placed) ?? $placed;
-        }
-
-        return [$glyphs, $box];
-    }
-
-    /**
-     * Lines split on "\n" with "\r" removed; each line's baseline is its top plus its ascent.
-     *
-     * @return list<array{ShapedGlyph, float}> each glyph with its line's baseline, from the text's top
-     */
-    private static function trueTypeLayout(TrueTypeFont $font, float $pixelSize, string $text): array
-    {
-        $out = [];
-        $lineTop = 0.0;
-        foreach (explode("\n", str_replace("\r", '', $text)) as $line) {
-            if ($line === '') {
-                $lineTop += $font->shape($pixelSize, ' ')->lineHeight;
-
-                continue;
-            }
-            $run = $font->shape($pixelSize, $line);
-            foreach ($run->glyphs as $g) {
-                $out[] = [$g, $lineTop + $run->ascent];
-            }
-            $lineTop += $run->lineHeight;
-        }
-
-        return $out;
     }
 
     /** @throws DrawingException When no frame is open. */

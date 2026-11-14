@@ -6,7 +6,6 @@ use Surface\Contracts\Graphics\StrokeStyle;
 
 use Surface\Contracts\Graphics\Effects\FilterChain;
 use Surface\Contracts\Graphics\Effects\Glass;
-use Surface\Contracts\Typography\Font;
 use Surface\Contracts\Rendering\Framebuffers\Filter;
 use Surface\Contracts\Rendering\Framebuffers\Framebuffer;
 use Surface\Contracts\Rendering\Framebuffers\Region;
@@ -39,7 +38,7 @@ interface Painter
     public function name(): string;
 
     /** Where this engine draws: the one it was given, or the one its graphics library made. */
-    public function framebuffer(): Framebuffer;
+    public function framebuffer(): PaintTarget;
 
     public function width(): int;
 
@@ -209,7 +208,7 @@ interface Painter
      *
      * @throws DrawingException When the radii or the source rect are malformed, or radii are given under a turn, shear or uneven scale.
      */
-    public function image(Framebuffer $source, float $x, float $y, ?float $width = null, ?float $height = null, float $opacity = 1.0, Filter $filter = Filter::NEAREST, ?array $radii = null, ?Color $tint = null, ?array $sourceRect = null): static;
+    public function image(PaintTarget $source, float $x, float $y, ?float $width = null, ?float $height = null, float $opacity = 1.0, Filter $filter = Filter::NEAREST, ?array $radii = null, ?Color $tint = null, ?array $sourceRect = null): static;
 
     /**
      * Draws a group of things apart, then lays it down in one piece: a layer, as SVG's group with opacity, CSS's
@@ -245,18 +244,4 @@ interface Painter
      */
     public function glass(float $x, float $y, float $width, float $height, ?array $radii, Glass $glass, float $opacity = 1.0): static;
 
-    /**
-     * Text. ($x, $y) is the top-left of the first line box; "\n" starts a new
-     * line, "\r" is ignored. A bitmap face draws its own glyphs, codes outside
-     * it skipped, one glyph pixel to one unit. A TrueType face is shaped at its
-     * size in units. Both scale and turn through the transform.
-     */
-    public function text(string $text, float $x, float $y, Color $color, Font $font): static;
-
-    /**
-     * The ink box of a text, relative to its origin, before any transform.
-     *
-     * @return array{float, float, float, float} [x, y, width, height]; all zero when nothing inks.
-     */
-    public function textBounds(string $text, Font $font): array;
 }

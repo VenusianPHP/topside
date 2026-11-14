@@ -2,6 +2,16 @@
 
 namespace Surface\Toolkits\Demo;
 
+use Surface\Contracts\Graphics\ActorStage;
+use Surface\Contracts\Graphics\StrokeStyle;
+use Surface\Graphics\GEPainter;
+use Surface\NutsAndBolts\Color;
+use Surface\NutsAndBolts\Path;
+use Surface\NutsAndBolts\RadialGradient;
+use Surface\Contracts\Graphics\Resource;
+use Surface\Contracts\Rendering\Raycasting\Camera;
+use Surface\Contracts\Rendering\Raycasting\Grid;
+use Surface\Contracts\Rendering\Raycasting\Scenery;
 use Surface\Contracts\Toolkits\Composition;
 use Surface\Contracts\Toolkits\ViewBuilder;
 use Surface\Toolkits\Navigation\Navigator;
@@ -30,6 +40,9 @@ use Surface\Toolkits\Support\Live;
  *              the new text. So a handler changes the state and calls refresh(): nothing is
  *              rebuilt, and the handler does not need to know which labels show that state.
  *
+ *   Graphics.  A canvas is a stage: a region a graphics engine's frames are shown in. The page
+ *              asks Gfx for an engine, attaches it to the stage, draws a frame and presents it.
+ *
  * compose() runs one time. After that the page is shown and hidden, never built again.
  */
 class KitchenSinkView implements Composition
@@ -54,6 +67,7 @@ class KitchenSinkView implements Composition
         // Everything below scrolls, so the page fits a small window.
         $page = $ui->scroll('page');
 
+        $this->graphics($page);
         $this->text($page);
         $this->buttons($page, $state, $refresh);
         $this->input($page, $state, $refresh);
@@ -239,5 +253,288 @@ class KitchenSinkView implements Composition
             $pane->label('text', 'It sits over the page. Close it to go back.', 'body');
             $pane->button('close', 'Close', fn () => $pane->hide());
         });
+    }
+
+    /**
+     * A canvas: the toolkit lays it out and reports its size, and a graphics engine draws what it
+     * shows. The handler runs once the canvas has a size and again whenever the window resizes it.
+     *
+     * $page->engine() is the engine the application draws its canvases with: the presentation
+     * config's PRESENTATION_CANVAS_DRIVER, which left unset is the Graphics default. A view asks
+     * the builder for it, and never asks Gfx for an engine itself. An engine with no painter is
+     * named on the card and not drawn with. attach() gives a framebuffer of the stage's size in pixels; the painter draws a
+     * frame onto it; present() shows it on the stage. A stage on a dense display has more pixels
+     * than points, so the frame is scaled by pixelScale() and drawn in points.
+     *
+     * The wave moves: Play starts a timer on the event loop that draws a frame each time it fires,
+     * and Stop forgets it, which leaves the last frame showing. The painter is kept between
+     * frames, so each frame redraws only where the wave changed.
+     *
+     * The rate buttons set how often the timer fires: 30, 60, 120 or 240 times a second, or "uncapped",
+     * which asks for 100,000 so a frame is drawn on every turn of the loop. Two numbers are shown: frames
+     * drawn a second, and frames shown. Drawn below the target, the engine is the limit. A canvas that
+     * knows its display's refresh (a PacedStage) shows the latest frame once a refresh, so shown stops
+     * at the display's rate however many are drawn. Uncapped keeps a CPU core busy, and
+     * draws frames the display never shows.
+     *
+     * When the engine has a raycaster (Metal's always; Velvet's with config/rendering.php's raycaster.enabled), three more buttons
+     * choose what fills the canvas. Both of the new scenes cast rays through a grid of walls, and
+     * differ in what they do with where a ray stops:
+     *
+     *  - "Raycast a room": one ray a screen column from a turning camera, and the distance to the wall
+     *    is how tall that column's slice of wall is drawn. The raycaster writes the picture straight
+     *    into the framebuffer: no painter is involved.
+     *  - "Cast shadows": the grid seen from above, with a light moving through it. Rays go out from
+     *    the light and stop at the first block: the points where they stop outline what the light
+     *    reaches. The painter fills that outline, and whatever is outside it is in shadow.
+     */
+    private function graphics(ViewBuilder $page): void
+    {
+        $card = $page->card('graphics', 'Graphics');
+        $engine = $page->engine();
+        if (! $engine->supports(Resource::PAINTER)) {
+            // every scene here is drawn by a painter: an engine without one is named, not drawn with
+            $card->label('about', 'The "'.$engine->name().'" engine has no painter yet, so nothing here is drawn with it.', 'body');
+
+            return;
+        }
+        $card->label('about', fn (): string => 'Drawn by the "'.$engine->name().'" engine on the '.$engine->backend()->value.' backend, shown in a canvas.', 'body');
+
+        // what the engine is built from: for Velvet, the Rendering driver behind each part
+        $modules = $engine->modules();
+        if ($modules !== []) {
+            $card->label('modules', implode('  ·  ', array_map(fn (string $part, string $driver): string => "{$part}: {$driver}", array_keys($modules), $modules)), 'footnote');
+        }
+
+        /** @var GEPainter|null $painter what draws on the framebuffer attached at the canvas's current size */
+        $painter = null;
+        $scale = 1.0;
+        $phase = 0.0;
+        $drawn = 0;          // frames since the rate was last worked out
+        $since = microtime(true);
+        $rate = null;        // frames drawn a second over the last second; 0.0 until the first second is up, null while stopped
+        $showing = 0.0;      // frames shown a second over that second: the display shows no more than it refreshes
+        $shownAt = 0;        // the framebuffer's shown() when the rate was last worked out
+        $target = 30;                  // frames a second asked for; 0 is uncapped
+        $last = microtime(true);       // when the wave last moved
+        $scene = 'shapes';             // what fills the canvas: 'shapes', 'room' or 'light'
+
+        // the room: 0 is open floor, a number is a wall of that kind. Made once; null when the engine has no raycaster
+        $caster = $engine->supports(Resource::RAYCASTER) ? $engine->raycaster(Grid::of([
+            [1, 1, 1, 1, 1, 1, 1, 1, 1],
+            [1, 0, 0, 0, 0, 0, 0, 0, 1],
+            [1, 0, 2, 0, 0, 0, 3, 0, 1],
+            [1, 0, 0, 0, 0, 0, 0, 0, 1],
+            [1, 0, 0, 0, 0, 0, 0, 0, 1],
+            [1, 0, 3, 0, 0, 0, 2, 0, 1],
+            [1, 0, 0, 0, 0, 0, 0, 0, 1],
+            [1, 1, 1, 1, 1, 1, 1, 1, 1],
+        ])) : null;
+        // what each kind of wall is painted with, then the ceiling, the floor, and how dark far walls get
+        $scenery = new Scenery([1 => 0x8A9BA8FF, 2 => 0xFF6B35FF, 3 => 0x40C8FFFF], 0x101820FF, 0x2B3A42FF, 150);
+
+        // the floor the light moves over, seen from above: 0 is open, a number is a block of that kind
+        $floor = Grid::of([
+            [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+            [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 3, 0, 0, 0, 1],
+            [1, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+            [1, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 3, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+            [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 3, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 1],
+            [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 1],
+            [1, 0, 0, 0, 2, 0, 0, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+            [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+        ]);
+        $lamp = is_null($caster) ? null : $engine->raycaster($floor);
+
+        // the blocks inside the outer wall, and every corner a shadow's edge can start from: each block's
+        // four, and the four where the outer walls meet
+        [$blocks, $corners] = [[], []];
+        for ($y = 1; $y < $floor->height - 1; $y++) {
+            for ($x = 1; $x < $floor->width - 1; $x++) {
+                if (($kind = $floor->wall($x, $y)) !== 0) {
+                    $blocks[] = [$x, $y, $kind];
+                    foreach ([[$x, $y], [$x + 1, $y], [$x, $y + 1], [$x + 1, $y + 1]] as $corner) {
+                        $corners[implode(',', $corner)] = $corner;
+                    }
+                }
+            }
+        }
+        foreach ([[1, 1], [$floor->width - 1, 1], [1, $floor->height - 1], [$floor->width - 1, $floor->height - 1]] as $corner) {
+            $corners[implode(',', $corner)] = $corner;
+        }
+
+        // the light scene. Everything is drawn in cells: the painter's transform sizes a cell to the canvas
+        $light = function (GEPainter $g, float $width, float $height) use ($floor, $lamp, $blocks, $corners, &$scale, &$phase): void {
+            // where the light is: round and round the middle block
+            [$lx, $ly] = [12.0 + 8.0 * cos($phase * 0.4), 4.0 + 1.6 * sin($phase * 0.4)];
+
+            // a shadow's edge runs from the light past a corner, so one ray goes just either side of every
+            // corner: one stops at the block, the other slips by to whatever is behind it. In order
+            // round the light, the points where the rays stop are the outline of what is lit
+            $angles = [];
+            foreach ($corners as [$cx, $cy]) {
+                $toward = atan2($cy - $ly, $cx - $lx);
+                array_push($angles, $toward - 0.0001, $toward + 0.0001);
+            }
+            sort($angles);
+
+            // every ray in one call: an engine on the GPU casts them all in one trip there and back
+            $lit = new Path;
+            foreach ($lamp->casts($lx, $ly, $angles) as $i => $hit) {
+                $angle = $angles[$i];
+                [$x, $y] = [$lx + $hit->distance * cos($angle), $ly + $hit->distance * sin($angle)];
+                $i === 0 ? $lit->moveTo($x, $y) : $lit->lineTo($x, $y);
+            }
+            $lit->close();
+
+            $cell = min($width / $floor->width, $height / $floor->height);
+            $g->clear(Color::hex('#05070a'));
+            $g->scale($scale);
+            $g->translate(($width - $floor->width * $cell) / 2, ($height - $floor->height * $cell) / 2);
+            $g->scale($cell);
+
+            // the floor in the dark, then what the light reaches: brightest at the light, fading with distance
+            $g->fillRect(1, 1, $floor->width - 2, $floor->height - 2, Color::hex('#141b22'));
+            $g->fill($lit, new RadialGradient($lx, $ly, 14.0, [
+                [0.0, Color::rgba(255, 236, 170, 0.95)],
+                [1.0, Color::rgba(255, 236, 170, 0.10)],
+            ]));
+
+            // the walls and blocks over it, then the light itself
+            $wall = Color::hex('#8a9ba8');
+            $g->fillRect(0, 0, $floor->width, 1, $wall);
+            $g->fillRect(0, $floor->height - 1, $floor->width, 1, $wall);
+            $g->fillRect(0, 1, 1, $floor->height - 2, $wall);
+            $g->fillRect($floor->width - 1, 1, 1, $floor->height - 2, $wall);
+            foreach ($blocks as [$x, $y, $kind]) {
+                $g->fillRect($x, $y, 1, 1, Color::hex($kind === 2 ? '#ff6b35' : '#40c8ff'));
+            }
+            $g->fillEllipse($lx, $ly, 0.22, 0.22, Color::hex('#fff7d6'));
+        };
+
+        $draw = function () use (&$painter, &$scale, &$phase, &$drawn, &$scene, $caster, $scenery, $light): void {
+            if (is_null($painter)) {
+                return;
+            }
+            $drawn++;
+            $screen = $painter->framebuffer();
+
+            if ($scene === 'room') {
+                // a camera in the middle of the room, turning: the raycaster paints what it sees
+                $caster->paint(new Camera(4.5, 4.0, $phase * 0.25), $scenery, $screen);
+                $screen->present();
+
+                return;
+            }
+            [$width, $height] = [$screen->width() / $scale, $screen->height() / $scale];
+
+            if ($scene === 'light') {
+                $painter->frame(fn (GEPainter $g) => $light($g, $width, $height));
+                $screen->present();
+
+                return;
+            }
+
+            $painter->frame(function (GEPainter $g) use ($scale, $width, $height, $phase): void {
+                $g->clear(Color::hex('#101820'));
+                $g->scale($scale);
+
+                // filled shapes: a rounded panel, a circle over it, half see-through
+                $g->roundRect(16, 16, 150, $height - 32, [14, 14, 14, 14], Color::hex('#ff6b35'));
+                $g->fillEllipse(166, $height / 2, 52, 52, Color::rgba(64, 200, 255, 0.6));
+
+                // a stroked sine wave, the width of the canvas: $phase slides it along
+                $wave = new Path;
+                for ($x = 240.0; $x <= $width - 16; $x += 6.0) {
+                    $y = $height / 2 + 40 * sin($x / 28 - $phase);
+                    $x === 240.0 ? $wave->moveTo($x, $y) : $wave->lineTo($x, $y);
+                }
+                $g->stroke($wave, Color::hex('#f7f052'), new StrokeStyle(4.0));
+            });
+
+            $screen->present();
+        };
+
+        $card->canvas('scene', 180, function (ActorStage $stage) use (&$painter, &$scale, $draw, $engine): void {
+            $painter = $engine->painter($engine->attach($stage));
+            $scale = $stage->pixelScale();
+            $draw();
+        });
+
+        // every() under a name replaces the timer of that name, so Play twice is one timer; a frame
+        // is drawn only while the kitchen sink is the page showing
+        $play = function () use ($draw, &$target, &$last, &$phase, &$drawn, &$since, &$rate, &$painter, &$showing, &$shownAt): void {
+            [$drawn, $since, $last, $rate] = [0, microtime(true), microtime(true), 0.0];
+            app(Live::class)->refresh();
+
+            // a timer skips the firings it is late for, so one asked for 100,000 times a second fires
+            // once a turn of the loop: as often as a frame can be drawn
+            app('event-loop')->every(1 / ($target ?: 100000), function () use ($draw, &$last, &$phase, &$drawn, &$since, &$rate, &$painter, &$showing, &$shownAt): void {
+                if (app(Navigator::class)->current() !== '/kitchen-sink') {
+                    return;
+                }
+                // by the clock, not by the frame: the wave moves at one speed whatever the rate
+                $now = microtime(true);
+                $phase += ($now - $last) * 3.0;
+                $last = $now;
+                $draw();
+
+                // once a second: the rate over that second, and the label that shows it read again
+                $elapsed = microtime(true) - $since;
+                if ($elapsed >= 1.0) {
+                    $rate = $drawn / $elapsed;
+                    // a canvas resized has a new framebuffer, counting from 0 again
+                    $shown = $painter?->framebuffer()->shown() ?? 0;
+                    $showing = max(0, $shown - $shownAt) / $elapsed;
+                    [$drawn, $since, $shownAt] = [0, microtime(true), $shown];
+                    app(Live::class)->refresh();
+                }
+            }, 'kitchen-sink.wave');
+        };
+        $stop = function () use (&$rate): void {
+            app('event-loop')->forget('kitchen-sink.wave');
+            $rate = null;
+            app(Live::class)->refresh();
+        };
+
+        $row = $card->row('controls', 8);
+        $row->button('play', 'Play', $play);
+        $row->button('stop', 'Stop', $stop);
+        $row->label('target', function () use (&$target): string {
+            return 'Target: '.($target ?: 'uncapped');
+        });
+
+        // one button a rate. Playing: the timer is replaced by one at the new rate. Stopped: the
+        // next Play uses it.
+        $rates = $card->row('rates', 8);
+        foreach ([30 => '30', 60 => '60', 120 => '120', 240 => '240', 0 => 'Uncapped'] as $frames => $label) {
+            $rates->button("rate-{$frames}", $label, function () use ($frames, &$target, &$rate, $play): void {
+                $target = $frames;
+                is_null($rate) ? app(Live::class)->refresh() : $play();
+            });
+        }
+
+        if (! is_null($caster)) {
+            $what = $card->row('what', 8);
+            foreach (['shapes' => 'Shapes', 'room' => 'Raycast a room', 'light' => 'Cast shadows'] as $name => $label) {
+                $what->button($name, $label, function () use ($name, &$scene, &$painter, $draw): void {
+                    $scene = $name;
+                    // the room is written over the painter's last frame, so the painter draws its next one whole
+                    $painter?->invalidate();
+                    $draw();
+                });
+            }
+        }
+
+        // a Closure with use (&$rate): an arrow function would keep the value $rate had when it was made
+        $row->label('fps', function () use (&$rate, &$showing): string {
+            return match (true) {
+                is_null($rate) => 'Stopped',
+                $rate === 0.0 => 'Measuring…',
+                default => sprintf('%.0f drawn, %.0f shown a second', $rate, $showing),
+            };
+        });
+
+        $play();
     }
 }

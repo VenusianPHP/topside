@@ -10,8 +10,8 @@ use Surface\Contracts\Rendering\Framebuffers\DamageGranularity;
 use Surface\Contracts\Rendering\Framebuffers\Filter;
 use Surface\Contracts\Rendering\Framebuffers\Framebuffer;
 use Surface\Contracts\Rendering\Framebuffers\Region;
+use Surface\Contracts\Rendering\Painting\PaintTarget;
 use Surface\Contracts\Rendering\Rasterization\FillRule;
-use Surface\Contracts\Typography\Font;
 use Surface\NutsAndBolts\Affine;
 use Surface\NutsAndBolts\Color;
 use Surface\NutsAndBolts\Gradient;
@@ -37,7 +37,7 @@ use Surface\NutsAndBolts\Path;
  *     ['polyline', points, stroke, closed, rgba, clip]
  *     ['ellipse', cx, cy, rx, ry, rgba, clip]             axis-aligned
  *     ['ring', cx, cy, rx, ry, stroke, rgba, clip]        the band between radii r ± stroke / 2
- *     ['image', Framebuffer, Affine, opacity 1..255, Filter, style, clip]
+ *     ['image', PaintTarget, Affine, opacity 1..255, Filter, style, clip]
  *                                                         style: null, or ['tint' => 0xRRGGBBAA, 'window' => [u0, v0, u1, v1]|null (source pixels that paint),
  *                                                         'round' => [x0, y0, x1, y1, [tl, tr, br, bl]]|null (the box whose rounded rect the image is cut to, in pixels)]
  *     ['spans', bytes, rgba, clip]                        whole pixels, already inside the clip, rows top to bottom; 7 bytes each: y, x, length (uint16 LE), coverage 255
@@ -48,9 +48,6 @@ use Surface\NutsAndBolts\Path;
  *                                                         shadow: null, or a 'shadow' command painted between the backdrop's capture and the pane
  *                                                         look: [frost, refraction, bevel, saturation, light, grain, tint,
  *                                                         rim, alpha] in device pixels; blur: the radius in device pixels
- *     ['glyphs', TrueTypeFont, pixelSize, glyphs, rgba, Region box, clip]
- *                                                         glyphs: list of [face, glyph, maskLeft, maskTop, style], the mask's
- *                                                         top-left in framebuffer pixels; box: the union of the masks before the clip
  *     ['layer', Region area, [x0, y0, x1, y1, [tl, tr, br, bl]], children, alpha 0..255, FilterChain|null filter, FilterChain|null backdrop, clip]
  *                                                         children: the commands drawn inside, clipped to the area
  */
@@ -122,7 +119,7 @@ interface Recorder
 
     public function strokeEllipse(float $cx, float $cy, float $rx, float $ry, Color $color, float $stroke = 1.0): void;
 
-    public function image(Framebuffer $source, float $x, float $y, ?float $width = null, ?float $height = null, float $opacity = 1.0, Filter $filter = Filter::NEAREST, ?array $radii = null, ?Color $tint = null, ?array $sourceRect = null): void;
+    public function image(PaintTarget $source, float $x, float $y, ?float $width = null, ?float $height = null, float $opacity = 1.0, Filter $filter = Filter::NEAREST, ?array $radii = null, ?Color $tint = null, ?array $sourceRect = null): void;
 
     public function roundRect(float $x, float $y, float $width, float $height, array $radii, Color $fill, ?Color $border = null, float $borderWidth = 0.0): void;
 
@@ -134,11 +131,6 @@ interface Recorder
     public function layer(float $x, float $y, float $width, float $height, callable $draw, float $opacity = 1.0, ?array $radii = null, ?FilterChain $filter = null, ?FilterChain $backdrop = null): void;
 
     public function glass(float $x, float $y, float $width, float $height, ?array $radii, Glass $glass, float $opacity = 1.0): void;
-
-    public function text(string $text, float $x, float $y, Color $color, Font $font): void;
-
-    /** @return array{float, float, float, float} x, y, width, height of the text's ink from its origin; needs no frame. */
-    public function textBounds(string $text, Font $font): array;
 
     /**
      * Where the last frame draws: every command's box, with $also, merged until no two overlap.

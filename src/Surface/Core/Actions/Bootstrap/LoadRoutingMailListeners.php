@@ -9,6 +9,8 @@ use Surface\Contracts\Toolkits\Mail\Views\TextSubmitted;
 use Surface\Contracts\Toolkits\Mail\Views\TextChanged;
 use Surface\Contracts\Toolkits\Mail\Views\SelectionChanged;
 use Surface\Contracts\Toolkits\Mail\Views\ValueChanged;
+use Surface\Contracts\Toolkits\Mail\Views\Toggled;
+use Surface\Contracts\Toolkits\Mail\Views\ViewResized;
 use Surface\Contracts\Toolkits\Mail\Views\ViewScrolled;
 use Surface\Contracts\Toolkits\Mail\Views\ItemActivated;
 use Surface\Contracts\Toolkits\Mail\Views\ItemActionClicked;
@@ -44,6 +46,12 @@ class LoadRoutingMailListeners
         });
         $app['signals']->listen(ValueChanged::class, function (ValueChanged $changed) use ($app): void {
             $app->make(ViewActions::class)->fireChange($changed->uuid, $changed);
+        });
+        $app['signals']->listen(Toggled::class, function (Toggled $toggled) use ($app): void {
+            $app->make(ViewActions::class)->fireChange($toggled->uuid, $toggled);
+        });
+        $app['signals']->listen(ViewResized::class, function (ViewResized $resized) use ($app): void {
+            $app->make(ViewActions::class)->fireChange($resized->uuid, $resized);
         });
         $app['signals']->listen(ViewScrolled::class, function (ViewScrolled $scrolled) use ($app): void {
             $app->make(ViewActions::class)->fireChange($scrolled->uuid, $scrolled);

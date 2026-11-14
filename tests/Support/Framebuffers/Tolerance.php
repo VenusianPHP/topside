@@ -12,6 +12,10 @@ use Surface\Contracts\Rendering\Framebuffers\FramebufferDriver;
  * own, by driver name, where it adds its driver to the datasets:
  *
  *     Tolerance::$by['pixman'] = 2;
+ *
+ * A library rasterization driver that blends in place with its own arithmetic (a DirectScanner
+ * that is not VelvetGE's) sets its own the same way, under its own name; the DirectDraw matrix
+ * allows the greater of the store's and the rasterizer's.
  */
 final class Tolerance
 {
@@ -21,6 +25,12 @@ final class Tolerance
     public static function of(FramebufferDriver $driver): int
     {
         return self::$by[$driver->driver()] ?? 0;
+    }
+
+    /** The tolerance set under a driver's name, whichever part it is a driver of; 0 when none is. */
+    public static function named(string $driver): int
+    {
+        return self::$by[$driver] ?? 0;
     }
 
     /** Whether two 0xRRGGBBAA words are within the driver's tolerance, channel by channel. */

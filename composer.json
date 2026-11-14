@@ -30,9 +30,15 @@
         "venusian-voyager/nuts-and-bolts": "^0.11.0"
     },
     "replace": {
-        "venusian-surface/toolkits": "self.version",
+        "venusian-surface/av": "self.version",
         "venusian-surface/contracts": "self.version",
-        "venusian-surface/nuts-and-bolts": "self.version"
+        "venusian-surface/graphics": "self.version",
+        "venusian-surface/human-input": "self.version",
+        "venusian-surface/nuts-and-bolts": "self.version",
+        "venusian-surface/rendering": "self.version",
+        "venusian-surface/toolkits": "self.version",
+        "venusian-surface/typography": "self.version",
+        "venusian-surface/velvetge": "self.version"
     },
     "suggest": {},
     "require-dev": {

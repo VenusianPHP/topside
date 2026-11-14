@@ -3,7 +3,8 @@
 namespace Surface\VelvetGE;
 
 use ReflectionException;
-use Surface\Graphics\Engines;
+use Surface\Contracts\Graphics\Backend;
+use Surface\Graphics\Gfx;
 use Surface\Rendering\Framebuffers;
 use Surface\Rendering\Painters;
 use Surface\Contracts\Rendering\Rasterization\RasterizeException;
@@ -119,14 +120,22 @@ class VelvetGEServiceProvider extends ServiceProvider
         Recorders::manager()->extend('ext', fn () => new CLandRecordingDriver());
     }
 
-    /** The CPU engine, over whichever of Rendering's drivers the application has. */
+    /**
+     * Velvet as a graphics engine, on the CPU. Its GPU backend is not built: asking for it says so.
+     *
+     * @throws ReflectionException
+     */
     protected function bootstrapEngine(): void
     {
-        Engines::manager()->extend('velvet', fn () => new VelvetGraphicsEngine(
-            Framebuffers::manager(),
-            Rasterization::manager(),
-            Painters::manager(),
-            Raycasters::enabled() ? Raycasters::manager() : null,
-        ));
+        Gfx::manager()
+            ->extend('velvet', fn (Backend $backend) => new VelvetDevice(
+                $backend,
+                Framebuffers::manager(),
+                Rasterization::manager(),
+                Painters::manager(),
+                Raycasters::enabled() ? Raycasters::manager() : null,
+                config('velvet.cpu', []),
+            ), Backend::CPU)
+            ->notReady('velvet', Backend::GPU);
     }
 }

@@ -5,8 +5,9 @@ namespace Surface\Contracts\Rendering\Framebuffers;
 use Surface\NutsAndBolts\Affine;
 use Surface\NutsAndBolts\GradientSpread;
 use Surface\Contracts\Graphics\Effects\FilterChain;
+use Surface\Contracts\Rendering\Painting\PaintTarget;
 
-interface Framebuffer
+interface Framebuffer extends PaintTarget
 {
     public function viewportWidth(): int;
 

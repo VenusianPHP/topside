@@ -169,22 +169,6 @@ it('gives panes whose read areas nothing was drawn into one backdrop, and a pane
         ->and(array_map(fn (array $group): int => count($group['members']), Surface\Rendering\Painters\GlassGroups::of($apart, new Region(0, 0, 240, 120), null)))->toBe([1, 1]);  // no box: every pane its own
 });
 
-it('lowers each group to one backdrop and a draw a pane for a device that draws glass, and to backdrop layers for one that does not', function (): void {
-    [$commands, $g] = glassCommands(function (Painter $g): void {
-        $g->clear(Color::hex('#102030'));
-        $g->glass(4, 10, 24, 20, [4, 4, 4, 4], new Glass(blur: 2.0), 1.0);
-        $g->glass(200, 10, 24, 20, [4, 4, 4, 4], new Glass(blur: 2.0), 0.5);
-        $g->fillRect(190, 0, 40, 60, Color::hex('#ff0000'));
-        $g->glass(200, 40, 24, 20, null, new Glass(blur: 2.0), 1.0);
-    });
-    $ops = fn (bool $glass, ?Closure $box): array => array_map(fn (array $o): string => $o[0]->name, Surface\Graphics\Gpu\Lowering::lower($commands, 240, 120, null, $glass, box: $box)->operations);
-
-    // the first two panes share a capture; the red stripe covers the third's read area: its own
-    expect(array_count_values($ops(true, $g->commandBox(...))))->toMatchArray(['GLASS_BACKDROP' => 2, 'GLASS' => 3])
-        ->and(array_count_values($ops(true, null))['GLASS_BACKDROP'])->toBe(3)
-        ->and($ops(false, null))->not->toContain('GLASS')->toContain('BACKDROP')->toContain('FILTER');
-});
-
 it('blurs what was drawn between glass panes, as the pane before it did not', function (): void {
     // a stripe drawn after one pane and before the next, under the second: the second pane's backdrop holds it
     $draw = function (Painter $g): void {
@@ -198,34 +182,6 @@ it('blurs what was drawn between glass panes, as the pane before it did not', fu
 
     // the second pane is over a white stripe: it is light, not the black of the frame's start
     expect($buffer->getPixel(116, 20) >> 24)->toBeGreaterThan(200);
-});
-
-it('marks a glass backdrop kept only when its region and depths match last frame\'s and no damage touches it', function (): void {
-    $g = new class((new PHPLandFramebufferDriver)->full(FormatSpec::rgba8(), 160, 80), new Surface\VelvetGE\Drivers\Rasterization\PHPLandRasterizationDriver) extends VelvetPainter {
-        public array $kept = [];
-
-        protected function execute(array $commands): void
-        {
-            $this->kept = $commands;
-        }
-    };
-    $g->frame(function (Painter $g): void {
-        $g->clear(Color::hex('#102030'));
-        $g->glass(10, 10, 30, 20, null, new Glass(blur: 6.0), 1.0);
-    });
-    $commands = $g->kept;
-    $backdrops = [];
-    $keepOf = function (array $damage, array $commands) use (&$backdrops): bool {
-        $ops = Surface\Graphics\Gpu\Lowering::lower($commands, 160, 80, null, true, $backdrops, $damage)->operations;
-
-        return array_values(array_filter($ops, fn (array $o): bool => $o[0]->name === 'GLASS_BACKDROP'))[0][5];
-    };
-
-    expect($keepOf([new Region(0, 0, 160, 80)], $commands))->toBeFalse()               // the first frame: nothing to keep
-        ->and($keepOf([new Region(140, 60, 10, 10)], $commands))->toBeTrue()            // damage far from the region
-        ->and($keepOf([new Region(12, 12, 4, 4)], $commands))->toBeFalse()              // damage under it
-        ->and($keepOf([], $commands))->toBeTrue()                                       // nothing redrawn at all
-        ->and($keepOf([], [['glass', new Region(60, 10, 30, 20), [60.0, 10.0, 90.0, 30.0, [0.0, 0.0, 0.0, 0.0]], $commands[1][3], 6.0, null, new Region(60, 10, 30, 20)]]))->toBeFalse(); // a pane that moved
 });
 
 it('shows the sharp backdrop for a blur under a pixel, and takes the widest blur a slider sets at any scale', function (): void {

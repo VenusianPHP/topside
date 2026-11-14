@@ -11,10 +11,10 @@ use Surface\Contracts\Rendering\Framebuffers\Framebuffer;
 use Surface\Contracts\Rendering\Framebuffers\PagedFramebuffer;
 use Surface\Contracts\Rendering\Framebuffers\Region;
 use Surface\Contracts\Rendering\Framebuffers\RingFramebuffer;
+use Surface\Contracts\Rendering\Painting\PaintTarget;
 use Surface\Contracts\Rendering\Painting\Painter as RenderingEngineContract;
 use Surface\Contracts\Rendering\Rasterization\FillRule;
 use Surface\Contracts\Rendering\Recording\Recorder;
-use Surface\Contracts\Typography\Font;
 use Surface\NutsAndBolts\Affine;
 use Surface\NutsAndBolts\Color;
 use Surface\NutsAndBolts\Gradient;
@@ -334,7 +334,7 @@ abstract class Painter implements RenderingEngineContract
         return $this;
     }
 
-    public function image(Framebuffer $source, float $x, float $y, ?float $width = null, ?float $height = null, float $opacity = 1.0, Filter $filter = Filter::NEAREST, ?array $radii = null, ?Color $tint = null, ?array $sourceRect = null): static
+    public function image(PaintTarget $source, float $x, float $y, ?float $width = null, ?float $height = null, float $opacity = 1.0, Filter $filter = Filter::NEAREST, ?array $radii = null, ?Color $tint = null, ?array $sourceRect = null): static
     {
         $this->recorder()->image($source, $x, $y, $width, $height, $opacity, $filter, $radii, $tint, $sourceRect);
 
@@ -372,25 +372,13 @@ abstract class Painter implements RenderingEngineContract
         return $this;
     }
 
-    public function text(string $text, float $x, float $y, Color $color, Font $font): static
-    {
-        $this->recorder()->text($text, $x, $y, $color, $font);
-
-        return $this;
-    }
-
-    public function textBounds(string $text, Font $font): array
-    {
-        return $this->recorder()->textBounds($text, $font);
-    }
-
     /**
      * Whether the framebuffer still holds the last frame when the next is
      * drawn, so drawing only what changed leaves the rest correct. Every
      * engine repairs a ring before drawing, so its back holds the last frame
      * too: a ring keeps its frame whatever the engine.
      */
-    protected function keepsFrame(Framebuffer $framebuffer): bool
+    protected function keepsFrame(PaintTarget $framebuffer): bool
     {
         return $framebuffer->preservesContentsOnPresent() || $framebuffer instanceof RingFramebuffer;
     }

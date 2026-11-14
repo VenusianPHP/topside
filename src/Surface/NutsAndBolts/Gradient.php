@@ -89,35 +89,60 @@ abstract readonly class Gradient
         static $kept = null;
         $kept ??= new WeakMap();
 
-        return $kept[$this] ??= $this->bake();
+        return $kept[$this] ??= self::shared($this);
+    }
+
+    /**
+     * A ramp depends on the stops alone. An animation that makes a new gradient each frame with
+     * the same stops, or one of a few hundred, gets the ramp worked out before: the most recent
+     * 512 are kept, by their stops' offsets and bytes.
+     */
+    private static function shared(self $gradient): string
+    {
+        static $ramps = [];
+
+        $key = '';
+        foreach ($gradient->stops as [$offset, $colour]) {
+            $key .= pack('d', (float) $offset).pack('C4', ...self::bytes($colour));
+        }
+        if (isset($ramps[$key])) {
+            return $ramps[$key];
+        }
+        if (count($ramps) >= 512) {
+            unset($ramps[array_key_first($ramps)]);
+        }
+
+        return $ramps[$key] = $gradient->bake();
     }
 
     private function bake(): string
     {
         $bytes = array_map(fn (array $stop): array => [(float) $stop[0], self::bytes($stop[1])], $this->stops);
-        $out = '';
+        $last = count($bytes) - 1;
+        $out = [];
+
+        // Steps rise and stops do not fall, so the stop each step starts from (the last at or
+        // before it) only moves forward: one walk along the stops, not a search per step. Each
+        // channel is the same sum as before, so the bytes do not change.
+        $k = 0;
         for ($i = 0; $i < self::STEPS; $i++) {
             $x = $i / (self::STEPS - 1);
-            $k = 0;
-            foreach ($bytes as $j => [$offset]) {
-                if ($offset <= $x) {
-                    $k = $j;
-                }
+            while ($k < $last && $bytes[$k + 1][0] <= $x) {
+                $k++;
             }
             if ($x < $bytes[0][0]) {
-                $colour = $bytes[0][1];
-            } elseif ($k === count($bytes) - 1) {
-                $colour = $bytes[$k][1];
+                array_push($out, ...$bytes[0][1]);
+            } elseif ($k === $last) {
+                array_push($out, ...$bytes[$k][1]);
             } else {
                 [$from, $a] = $bytes[$k];
                 [$to, $b] = $bytes[$k + 1];
                 $u = ($x - $from) / ($to - $from);
-                $colour = [(int) round($a[0] + ($b[0] - $a[0]) * $u), (int) round($a[1] + ($b[1] - $a[1]) * $u), (int) round($a[2] + ($b[2] - $a[2]) * $u), (int) round($a[3] + ($b[3] - $a[3]) * $u)];
+                array_push($out, (int) round($a[0] + ($b[0] - $a[0]) * $u), (int) round($a[1] + ($b[1] - $a[1]) * $u), (int) round($a[2] + ($b[2] - $a[2]) * $u), (int) round($a[3] + ($b[3] - $a[3]) * $u));
             }
-            $out .= chr($colour[0]).chr($colour[1]).chr($colour[2]).chr($colour[3]);
         }
 
-        return $out;
+        return pack('C*', ...$out);
     }
 
     /** @return array{int, int, int, int} */

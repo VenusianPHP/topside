@@ -42,6 +42,7 @@ class DemoHomeView implements Composition
         $actions = $ui->row('actions');
         $actions->spacer('left');
         $actions->button('kitchen-sink', 'Open the kitchen sink', '/kitchen-sink');
+        $actions->button('animations', 'Animations', '/animations');
         $actions->spacer('right');
 
         $ui->spacer('below');

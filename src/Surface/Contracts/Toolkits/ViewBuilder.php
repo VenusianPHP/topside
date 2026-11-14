@@ -2,6 +2,8 @@
 
 namespace Surface\Contracts\Toolkits;
 
+use Surface\Contracts\Graphics\ActorStage;
+use Surface\Graphics\GraphicsEngine;
 use Closure;
 
 interface ViewBuilder
@@ -31,8 +33,46 @@ interface ViewBuilder
     /** A rounded panel with a bold title: what is built into it goes under the title. Cards in a row share its width. */
     public function card(string $name, string $title): ViewBuilder;
 
+    /**
+     * A region a graphics engine draws in, $height points tall and as wide as its container.
+     * $onSize is called with the stage once it has a size and each time its size changes: attach
+     * an engine to it there, draw, and present.
+     *
+     * @param Closure(ActorStage): void $onSize
+     */
+    public function canvas(string $name, int $height, Closure $onSize): void;
+
+    /**
+     * The graphics engine this application draws its canvases with: the application's choice, not
+     * the Graphics default. A view draws on a canvas with this, and asks Gfx for no engine itself.
+     */
+    public function engine(): GraphicsEngine;
+
     /** Text that opens $url in the user's browser when clicked. */
     public function link(string $name, string $text, string $url): void;
+
+    /**
+     * A horizontal slider from $min to $max, as wide as its container. $onChange is called with the
+     * new value each time the user moves it.
+     *
+     * @param Closure(float): void $onChange
+     */
+    public function slider(string $name, float $min, float $max, float $value, Closure $onChange): void;
+
+    /**
+     * A menu of $options showing $selected. $onChange is called with the chosen index and its option.
+     *
+     * @param list<string>               $options
+     * @param Closure(int, string): void $onChange
+     */
+    public function dropdown(string $name, array $options, int $selected, Closure $onChange): void;
+
+    /**
+     * A checkbox labelled $label. $onChange is called with true or false each time it is ticked or cleared.
+     *
+     * @param Closure(bool): void $onChange
+     */
+    public function checkbox(string $name, string $label, bool $checked, Closure $onChange): void;
 
     /** A rounded panel of options, with an optional title above it (a Closure title as label()). Build its rows with option(). */
     public function group(string $name, string|Closure|null $title = null): ViewBuilder;
@@ -49,9 +89,10 @@ interface ViewBuilder
      * with a transition. $page builds each page: fn (ViewBuilder $ui, int $index): void. A Closure
      * item is a label read again on each Live refresh.
      * @param list<string|Closure(): string> $items
+     * @param (Closure(int): void)|null $onSelect called with the index each time a page is shown, by a click or the Closure returned
      * @return Closure(int): void shows page $index, as a click on its item does
      */
-    public function tabs(string $name, array $items, Closure $page): Closure;
+    public function tabs(string $name, array $items, Closure $page, ?Closure $onSelect = null): Closure;
 
     /**
      * A section that opens and closes smoothly: $shown is read now and on each Live refresh. What

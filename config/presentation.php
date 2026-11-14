@@ -23,6 +23,7 @@ return [
                 device_os_family() == 'mac' ? 'appkit' : 'gtk'
             )
         ),
-        'canvas_driver' => env('PRESENTATION_CANVAS_DRIVER', 'velvet'),
+        // the graphics engine a canvas is drawn with: overrides GRAPHICS_ENGINE, as PRESENTATION_TOOLKIT_DRIVER does TOOLKIT_BRIDGE_DEFAULT
+        'canvas_driver' => env('PRESENTATION_CANVAS_DRIVER', env('GRAPHICS_ENGINE', 'velvet')),
     ],
 ];

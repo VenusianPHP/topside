@@ -2,10 +2,14 @@
 
 namespace Surface\Toolkits\Factory;
 
+use Surface\Graphics\GraphicsEngine;
+use Surface\Toolkits\ToolkitShell;
 use Closure;
 use Surface\Contracts\Toolkits\Field;
 use Surface\Contracts\Toolkits\Mail\Views\SelectionChanged;
 use Surface\Contracts\Toolkits\Mail\Views\TextChanged;
+use Surface\Contracts\Toolkits\Mail\Views\Toggled;
+use Surface\Contracts\Toolkits\Mail\Views\ValueChanged;
 use Surface\Contracts\Toolkits\Primitives\Align;
 use Surface\Contracts\Toolkits\Primitives\ImageScaling;
 use Surface\Contracts\Toolkits\Primitives\TKColumn;
@@ -100,6 +104,34 @@ class ToolkitUIBuilder implements ViewBuilder
         $this->group->link($name, $text, $url);
     }
 
+    public function slider(string $name, float $min, float $max, float $value, Closure $onChange): void
+    {
+        $slider = $this->group->slider($name, $min, $max, $value);
+        $slider->fill(true, false);
+
+        app(ViewActions::class)->onChange($slider->uuid(), function (object $mail) use ($onChange): void {
+            $mail instanceof ValueChanged && $onChange($mail->value);
+        });
+    }
+
+    public function dropdown(string $name, array $options, int $selected, Closure $onChange): void
+    {
+        $dropdown = $this->group->dropdown($name, $options, $selected);
+
+        app(ViewActions::class)->onChange($dropdown->uuid(), function (object $mail) use ($onChange, $options): void {
+            $mail instanceof SelectionChanged && $onChange($mail->index, $mail->option ?? $options[$mail->index] ?? '');
+        });
+    }
+
+    public function checkbox(string $name, string $label, bool $checked, Closure $onChange): void
+    {
+        $checkbox = $this->group->checkbox($name, $label, $checked);
+
+        app(ViewActions::class)->onChange($checkbox->uuid(), function (object $mail) use ($onChange): void {
+            $mail instanceof Toggled && $onChange($mail->on);
+        });
+    }
+
     /** Only along its parent's axis: a spacer that also fills across makes AppKit and GTK grow the parent. */
     public function spacer(string $name): void
     {
@@ -136,6 +168,24 @@ class ToolkitUIBuilder implements ViewBuilder
      * $onClick is what a click does: a Closure runs, [Controller::class, 'method'] calls that method,
      * and a string is a route name the Navigator goes to. Each is given the ButtonClicked mail.
      */
+    public function engine(): GraphicsEngine
+    {
+        return app(ToolkitShell::class)->canvasEngine();
+    }
+
+    public function canvas(string $name, int $height, Closure $onSize): void
+    {
+        $canvas = $this->group->canvas($name);
+        $canvas->fill(true, false)->minSize(0, $height);
+
+        // the toolkit reports the size once the canvas is laid out, and again whenever it changes
+        app(ViewActions::class)->onChange($canvas->uuid(), function () use ($canvas, $onSize): void {
+            [$width, $height] = $canvas->pixelSize();
+            $width > 0 && $height > 0 && $onSize($canvas);
+        });
+        $canvas->watchSize();
+    }
+
     public function button(string $name, string $label, Closure|array|string|null $onClick = null, bool $destructive = false): void
     {
         $button = $this->group->button($name, $label);
@@ -228,7 +278,7 @@ class ToolkitUIBuilder implements ViewBuilder
      * returned Closure swap the pages with a cross-fade; the Closure also moves the control, which
      * posts nothing.
      */
-    public function tabs(string $name, array $items, Closure $page): Closure
+    public function tabs(string $name, array $items, Closure $page, ?Closure $onSelect = null): Closure
     {
         $wrap = $this->group->column($name, 16);
         $wrap->fill();
@@ -249,12 +299,13 @@ class ToolkitUIBuilder implements ViewBuilder
         }
 
         $shown = 0;
-        $swap = function (int $i) use (&$shown, $pages, $stack): void {
+        $swap = function (int $i) use (&$shown, $pages, $stack, $onSelect): void {
             if ($i === $shown) {
                 return;
             }
             [$old, $new] = [$pages[$shown], $pages[$i]];
             $shown = $i;
+            is_null($onSelect) || $onSelect($i);
             $key = 'tabs.'.$stack->uuid();
             Tween::run($key, 0.12, fn (float $t) => $old->setOpacity(Tween::between(1.0, 0.0, $t)), function () use ($key, $old, $new): void {
                 $old->setVisible(false)->setOpacity(1.0);

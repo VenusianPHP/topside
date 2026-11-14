@@ -5,7 +5,6 @@ namespace Surface\VelvetGE\Painters;
 use Surface\Contracts\Graphics\DrawingException;
 use Surface\Contracts\Graphics\Effects\FilterChain;
 use Surface\Contracts\Graphics\Effects\Glass;
-use Surface\Contracts\Typography\TrueTypeFont;
 use Surface\Contracts\Rendering\Framebuffers\Filter;
 use Surface\Contracts\Rendering\Framebuffers\FormatSpec;
 use Surface\Contracts\Rendering\Framebuffers\Framebuffer;
@@ -77,15 +76,6 @@ class VelvetPainter extends Painter
 
     /** @var list<string> The level frames the pyramid being built took. */
     private array $made = [];
-
-    /** The coverage bytes the glyph cache holds at most (each entry counts 64 more); the least recently used goes first. */
-    public const int GLYPH_CACHE_BYTES = 8 * 1024 * 1024;
-
-    /** @var array<string, array{string, int}|null> face|pixelSize|glyph|style|edges => [coverage, width], null for a glyph with no coverage */
-    private array $glyphMasks = [];
-
-    /** What $glyphMasks holds, by GLYPH_CACHE_BYTES's count. */
-    private int $glyphBytes = 0;
 
     /**
      * @param  Edges|null  $edges  Null picks by format: anti-aliased where the format can blend (RGB, grey), hard where it cannot (mono, palette, planar).
@@ -240,6 +230,9 @@ class VelvetPainter extends Painter
             }
             if ($command[0] === 'image') {
                 [, $source, $placement, $opacity, $filter, $style, $clip] = $command;
+                if (! $source instanceof Framebuffer) {
+                    throw new DrawingException('Velvet draws an image from a Rendering framebuffer only, got '.get_debug_type($source).'.');
+                }
                 $coverage = null;
                 if (isset($style['round'])) {
                     // rounded corners: the image paints through the coverage of the rounded box, as roundRect() would fill it
@@ -264,14 +257,6 @@ class VelvetPainter extends Painter
             }
             if ($command[0] === 'spans') {
                 $target->paintSpans($command[1], $command[2]);
-
-                continue;
-            }
-            if ($command[0] === 'glyphs') {
-                $masks = $this->glyphMasks($command[1], $command[2], $command[3]);
-                if ($masks !== []) {
-                    $target->paintMasks($masks, $command[4], $clip);
-                }
 
                 continue;
             }
@@ -312,62 +297,6 @@ class VelvetPainter extends Painter
     private function rasterizer(Region $clip): Rasterizer
     {
         return $this->rasterizers[$clip->x][$clip->y][$clip->width][$clip->height] ??= $this->rasterize->rasterizer($clip, $this->edges);
-    }
-
-    /**
-     * Every glyph's mask at its place, for one paintMasks() call; the framebuffer cuts them to the clip.
-     * shortcut: translucent text blends twice where two glyph boxes overlap; upgrade by merging the masks when that shows.
-     *
-     * @param  list<array{string, int, int, int, int}>  $glyphs
-     * @return list<array{string, int, int, int}>
-     */
-    private function glyphMasks(TrueTypeFont $font, float $pixelSize, array $glyphs): array
-    {
-        $masks = [];
-        foreach ($glyphs as [$face, $glyph, $left, $top, $style]) {
-            $key = "{$face}|{$pixelSize}|{$glyph}|{$style}|{$this->edges->name}";
-            if (array_key_exists($key, $this->glyphMasks)) {
-                // a hit moves the glyph to the end: the front is the least recently used
-                $mask = $this->glyphMasks[$key];
-                unset($this->glyphMasks[$key]);
-                $this->glyphMasks[$key] = $mask;
-            } else {
-                $mask = $this->glyphMask($font, $face, $pixelSize, $glyph, $style, $key);
-            }
-            if ($mask !== null) {
-                $masks[] = [$mask[0], $mask[1], $left, $top];
-            }
-        }
-
-        return $masks;
-    }
-
-    /**
-     * A glyph's coverage in its final form, made once and kept: hard edges keep coverage of 128 and up, at 255.
-     *
-     * @return array{string, int}|null [coverage, width]; null when it covers nothing
-     */
-    private function glyphMask(TrueTypeFont $font, string $face, float $pixelSize, int $glyph, int $style, string $key): ?array
-    {
-        $mask = $font->mask($face, $pixelSize, $glyph, $style);
-        $coverage = $mask->width > 0 && $mask->height > 0 ? substr($mask->coverage, 0, $mask->width * $mask->height) : '';
-        if ($this->edges === Edges::HARD) {
-            static $hard = null;
-            $hard ??= [implode('', array_map('chr', range(0, 255))), str_repeat("\0", 128).str_repeat("\xFF", 128)];
-            $coverage = strtr($coverage, $hard[0], $hard[1]);
-        }
-        $kept = $coverage === '' || strspn($coverage, "\0") === strlen($coverage) ? null : [$coverage, $mask->width];
-
-        $size = strlen($kept[0] ?? '') + 64;
-        while ($this->glyphMasks !== [] && $this->glyphBytes + $size > self::GLYPH_CACHE_BYTES) {
-            $first = array_key_first($this->glyphMasks);
-            $this->glyphBytes -= strlen($this->glyphMasks[$first][0] ?? '') + 64;
-            unset($this->glyphMasks[$first]);
-        }
-        $this->glyphMasks[$key] = $kept;
-        $this->glyphBytes += $size;
-
-        return $kept;
     }
 
     /**

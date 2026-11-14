@@ -89,8 +89,8 @@ it('paints a batch as the spans path does, whichever scanner and whichever store
     $raster->fillBatch(directShapes(), $direct);
     $raster->fillBatch(directShapes(), $spanned, false);
 
-    // the same bytes; within its own tolerance on a library store that blends spans with its own arithmetic
-    expect(dumpDistance($direct->dump(), $spanned->dump()))->toBeLessThanOrEqual(Tolerance::of($frames))
+    // the same bytes; within a library's own tolerance where its store blends spans, or its scanner blends in place, with its own arithmetic
+    expect(dumpDistance($direct->dump(), $spanned->dump()))->toBeLessThanOrEqual(max(Tolerance::of($frames), Tolerance::named($rasterizers->driver())))
         ->and($direct->damage())->toEqual($spanned->damage());
 })->with('every rasterization driver')->with('framebuffer drivers')->with([FormatSpec::rgba8(), FormatSpec::bgra8(), Formats::rgb565()])->with([Edges::ANTIALIASED, Edges::HARD]);
 

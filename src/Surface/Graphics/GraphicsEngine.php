@@ -2,89 +2,97 @@
 
 namespace Surface\Graphics;
 
-use Surface\Contracts\Graphics\DrawingException;
-use Surface\Contracts\Graphics\GraphicsEngine as GraphicsEngineContract;
-use Surface\Contracts\Graphics\Part;
-use Surface\Contracts\Rendering\Framebuffers\Framebuffer;
-use Surface\Contracts\Rendering\Framebuffers\Region;
+use Surface\Contracts\Graphics\ActorStage;
+use Surface\Contracts\Graphics\Backend;
+use Surface\Contracts\Graphics\GraphicsException;
+use Surface\Contracts\Graphics\Resource;
+use Surface\Contracts\Rendering\Framebuffers\FormatSpec;
 use Surface\Contracts\Rendering\Rasterization\Edges;
-use Surface\Contracts\Rendering\Rasterization\ShapeRasterizer;
 use Surface\Contracts\Rendering\Raycasting\Grid;
-use Surface\Contracts\Rendering\Raycasting\Raycaster;
 
 /**
- * What every engine starts from: it offers the parts it lists, and each part it leaves out throws
- * DrawingException naming the engine and the part. An engine overrides the parts it has.
+ * One graphics library, on one backend. Everything drawn with it is made from it, and what it
+ * makes works only with what it made: a framebuffer of one engine is not a target for another's
+ * painter.
+ *
+ * An engine hands out its own version of each GE type. What is behind them is the engine's own
+ * business: nothing here says how its pixels are held or its shapes drawn.
  */
-abstract class GraphicsEngine implements GraphicsEngineContract
+abstract class GraphicsEngine
 {
-    /** @return list<Part> The parts this engine has. */
-    abstract protected function parts(): array;
+    public function __construct(
+        protected readonly Backend $backend,
+    ) {}
 
-    public function offers(Part $part): bool
-    {
-        return in_array($part, $this->parts(), true);
-    }
+    /** The name it is registered by: 'velvet', 'metal'. */
+    abstract public function name(): string;
 
-    public function framebuffer(int $width, int $height, array $args = []): Framebuffer
+    public function backend(): Backend
     {
-        throw DrawingException::notOffered($this->name(), Part::FRAMEBUFFER);
-    }
-
-    public function rasterizer(Region $clip, ?Edges $edges = null): ShapeRasterizer
-    {
-        throw DrawingException::notOffered($this->name(), Part::RASTERIZER);
-    }
-
-    public function raycaster(Grid $grid): Raycaster
-    {
-        throw DrawingException::notOffered($this->name(), Part::RAYCASTER);
+        return $this->backend;
     }
 
     /**
-     * 'edges' as an engine takes it: an Edges, 'hard' or 'antialiased'. Null when it is not given:
-     * the engine picks.
+     * What the engine is built from, for showing to a person: a name for each part and what
+     * drives it. An engine that is one library through and through answers nothing.
      *
-     * @param  array<string, mixed>  $args
-     *
-     * @throws DrawingException When 'edges' is anything else.
+     * @return array<string, string>
      */
-    public static function edgesFrom(array $args): ?Edges
+    public function modules(): array
     {
-        $edges = $args['edges'] ?? null;
-        if (is_string($edges)) {
-            $edges = Edges::tryFrom($edges) ?? throw new DrawingException("'edges' is 'hard' or 'antialiased', got '{$edges}'.");
-        }
-        if (! is_null($edges) && ! $edges instanceof Edges) {
-            throw new DrawingException("'edges' is 'hard' or 'antialiased', or an Edges.");
-        }
-
-        return $edges;
+        return [];
     }
+
+    /** Whether this engine, as it is now, hands out that resource. */
+    abstract public function supports(Resource $resource): bool;
 
     /**
-     * @param  array<string, mixed>  $args
-     * @param  list<string>  $takes
+     * A framebuffer with no head: nothing shows it.
      *
-     * @throws DrawingException When $args has a key the engine does not take.
+     * @param FormatSpec|null $format null: the engine's own
      */
-    protected function accept(array $args, array $takes): void
-    {
-        foreach (array_keys($args) as $key) {
-            if (! in_array($key, $takes, true)) {
-                throw new DrawingException("{$this->name()} does not take '{$key}'. It takes: ".implode(', ', $takes).'.');
-            }
-        }
-    }
+    abstract public function framebuffer(int $width, int $height, ?FormatSpec $format = null): GEFramebuffer;
 
-    /** @throws DrawingException When a size is not a whole number of at least 1. */
-    protected function size(mixed $width, mixed $height): void
+    /**
+     * A framebuffer of $stage's size in pixels, which present() shows on it. The size is taken
+     * now: when the stage is resized, attach to it again.
+     *
+     * @param FormatSpec|null $format null: the engine's own
+     *
+     * @throws GraphicsException When the stage has no size yet.
+     */
+    public function attach(ActorStage $stage, ?FormatSpec $format = null): GEFramebuffer
     {
-        if (! is_int($width) || ! is_int($height)) {
-            throw new DrawingException("'width' and 'height' are integers.");
-        }
+        [$width, $height] = $stage->pixelSize();
         if ($width < 1 || $height < 1) {
-            throw new DrawingException("'width' and 'height' are at least 1.");
+            throw GraphicsException::stageHasNoSize();
         }
+
+        return $this->framebuffer($width, $height, $format)->onto($stage);
     }
+
+    /** @throws GraphicsException When the engine has none. */
+    public function rasterizer(Edges $edges = Edges::ANTIALIASED): GERasterizer
+    {
+        throw GraphicsException::unsupported($this->name(), Resource::RASTERIZER);
+    }
+
+    /** @throws GraphicsException When the engine has none. */
+    public function raycaster(Grid $grid): GERaycaster
+    {
+        throw GraphicsException::unsupported($this->name(), Resource::RAYCASTER);
+    }
+
+    /**
+     * @param GEFramebuffer $onto one of this engine's
+     *
+     * @throws GraphicsException When the engine has none, or $onto is another engine's.
+     */
+    public function painter(GEFramebuffer $onto): GEPainter
+    {
+        throw GraphicsException::unsupported($this->name(), Resource::PAINTER);
+    }
+
+    /** Lets go of what the engine holds in its library. Its resources are of no use after. */
+    public function release(): void {}
 }

@@ -37,21 +37,6 @@ class DrawingException extends TopsideException
         return new self('Radii are a list of four numbers: [tl, tr, br, bl].');
     }
 
-    public static function unknownFont(string $class): self
-    {
-        return new self("Text cannot be drawn with [{$class}]: it is neither a GFXFont nor a TrueTypeFont.");
-    }
-
-    public static function atlasFull(int $max): self
-    {
-        return new self("One frame's glyph masks do not fit in a {$max}x{$max} atlas.");
-    }
-
-    public static function noAtlas(): self
-    {
-        return new self('TrueType glyphs need a glyph atlas to be lowered.');
-    }
-
     public static function outsideFrame(string $call): self
     {
         return new self("{$call}() belongs inside a frame: between begin() and end(), or in the callable given to frame().");

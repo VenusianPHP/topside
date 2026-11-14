@@ -23,7 +23,7 @@ use ValueError;
  * VelvetGE's PHP scanner and store, so its pixels are theirs byte for byte.
  *
  * Shapes are prepared exactly as the rasterizer prepares them (Rasterizer::lower()): radii held,
- * a wide stroke turned into its outline. Layers, glass, images, glyphs and spans are VelvetGE's
+ * a wide stroke turned into its outline. Layers, glass, images and spans are VelvetGE's
  * painter's.
  */
 class CLandBrush implements Brush

@@ -1,5 +1,6 @@
 <?php
 
+use Surface\Toolkits\Demo\AnimationsController;
 use Surface\Toolkits\Demo\DemoHomeController;
 use Surface\Toolkits\Demo\KitchenSinkController;
 use Surface\Toolkits\Navigation\ToolkitPageRoute as Route;
@@ -9,3 +10,4 @@ use Surface\Toolkits\Navigation\ToolkitPageRoute as Route;
 
 Route::get('/', [DemoHomeController::class, 'index']);
 Route::get('/kitchen-sink', [KitchenSinkController::class, 'index']);
+Route::get('/animations', [AnimationsController::class, 'index']);
