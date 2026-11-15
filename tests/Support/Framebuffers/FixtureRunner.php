@@ -13,15 +13,16 @@ use Surface\Contracts\Rendering\Framebuffers\ChannelSpec;
 use Surface\Contracts\Rendering\Framebuffers\DamageTrackingFramebuffer;
 use Surface\Contracts\Rendering\Framebuffers\EInkColor;
 use Surface\Contracts\Rendering\Framebuffers\Endianness;
-use Surface\Contracts\Rendering\Framebuffers\ePaperFramebuffer;
+use VelvetGE\Contracts\Framebuffers\ePaperFramebuffer;
 use Surface\Contracts\Rendering\Framebuffers\FormatSpec;
-use Surface\Contracts\Rendering\Framebuffers\Framebuffer;
-use Surface\Contracts\Rendering\Framebuffers\FramebufferDriver;
+use Surface\Contracts\Rendering\Framebuffers\InstanceThatManagesAFramebuffer;
+use VelvetGE\Contracts\Framebuffers\CompositingFramebuffer;
+use Surface\Rendering\Framebuffers\FramebufferDriver;
 use Surface\Contracts\Rendering\Framebuffers\PageAxis;
-use Surface\Contracts\Rendering\Framebuffers\PagedFramebuffer;
+use VelvetGE\Contracts\Framebuffers\PagedFramebuffer;
 use Surface\Contracts\Rendering\Framebuffers\PixelFormat;
 use Surface\Contracts\Rendering\Framebuffers\Region;
-use Surface\Contracts\Rendering\Framebuffers\RingFramebuffer;
+use VelvetGE\Contracts\Framebuffers\RingFramebuffer;
 use Surface\Contracts\Rendering\Framebuffers\ScanDirection;
 use Surface\Contracts\Rendering\Framebuffers\Spans;
 
@@ -83,8 +84,8 @@ final class FixtureRunner
     private static int $tolerance = 0;
 
     /**
-     * @param bool|null $addressed Whether the driver's stores answer a native address from pointer(). Null: 'native' does not,
-     *                             'ext' does, and any other driver is not checked, since a library driver may hold only
+     * @param bool|null $addressed Whether the driver's stores answer a native address from pointer(). Null: 'lustrous-php' does not,
+     *                             'lustrous-c' does, and any other driver is not checked, since a library driver may hold only
      *                             some formats itself and hand the rest to a VelvetGE store.
      * @param int $tolerance For a library driver that blends with its own arithmetic: how far each pixel byte may be
      *                       from VelvetGE's. VelvetGE's own drivers pass 0. It compares byte by byte, so it suits
@@ -93,8 +94,8 @@ final class FixtureRunner
     public static function run(FramebufferDriver $driver, string $file, ?bool $addressed = null, int $tolerance = 0): void
     {
         self::$addressed = $addressed ?? match ($driver->driver()) {
-            'native' => false,
-            'ext' => true,
+            'lustrous-php' => false,
+            'lustrous-c' => true,
             default => null,
         };
         self::$tolerance = $tolerance;
@@ -119,8 +120,8 @@ final class FixtureRunner
         }
     }
 
-    /** @param list<Framebuffer> $held Frames a ring fixture is holding, oldest first. */
-    private static function apply(Framebuffer $b, array $op, array &$held): void
+    /** @param list<InstanceThatManagesAFramebuffer> $held Frames a ring fixture is holding, oldest first. */
+    private static function apply(InstanceThatManagesAFramebuffer $b, array $op, array &$held): void
     {
         match ($op[0]) {
             'set' => $b->setPixel($op[1], $op[2], $op[3]),
@@ -130,7 +131,7 @@ final class FixtureRunner
             'pixels' => $b->setPixels($op[1]),
             'region_set' => $b->setRegion($op[1], $op[2]),
             'rgba8' => $b->blitFrom(new Rgba8Source(hex2bin($op[1]), $b->viewportWidth(), $b->viewportHeight())),
-            'spans' => $b->paintSpans(implode('', array_map(fn (array $span): string => Spans::pack(...$span), $op[1])), $op[2]),
+            'spans' => $b instanceof CompositingFramebuffer ? $b->paintSpans(implode('', array_map(fn (array $span): string => Spans::pack(...$span), $op[1])), $op[2]) : throw new LogicException('spans on a buffer that does not composite'),
             'epoch' => $b instanceof DamageTrackingFramebuffer ? $b->beginEpoch() : throw new LogicException('epoch on a buffer that tracks no damage'),
             'page' => $b instanceof PagedFramebuffer ? $b->setPage($op[1]) : throw new LogicException('page on a non-paged buffer'),
             'present' => self::ring($b)->present(),
@@ -140,7 +141,7 @@ final class FixtureRunner
         };
     }
 
-    private static function ring(Framebuffer $b): RingFramebuffer
+    private static function ring(InstanceThatManagesAFramebuffer $b): RingFramebuffer
     {
         return $b instanceof RingFramebuffer ? $b : throw new LogicException('a ring op on a non-ring buffer');
     }
@@ -174,7 +175,7 @@ final class FixtureRunner
         expect($worst)->toBeLessThanOrEqual(self::$tolerance, "{$at}: byte {$where} is off by {$worst}");
     }
 
-    private static function check(FramebufferDriver $driver, Framebuffer $b, FormatSpec $spec, array $e, string $at): void
+    private static function check(FramebufferDriver $driver, InstanceThatManagesAFramebuffer $b, FormatSpec $spec, array $e, string $at): void
     {
         if (isset($e['bytes_hex'])) {
             self::pixels(bin2hex($b->flush($spec)), $e['bytes_hex'], "{$at}: bytes");

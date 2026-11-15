@@ -6,7 +6,7 @@ namespace Surface\Contracts\Rendering\Rasterization;
  * What turns a polyline into a stroke: the contours that, filled with the non-zero rule, are its outline, and the
  * pieces a dash pattern cuts it into. Plain geometry, in framebuffer pixels: no pixel, no colour, no frame.
  *
- * Every implementation answers the numbers of Surface\Rendering\Rasterization\PHPStroker, to the last bit: a quad
+ * Every implementation answers the numbers of VelvetGE\Rasterization\PHPStroker, to the last bit: a quad
  * a segment; at each corner the join (a miter, cut to a bevel where its tip would sit more than the miter limit of
  * half-strokes from the corner; a bevel; or a round arc); at the ends of an open polyline the cap (butt, square or
  * round); every contour turned to positive signed area, one with none dropped. A round join or cap strays from its

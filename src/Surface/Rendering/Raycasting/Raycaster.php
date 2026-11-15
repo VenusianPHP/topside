@@ -2,7 +2,6 @@
 
 namespace Surface\Rendering\Raycasting;
 
-use Surface\Contracts\Rendering\Framebuffers\Framebuffer;
 use Surface\Contracts\Rendering\Framebuffers\Region;
 use Surface\Contracts\Rendering\Raycasting\Camera;
 use Surface\Contracts\Rendering\Raycasting\Grid;
@@ -11,6 +10,7 @@ use Surface\Contracts\Rendering\Raycasting\Hits;
 use Surface\Contracts\Rendering\Raycasting\RaycastException;
 use Surface\Contracts\Rendering\Raycasting\Raycaster as RaycasterContract;
 use Surface\Contracts\Rendering\Raycasting\Scenery;
+use Surface\Contracts\Rendering\Framebuffers\InstanceThatManagesAFramebuffer;
 
 /**
  * The Raycaster contract over three operations on plain numbers. Everything is checked here and
@@ -61,8 +61,8 @@ abstract class Raycaster implements RaycasterContract
         return $this->picture(...self::pictureOf($camera, $width, $height, $scenery, $reach));
     }
 
-    /** Through view() and Framebuffer::writeRgba8(), which every framebuffer has. A driver that can draw in place overrides this. */
-    public function paint(Camera $camera, Scenery $scenery, Framebuffer $target, ?Region $where = null, float $reach = INF): void
+    /** Through view() and InstanceThatManagesAFramebuffer::writeRgba8(), which every framebuffer has. A driver that can draw in place overrides this. */
+    public function paint(Camera $camera, Scenery $scenery, InstanceThatManagesAFramebuffer $target, ?Region $where = null, float $reach = INF): void
     {
         $where = self::inside($target, $where);
 
@@ -74,7 +74,7 @@ abstract class Raycaster implements RaycasterContract
      *
      * @throws RaycastException When $where is empty or not inside the framebuffer.
      */
-    protected static function inside(Framebuffer $target, ?Region $where): Region
+    protected static function inside(InstanceThatManagesAFramebuffer $target, ?Region $where): Region
     {
         [$width, $height] = [$target->viewportWidth(), $target->viewportHeight()];
         $where ??= Region::wholeSurface($width, $height);

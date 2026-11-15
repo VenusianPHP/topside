@@ -2,8 +2,12 @@
 
 namespace Surface\Toolkits\Primitives;
 
+use ReflectionException;
+use Surface\Contracts\HumanInput\HumanInputException;
 use Surface\Contracts\Toolkits\Primitives\TKCanvas as PrimitiveContract;
 use Surface\Contracts\Toolkits\ToolkitRuntimeException;
+use Surface\HumanInput\HumanInput;
+use Surface\HumanInput\InputChannel;
 
 /**
  * A region of a toolkit window that shows a graphics engine's frames. It has no size of its own:
@@ -11,6 +15,8 @@ use Surface\Contracts\Toolkits\ToolkitRuntimeException;
  */
 abstract class TKCanvas extends TKPrimitive implements PrimitiveContract
 {
+    private ?InputChannel $input = null;
+
     public function pixelSize(): array
     {
         $this->live();
@@ -41,6 +47,43 @@ abstract class TKCanvas extends TKPrimitive implements PrimitiveContract
     public function nativeSurface(): ?object
     {
         return null;
+    }
+
+    /**
+     * The keyboard, pointer and pads this canvas reads, from the application's input backend.
+     *
+     * @throws HumanInputException When human input is off (config/human-input.php enabled).
+     * @throws ReflectionException
+     */
+    public function input(): InputChannel
+    {
+        $this->live();
+        if (is_null($this->input) || $this->input->closed()) {
+            $this->input = HumanInput::channel($this);
+        }
+
+        return $this->input;
+    }
+
+    /** The input this canvas opened, while it is open: a toolkit's canvas takes the keyboard only then. */
+    protected function openInput(): ?InputChannel
+    {
+        return is_null($this->input) || $this->input->closed() ? null : $this->input;
+    }
+
+    public function settleInput(): void
+    {
+        if (! is_null($this->input) && ! $this->input->closed()) {
+            $this->input->settle();
+        }
+    }
+
+    /** Terminal, as every primitive's: its input closes with it. */
+    public function remove(): void
+    {
+        $this->input?->close();
+        $this->input = null;
+        parent::remove();
     }
 
     /** Device pixels to one unit of the toolkit's layout, where this canvas is shown. */

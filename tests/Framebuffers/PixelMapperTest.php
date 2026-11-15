@@ -6,9 +6,9 @@ use Surface\Contracts\Rendering\Framebuffers\BitDepth;
 use Surface\Contracts\Rendering\Framebuffers\FormatSpec;
 use Surface\Contracts\Rendering\Framebuffers\FramebufferException;
 use Surface\Contracts\Rendering\Framebuffers\PixelFormat;
-use Surface\VelvetGE\Framebuffers\PixelMapper;
-use Surface\VelvetGE\Framebuffers\PixelMapperMode;
 use Surface\NutsAndBolts\Color;
+use VelvetGE\Framebuffers\PixelMapper;
+use VelvetGE\Framebuffers\PixelMapperMode;
 use Venusian\Topside\Tests\Support\Framebuffers\Formats;
 
 function mapperAt(BitDepth $depth): PixelMapper

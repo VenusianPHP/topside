@@ -7,6 +7,7 @@ use Surface\NutsAndBolts\GradientSpread;
 use Surface\Contracts\Graphics\Effects\FilterChain;
 use Surface\Contracts\Rendering\Painting\PaintTarget;
 
+/** @deprecated Replaced by InstanceThatManagesAFramebuffer and its optional contracts. */
 interface Framebuffer extends PaintTarget
 {
     public function viewportWidth(): int;

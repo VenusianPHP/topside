@@ -3,7 +3,7 @@
 namespace Surface\Contracts\Rendering\Framebuffers;
 
 /** The dirty buffer: every write is recorded; beginEpoch() starts a fresh record. */
-interface DamageTrackingFramebuffer extends Framebuffer
+interface DamageTrackingFramebuffer extends InstanceThatManagesAFramebuffer
 {
     public function beginEpoch(): static;
 

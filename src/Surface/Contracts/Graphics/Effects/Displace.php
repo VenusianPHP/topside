@@ -3,7 +3,7 @@
 namespace Surface\Contracts\Graphics\Effects;
 
 use Surface\Contracts\Graphics\DrawingException;
-use Surface\Contracts\Rendering\Framebuffers\Framebuffer;
+use Surface\Contracts\Rendering\Framebuffers\InstanceThatManagesAFramebuffer;
 
 /**
  * SVG's feDisplacementMap, CoreImage's CIDisplacementDistortion: each pixel of the result is the input read at a
@@ -11,7 +11,7 @@ use Surface\Contracts\Rendering\Framebuffers\Framebuffer;
  * straight colour) of the map at (x, y), read with bilinear weights of 1/256. The map starts at the top left of the
  * layer; where it ends, nothing moves.
  *
- * The map is a Framebuffer, or the name of an earlier step's result (a map a Field and a few steps make): then it lies
+ * The map is a framebuffer (InstanceThatManagesAFramebuffer), or the name of an earlier step's result (a map a Field and a few steps make): then it lies
  * where the layer lies, and a pixel it does not reach moves nothing.
  *
  * With $bands above 1 the colour is split, as a prism splits it: band i of N is read at the point moved by
@@ -30,7 +30,7 @@ final readonly class Displace extends FilterStep
      * @throws DrawingException When the scale or spread is not finite, the bands are not 1..MAX_BANDS, or the weights are not one triple a band.
      */
     public function __construct(
-        public Framebuffer|string $map,
+        public InstanceThatManagesAFramebuffer|string $map,
         public float $scale,
         public Channel $xChannel = Channel::R,
         public Channel $yChannel = Channel::G,

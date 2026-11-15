@@ -2,8 +2,8 @@
 
 namespace Surface\Contracts\Rendering\Raycasting;
 
-use Surface\Contracts\Rendering\Framebuffers\Framebuffer;
 use Surface\Contracts\Rendering\Framebuffers\Region;
+use Surface\Contracts\Rendering\Framebuffers\InstanceThatManagesAFramebuffer;
 
 /**
  * Rays through one Grid. A ray walks from cell to cell and stops at the first
@@ -62,5 +62,5 @@ interface Raycaster
      *
      * @throws RaycastException As view(), and when $where is empty or not inside the framebuffer; nothing is then written.
      */
-    public function paint(Camera $camera, Scenery $scenery, Framebuffer $target, ?Region $where = null, float $reach = INF): void;
+    public function paint(Camera $camera, Scenery $scenery, InstanceThatManagesAFramebuffer $target, ?Region $where = null, float $reach = INF): void;
 }

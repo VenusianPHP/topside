@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 use Surface\Contracts\Rendering\Framebuffers\Region;
 use Surface\Contracts\Rendering\Rasterization\FillRule;
-use Surface\VelvetGE\Recording\Boxes;
+use Surface\Rendering\Recording\Boxes;
 
 // A frame cut into many changed regions is drawn region by region. A command whose clip is the
 // whole surface but whose shape is in one corner belongs to that corner's region only: drawn into

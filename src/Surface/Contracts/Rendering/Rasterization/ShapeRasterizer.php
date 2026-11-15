@@ -2,8 +2,8 @@
 
 namespace Surface\Contracts\Rendering\Rasterization;
 
-use Surface\Contracts\Rendering\Framebuffers\Framebuffer;
 use Surface\Contracts\Rendering\Framebuffers\Region;
+use VelvetGE\Contracts\Framebuffers\CompositingFramebuffer;
 
 /**
  * Paints shapes into a framebuffer. Every graphics engine's rasterizer does this much: one on a
@@ -28,7 +28,11 @@ interface ShapeRasterizer
      * allow; without, a CPU rasterizer sends every shape through $target->paintSpans(), the path the
      * others are held to. A GPU rasterizer paints only into its own engine's framebuffers.
      *
+     * A shape this rasterizer has no way to draw is not drawn, and is answered as it was given:
+     * nothing else is asked to draw it, and nothing throws. The caller decides what becomes of it.
+     *
      * @param  list<array<int, mixed>>  $shapes
+     * @return list<array<int, mixed>>  the shapes not drawn, in order; [] when every shape was
      */
-    public function fillBatch(array $shapes, Framebuffer $target, bool $direct = true): void;
+    public function fillBatch(array $shapes, CompositingFramebuffer $target, bool $direct = true): array;
 }

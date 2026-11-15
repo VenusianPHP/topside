@@ -8,7 +8,6 @@ use Surface\Contracts\Graphics\Effects\Glass;
 use Surface\Contracts\Graphics\StrokeStyle;
 use Surface\Contracts\Rendering\Framebuffers\DamageGranularity;
 use Surface\Contracts\Rendering\Framebuffers\Filter;
-use Surface\Contracts\Rendering\Framebuffers\Framebuffer;
 use Surface\Contracts\Rendering\Framebuffers\Region;
 use Surface\Contracts\Rendering\Painting\PaintTarget;
 use Surface\Contracts\Rendering\Rasterization\FillRule;

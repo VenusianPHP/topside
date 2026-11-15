@@ -3,8 +3,10 @@
 namespace Surface\Contracts\Rendering\Framebuffers;
 
 /**
- * Where a pixel store's bytes are in memory, for native code that paints into them in place. It
- * names no library: a rasterizer that knows nothing of the store can still draw into it.
+ * Where a frame's bytes are in C memory: the ticket one C library hands another for work on the
+ * pixels (a painter drawing in, a store copying from), so PHP never holds the bytes on the way. It
+ * names no library. A PHP-land frame lends none: its bytes stay opaque inside its own store, and
+ * data crossing from C into PHP-land does so as an explicit read-back.
  *
  * The bytes are what PixelStore::bytes() answers: $height rows of $stride bytes each, in $format
  * (its scan direction included), colours straight, not premultiplied. They stay valid while

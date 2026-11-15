@@ -11,7 +11,7 @@ use Surface\Contracts\Rendering\Framebuffers\FormatSpec;
 use Surface\Contracts\Rendering\Framebuffers\FramebufferException;
 use Surface\Contracts\Rendering\Framebuffers\PageAxis;
 use Surface\Contracts\Rendering\Framebuffers\PixelFormat;
-use Surface\VelvetGE\Framebuffers\Layout;
+use VelvetGE\Framebuffers\Layout;
 use Venusian\Topside\Tests\Support\Framebuffers\Formats;
 
 it('resolves a spec to its layout and the orders it leaves unsaid', function (): void {

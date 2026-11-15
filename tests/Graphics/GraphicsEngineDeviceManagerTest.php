@@ -8,7 +8,6 @@ use Surface\Contracts\Graphics\Resource;
 use Surface\Contracts\Rendering\Framebuffers\FormatSpec;
 use Surface\Graphics\GEFramebuffer;
 use Surface\Graphics\GraphicsEngine;
-use Surface\Graphics\GraphicsEngineDeviceManager;
 
 /** An engine with a framebuffer and nothing else, which counts its release() calls. */
 function fakeEngine(string $name, Backend $backend): GraphicsEngine
@@ -71,17 +70,6 @@ function fakeEngine(string $name, Backend $backend): GraphicsEngine
         public function release(): void
         {
             $this->released++;
-        }
-    };
-}
-
-/** A graphics manager reading the given config, without a container. */
-function gfx(array $config = []): GraphicsEngineDeviceManager
-{
-    return new class($config) extends GraphicsEngineDeviceManager {
-        public function __construct(array $config)
-        {
-            $this->config = fakeConfig($config);
         }
     };
 }

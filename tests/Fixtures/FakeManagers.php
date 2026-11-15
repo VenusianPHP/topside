@@ -2,13 +2,8 @@
 
 declare(strict_types=1);
 
-use Surface\Rendering\Framebuffers\FramebufferLibraryManager;
-use Surface\Rendering\Rasterization\RasterizationLibraryManager;
+use Surface\Graphics\GraphicsEngineDeviceManager;
 use Surface\Rendering\Raycasting\RaycastingLibraryManager;
-use Surface\VelvetGE\Drivers\Framebuffers\CLandFramebufferDriver;
-use Surface\VelvetGE\Drivers\Framebuffers\PHPLandFramebufferDriver;
-use Surface\VelvetGE\Drivers\Rasterization\CLandRasterizationDriver;
-use Surface\VelvetGE\Drivers\Rasterization\PHPLandRasterizationDriver;
 use Surface\VelvetGE\Drivers\Raycasting\CLandRaycastingDriver;
 use Surface\VelvetGE\Drivers\Raycasting\PHPLandRaycastingDriver;
 
@@ -23,30 +18,6 @@ function fakeConfig(array $items): object
             return $this->items[$key] ?? $default;
         }
     };
-}
-
-/**
- * A framebuffers manager reading the given config, without a container, with VelvetGE's two
- * drivers registered as VelvetGEServiceProvider registers them.
- */
-function framebuffers(array $config = []): FramebufferLibraryManager
-{
-    $manager = new class($config) extends FramebufferLibraryManager {
-        public function __construct(array $config)
-        {
-            $this->config = fakeConfig($config);
-        }
-
-        /** No container here: a creator is called with nothing. */
-        protected function callCustomCreator(string $driver): mixed
-        {
-            return $this->customCreators[$driver]();
-        }
-    };
-
-    return $manager
-        ->extend('native', fn () => new PHPLandFramebufferDriver())
-        ->extend('ext', fn () => new CLandFramebufferDriver());
 }
 
 /**
@@ -74,54 +45,6 @@ function raycasters(array $config = []): RaycastingLibraryManager
 }
 
 /**
- * A rasterization manager reading the given config, without a container, with VelvetGE's two
- * drivers registered as VelvetGEServiceProvider registers them.
- */
-function rasterize(array $config = []): RasterizationLibraryManager
-{
-    $manager = new class($config) extends RasterizationLibraryManager {
-        public function __construct(array $config)
-        {
-            $this->config = fakeConfig($config);
-        }
-
-        /** No container here: a creator is called with nothing. */
-        protected function callCustomCreator(string $driver): mixed
-        {
-            return $this->customCreators[$driver]();
-        }
-    };
-
-    return $manager
-        ->extend('native', fn () => new PHPLandRasterizationDriver())
-        ->extend('ext', fn () => new CLandRasterizationDriver());
-}
-
-/**
- * A painting manager reading the given config, without a container, with VelvetGE's two drivers
- * registered as VelvetGEServiceProvider registers them, over the native rasterization driver.
- */
-function painters(array $config = []): \Surface\Rendering\Painters\PaintingLibraryManager
-{
-    $manager = new class($config) extends \Surface\Rendering\Painters\PaintingLibraryManager {
-        public function __construct(array $config)
-        {
-            $this->config = fakeConfig($config);
-        }
-
-        /** No container here: a creator is called with nothing. */
-        protected function callCustomCreator(string $driver): mixed
-        {
-            return $this->customCreators[$driver]();
-        }
-    };
-
-    return $manager
-        ->extend('native', fn () => new \Surface\VelvetGE\Drivers\Painting\PHPLandPaintingDriver(new PHPLandRasterizationDriver(), true, new \Surface\VelvetGE\Drivers\Recording\PHPLandRecordingDriver()))
-        ->extend('ext', fn () => new \Surface\VelvetGE\Drivers\Painting\CLandPaintingDriver(new PHPLandRasterizationDriver(), true, new \Surface\VelvetGE\Drivers\Recording\PHPLandRecordingDriver()));
-}
-
-/**
  * A recording manager reading the given config, without a container, with VelvetGE's drivers
  * registered as VelvetGEServiceProvider registers them.
  */
@@ -141,8 +64,8 @@ function recorders(array $config = []): \Surface\Rendering\Recording\RecordingLi
     };
 
     return $manager
-        ->extend('native', fn () => new \Surface\VelvetGE\Drivers\Recording\PHPLandRecordingDriver())
-        ->extend('ext', fn () => new \Surface\VelvetGE\Drivers\Recording\CLandRecordingDriver());
+        ->extend('native', fn () => new \Surface\Rendering\Recording\Drivers\PHPLandRecordingDriver())
+        ->extend('ext', fn () => new \Surface\Rendering\Recording\Drivers\CLandRecordingDriver());
 }
 
 /**
@@ -152,4 +75,15 @@ function recorders(array $config = []): \Surface\Rendering\Recording\RecordingLi
 function recorderUnderTest(): \Surface\Contracts\Rendering\Recording\Recorder
 {
     return recorders()->driver(getenv('TOPSIDE_RECORDER') ?: 'native')->recorder();
+}
+
+/** A graphics manager reading the given config, without a container. */
+function gfx(array $config = []): GraphicsEngineDeviceManager
+{
+    return new class($config) extends GraphicsEngineDeviceManager {
+        public function __construct(array $config)
+        {
+            $this->config = fakeConfig($config);
+        }
+    };
 }

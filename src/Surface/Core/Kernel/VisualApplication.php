@@ -10,15 +10,19 @@ use Surface\Toolkits\ToolkitBridge;
 use Surface\Toolkits\Navigation\Navigator;
 use Surface\Core\Actions\Bootstrap\LoadSignals;
 use Surface\Core\Actions\Bootstrap\LoadDeathWatcher;
-use Surface\Core\Actions\Bootstrap\LoadRoutingMailListeners;
-use Surface\Contracts\Toolkits\Drivers\ToolkitWindowDriver;
 use Voyager\Contracts\NutsAndBolts\ApplicationShell;
+use Surface\Core\Actions\Bootstrap\LoadHumanInputBackend;
+use Surface\Core\Actions\Bootstrap\LoadAudioVideoServices;
+use Surface\Contracts\Toolkits\Drivers\ToolkitWindowDriver;
+use Surface\Core\Actions\Bootstrap\LoadRoutingMailListeners;
 
 abstract class VisualApplication extends ApplicationKernel
 {
     protected array $surface_bootstrappers = [
         LoadDeathWatcher::class,
         LoadSignals::class,
+        LoadHumanInputBackend::class,
+        LoadAudioVideoServices::class,
         LoadRoutingMailListeners::class,
     ];
 

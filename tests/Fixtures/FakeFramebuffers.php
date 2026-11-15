@@ -4,25 +4,19 @@ declare(strict_types=1);
 
 namespace Venusian\Topside\Tests\Fixtures;
 
-use Surface\Contracts\Rendering\Framebuffers\CompletePixelStore;
+use VelvetGE\Contracts\Framebuffers\CompletePixelStore;
 use Surface\Contracts\Rendering\Framebuffers\DamageGranularity;
 use Surface\Contracts\Rendering\Framebuffers\Filter;
 use Surface\Contracts\Rendering\Framebuffers\FormatSpec;
 use Surface\Contracts\Rendering\Framebuffers\FramebufferException;
-use Surface\Contracts\Rendering\Framebuffers\PaintingPixelStore;
+use VelvetGE\Contracts\Framebuffers\PaintingPixelStore;
 use Surface\Contracts\Rendering\Framebuffers\PixelMemory;
-use Surface\Contracts\Rendering\Framebuffers\PixelStore;
-use Surface\Contracts\Rendering\Framebuffers\PixelStoreMinter;
+use VelvetGE\Contracts\Framebuffers\PixelStore;
+use VelvetGE\Contracts\Framebuffers\PixelStoreMinter;
 use Surface\Contracts\Rendering\Framebuffers\Region;
 use Surface\Contracts\Rendering\Framebuffers\Spans;
-use Surface\VelvetGE\Drivers\Framebuffers\StoreFramebufferDriver;
-use Surface\VelvetGE\Framebuffers\CLand\CLandPixelStore;
-use Surface\VelvetGE\Framebuffers\DirtyFramebuffer;
-use Surface\VelvetGE\Framebuffers\ePaperFramebuffer;
-use Surface\VelvetGE\Framebuffers\FullFramebuffer;
-use Surface\VelvetGE\Framebuffers\PHPLand\PHPLandPixelStore;
-use Surface\VelvetGE\Framebuffers\PagedFramebuffer;
-use Surface\VelvetGE\Framebuffers\RingFramebuffer;
+use VelvetGE\Framebuffers\C\CLandPixelStore;
+use VelvetGE\Framebuffers\PHP\PHPLandPixelStore;
 
 /**
  * A pixel store with no layout: one word per pixel in a PHP array, one byte
@@ -236,46 +230,6 @@ final class FakeMinter implements PixelStoreMinter
     }
 }
 
-final class FakeFullFramebuffer extends FullFramebuffer
-{
-    public function __construct(FormatSpec $format, int $width, int $height)
-    {
-        parent::__construct(new FakeMinter(), $format, $width, $height);
-    }
-}
-
-final class FakeDirtyFramebuffer extends DirtyFramebuffer
-{
-    public function __construct(FormatSpec $format, int $width, int $height)
-    {
-        parent::__construct(new FakeMinter(), $format, $width, $height);
-    }
-}
-
-final class FakeePaperFramebuffer extends ePaperFramebuffer
-{
-    public function __construct(FormatSpec $format, int $width, int $height)
-    {
-        parent::__construct(new FakeMinter(), $format, $width, $height);
-    }
-}
-
-final class FakePagedFramebuffer extends PagedFramebuffer
-{
-    public function __construct(FormatSpec $format, int $width, int $height, int $page_rows)
-    {
-        parent::__construct(new FakeMinter(), $format, $width, $height, $page_rows);
-    }
-}
-
-final class FakeRingFramebuffer extends RingFramebuffer
-{
-    public function __construct(FormatSpec $format, int $width, int $height, int $frames)
-    {
-        parent::__construct(new FakeMinter(), $format, $width, $height, $frames);
-    }
-}
-
 /**
  * A store with the core only: a PHP store behind it, its painting and effects hidden. What a
  * library binding is on its first day. Completed by VelvetGE, it must draw byte for byte what
@@ -382,22 +336,5 @@ final class MemoryPixelStore extends CoreOnlyPixelStore
     public function memory(): ?PixelMemory
     {
         return $this->held->memory();
-    }
-}
-
-/** A driver over a store that leaves tiers out, as a library binding registers one. */
-final class PartialFramebufferDriver extends StoreFramebufferDriver
-{
-    /** @param class-string<PixelStore> $store */
-    public function __construct(private readonly string $name, private readonly string $store) {}
-
-    public function driver(): string
-    {
-        return $this->name;
-    }
-
-    public function mint(FormatSpec $format, int $width, int $height): PixelStore
-    {
-        return new ($this->store)($format, $width, $height);
     }
 }

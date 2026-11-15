@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-use Surface\Rendering\Rasterization\Stroker;
+use VelvetGE\Rasterization\Stroker;
 
 /** Twice the signed area: positive for the orientation every outline contour is turned to. */
 function windingArea(array $flat): float

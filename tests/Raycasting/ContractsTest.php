@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-use Surface\Contracts\Rendering\Framebuffers\FormatSpec;
+use Venusian\Topside\Tests\Support\Framebuffers\Rgba8Source;
 use Surface\Contracts\Rendering\Raycasting\Camera;
 use Surface\Contracts\Rendering\Raycasting\Face;
 use Surface\Contracts\Rendering\Raycasting\Grid;
@@ -11,7 +11,6 @@ use Surface\Contracts\Rendering\Raycasting\Hits;
 use Surface\Contracts\Rendering\Raycasting\RaycastException;
 use Surface\Contracts\Rendering\Raycasting\Scenery;
 use Surface\Contracts\Rendering\Raycasting\Texture;
-use Surface\VelvetGE\Drivers\Framebuffers\PHPLandFramebufferDriver;
 
 it('builds a grid from its rows, top first', function (): void {
     $grid = Grid::of([[1, 0, 255], [0, 2, 0]]);
@@ -80,7 +79,7 @@ it('refuses a camera that is not finite, too far out, or sees no width or a half
 ]);
 
 it('takes a texture as RGBA8 bytes, or from a framebuffer', function (): void {
-    $frame = (new PHPLandFramebufferDriver())->full(FormatSpec::rgba8(), 2, 1)->writeRgba8(hex2bin('ff0000ff00ff00ff'), 2, 1);
+    $frame = new Rgba8Source(hex2bin('ff0000ff00ff00ff'), 2, 1);
     $texture = Texture::of($frame);
 
     expect([$texture->width, $texture->height, bin2hex($texture->rgba8)])->toBe([2, 1, 'ff0000ff00ff00ff']);

@@ -3,8 +3,8 @@
 namespace Surface\Contracts\Rendering\Rasterization;
 
 /**
- * A scanner with every tier. A Rasterizer works on one of these: the engine's
- * two scanners are complete, and any other scanner is completed before a
- * rasterizer sees it.
+ * A scanner with every tier. A rasterizer gives it every shape as the shape's
+ * own op; a scanner without some tier gets curved shapes as outlines and hands
+ * back what it has no op for (VelvetGE\Rasterization\Rasterizer).
  */
 interface CompleteScanner extends BatchScanner, PixelScanner, ShapeScanner {}

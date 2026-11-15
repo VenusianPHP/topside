@@ -3,6 +3,7 @@
 namespace Surface\Core\Providers;
 
 use Surface\Graphics\GraphicsServiceProvider;
+use Surface\HumanInput\HumanInputServiceProvider;
 use Surface\Rendering\RenderingServiceProvider;
 use Surface\Toolkits\ToolkitsServiceProvider;
 use Surface\VelvetGE\VelvetGEServiceProvider;
@@ -14,8 +15,7 @@ class TopsideServiceProvider extends AggregateServiceProvider
         ToolkitsServiceProvider::class,
         RenderingServiceProvider::class,
         GraphicsServiceProvider::class,
-        // after Rendering and Graphics: it registers its drivers and its engine with their managers
-        VelvetGEServiceProvider::class,
+        HumanInputServiceProvider::class,
     ];
 
     public function register(): void
@@ -25,6 +25,7 @@ class TopsideServiceProvider extends AggregateServiceProvider
         }
 
         parent::register();
+        signal('topside-booted');
     }
 
     public function boot(): void
@@ -42,7 +43,9 @@ class TopsideServiceProvider extends AggregateServiceProvider
         $dir = dirname(__DIR__, 4).'/config';
 
         return [
+            'av' => "{$dir}/av.php",
             'graphics' => "{$dir}/graphics.php",
+            'human-input' => "{$dir}/human-input.php",
             'rendering' => "{$dir}/rendering.php",
             'toolkits' => "{$dir}/toolkits.php",
             'velvet' => "{$dir}/velvet.php",

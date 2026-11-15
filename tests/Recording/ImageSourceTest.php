@@ -6,7 +6,7 @@ use Surface\Contracts\Rendering\Framebuffers\DamageGranularity;
 use Surface\Contracts\Rendering\Framebuffers\Region;
 use Surface\Contracts\Rendering\Painting\PaintTarget;
 use Surface\NutsAndBolts\Affine;
-use Surface\VelvetGE\Recording\Boxes;
+use Surface\Rendering\Recording\Boxes;
 
 // A GPU engine's framebuffer is a PaintTarget but not a Rendering Framebuffer: an image drawn from one must be
 // boxed as any other, or the second frame that draws it cannot be compared with the first.

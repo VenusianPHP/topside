@@ -2,9 +2,9 @@
 
 namespace Surface\Contracts\Toolkits\Primitives;
 
-use Surface\Contracts\Graphics\ActorStage;
+use Surface\Contracts\HumanInput\InputStage;
 
-interface TKCanvas extends TKPrimitive, ActorStage
+interface TKCanvas extends TKPrimitive, InputStage
 {
 
 }

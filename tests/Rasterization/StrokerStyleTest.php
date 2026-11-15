@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 use Surface\Contracts\Rendering\Rasterization\StrokeCap;
 use Surface\Contracts\Rendering\Rasterization\StrokeJoin;
-use Surface\Rendering\Rasterization\Stroker;
+use VelvetGE\Rasterization\Stroker;
 
 /** The extent [minX, minY, maxX, maxY] of flat contours. */
 function extentOf(array $contours): array

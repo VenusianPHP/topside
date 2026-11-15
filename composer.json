@@ -46,7 +46,8 @@
     },
     "autoload": {
         "psr-4": {
-            "Surface\\": "src/Surface"
+            "Surface\\": "src/Surface/",
+            "VelvetGE\\": "src/Velvet/src/"
         }
     },
     "autoload-dev": {
@@ -60,7 +61,8 @@
         },
         "venusian": {
             "providers": [
-                "Surface\\Core\\Providers\\TopsideServiceProvider"
+                "Surface\\Core\\Providers\\TopsideServiceProvider",
+                "VelvetGE\\Providers\\VelvetGEServiceProvider"
             ]
         }
     },

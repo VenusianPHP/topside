@@ -7,7 +7,6 @@ use Surface\Contracts\Graphics\StrokeStyle;
 use Surface\Contracts\Graphics\Effects\FilterChain;
 use Surface\Contracts\Graphics\Effects\Glass;
 use Surface\Contracts\Rendering\Framebuffers\Filter;
-use Surface\Contracts\Rendering\Framebuffers\Framebuffer;
 use Surface\Contracts\Rendering\Framebuffers\Region;
 use Surface\Contracts\Rendering\Rasterization\FillRule;
 use Surface\NutsAndBolts\Affine;
@@ -79,7 +78,7 @@ interface Painter
     public function canScroll(): bool;
 
     /**
-     * Between frames, move the pixels of $region by ($dx, $dy) as Framebuffer::scroll() does,
+     * Between frames, move the pixels of $region by ($dx, $dy) as ScrollingFramebuffer::scroll() does,
      * and add the region to the next end()'s damage. The next frame then draws what the scroll
      * exposed and what changed; one that does not clear draws only that.
      *

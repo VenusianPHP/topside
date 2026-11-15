@@ -6,15 +6,13 @@ namespace Venusian\Topside\Tests\Support\Framebuffers;
 
 use LogicException;
 use Surface\Contracts\Rendering\Framebuffers\DamageGranularity;
-use Surface\Contracts\Rendering\Framebuffers\Filter;
 use Surface\Contracts\Rendering\Framebuffers\FormatSpec;
-use Surface\Contracts\Rendering\Framebuffers\Framebuffer;
+use Surface\Contracts\Rendering\Framebuffers\InstanceThatManagesAFramebuffer;
+use Surface\Contracts\Rendering\Painting\PaintTarget;
 use Surface\Contracts\Rendering\Framebuffers\Region;
-use Surface\NutsAndBolts\Affine;
-use Surface\NutsAndBolts\GradientSpread;
 
 /** RGBA8 bytes as a read-only framebuffer: what a fixture's rgba8 op blits from. Pixel words are 0xRRGGBBAA. */
-final class Rgba8Source implements Framebuffer
+final class Rgba8Source implements InstanceThatManagesAFramebuffer, PaintTarget
 {
     public function __construct(private string $rgba8, private int $width, private int $height) {}
 
@@ -43,7 +41,7 @@ final class Rgba8Source implements Framebuffer
 
     public function pointer(): int { return 0; }
 
-    public function blitTo(Framebuffer $target, int $offset_x = 0, int $offset_y = 0): Framebuffer { return $target->blitFrom($this, $offset_x, $offset_y); }
+    public function blitTo(InstanceThatManagesAFramebuffer $target, int $offset_x = 0, int $offset_y = 0): InstanceThatManagesAFramebuffer { return $target->blitFrom($this, $offset_x, $offset_y); }
 
     public function setPixel(int $x, int $y, int $value): static { throw new LogicException('read-only source'); }
 
@@ -53,33 +51,17 @@ final class Rgba8Source implements Framebuffer
 
     public function setSegment(int $x, int $y, int $width, int $height, int $color): static { throw new LogicException('read-only source'); }
 
-    public function paintSpans(string $spans, int $rgba8): static { throw new LogicException('read-only source'); }
-
-    public function paintMasks(array $masks, int $rgba8, Region $clip): static { throw new LogicException('read-only source'); }
-
     public function memory(): ?\Surface\Contracts\Rendering\Framebuffers\PixelMemory { return null; }
-
-    public function kawaseDown(Framebuffer $source, Region $region): static { throw new LogicException('read-only source'); }
-
-    public function kawaseUp(Framebuffer $source): static { throw new LogicException('read-only source'); }
-
-    public function paintGlass(array $geometry, Framebuffer $blur, int $scale, ?Framebuffer $sharp, int $originX, int $originY, array $look, Region $clip): static { throw new LogicException('read-only source'); }
 
     public function drewInto(?\Surface\Contracts\Rendering\Framebuffers\Region ...$regions): static { throw new LogicException('read-only source'); }
 
-    public function paintImage(Framebuffer $source, Affine $placement, int $opacity = 255, Filter $filter = Filter::NEAREST, ?Region $clip = null, int $tint = 0xFFFFFFFF, ?array $window = null, ?string $coverage = null): static { throw new LogicException('read-only source'); }
-
-    public function paintGradient(string $spans, string $ramp, string $kind, GradientSpread $spread, array $inverse): static { throw new LogicException('read-only source'); }
-
-    public function scratch(int $width, int $height): Framebuffer { throw new LogicException('read-only source'); }
-
-    public function filter(\Surface\Contracts\Graphics\Effects\FilterChain $chain, ?Region $region = null, bool $premultiplied = false): static { throw new LogicException('read-only source'); }
+    public function scratch(int $width, int $height): InstanceThatManagesAFramebuffer { throw new LogicException('read-only source'); }
 
     public function clear(): static { throw new LogicException('read-only source'); }
 
     public function fill(int $color): static { throw new LogicException('read-only source'); }
 
-    public function blitFrom(Framebuffer $source, int $offset_x = 0, int $offset_y = 0): Framebuffer { throw new LogicException('read-only source'); }
+    public function blitFrom(InstanceThatManagesAFramebuffer $source, int $offset_x = 0, int $offset_y = 0): InstanceThatManagesAFramebuffer { throw new LogicException('read-only source'); }
 
     public function writeRgba8(string $rgba8, int $width, int $height, int $x = 0, int $y = 0): static { throw new LogicException('read-only source'); }
 

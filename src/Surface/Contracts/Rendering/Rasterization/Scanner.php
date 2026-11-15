@@ -12,8 +12,9 @@ use Surface\Contracts\Rendering\Framebuffers\Region;
  * This is the core every scanner has: filling a path. More is optional, each
  * its own interface. Three add ops: ShapeScanner (curves by formula),
  * PixelScanner (work defined pixel by pixel) and BatchScanner (many ops in
- * one call); a scanner that leaves one out is completed with the engine's
- * own, so a rasterizer always has every op. Two add ways onto a framebuffer:
+ * one call); a scanner that leaves one out is asked for nothing it lacks: a
+ * curve reaches it as a path, and pixel work comes back undrawn. Two add ways
+ * onto a framebuffer:
  * DirectScanner (blend straight into a pixel store's memory) and MaskScanner
  * (coverage as bytes, for a library with no span list).
  *
@@ -46,6 +47,10 @@ interface Scanner
 
     public function clip(): Region;
 
+    /**
+     * The edges this scanner draws. A scanner whose library has no hard-edged mode answers
+     * Edges::ANTIALIASED whatever it was asked for, and draws that.
+     */
     public function edges(): Edges;
 
     /**

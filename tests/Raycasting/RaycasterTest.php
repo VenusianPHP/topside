@@ -2,7 +2,6 @@
 
 declare(strict_types=1);
 
-use Surface\Contracts\Rendering\Framebuffers\FormatSpec;
 use Surface\Contracts\Rendering\Raycasting\Camera;
 use Surface\Contracts\Rendering\Raycasting\Face;
 use Surface\Contracts\Rendering\Raycasting\Grid;
@@ -12,36 +11,11 @@ use Surface\Contracts\Rendering\Raycasting\RaycastDriver;
 use Surface\Contracts\Rendering\Raycasting\RaycastException;
 use Surface\Contracts\Rendering\Raycasting\Scenery;
 use Surface\Contracts\Rendering\Raycasting\Texture;
-use Surface\VelvetGE\Drivers\Framebuffers\PHPLandFramebufferDriver;
 
 /*
  * The contract on every driver. Expected hits and pictures are worked by hand from the grid
  * walk; the cameras look east (angle 0), where the direction is exactly (1, 0).
  */
-
-/** Walls all round, wall 2 in the east wall on row 3, wall 3 in the south wall on column 1. */
-function raycastRoom(): Grid
-{
-    return Grid::of([
-        [1, 1, 1, 1, 1],
-        [1, 0, 0, 0, 1],
-        [1, 0, 0, 0, 1],
-        [1, 0, 0, 0, 2],
-        [1, 3, 1, 1, 1],
-    ]);
-}
-
-/** A camera looking east whose plane is half as long as its direction: tan(fov / 2) = 0.5. */
-function eastward(float $x, float $y): Camera
-{
-    return new Camera($x, $y, 0.0, 2 * atan(0.5));
-}
-
-/** @return list<list<string>> rows of pixels, eight hex digits each */
-function raycastPicture(string $rgba8, int $width): array
-{
-    return array_map(fn (string $row): array => str_split(bin2hex($row), 8), str_split($rgba8, $width * 4));
-}
 
 it('names itself and keeps its grid', function (RaycastDriver $driver): void {
     $grid = raycastRoom();
@@ -108,16 +82,6 @@ it('paints a wall with a texture, and darkens north and south faces by the shade
         // Looking south at a north face, shade 128: 255 * 128 / 255 = 128.
         ->and(raycastPicture($caster->view(new Camera(2.5, 2.5, M_PI / 2, 2 * atan(0.5)), 1, 4, new Scenery([1 => 0xFF8040C0], 0x111111FF, 0x222222FF, 128)), 1))
         ->toBe([['111111ff'], ['804020c0'], ['804020c0'], ['222222ff']]);
-})->with('raycast drivers');
-
-it('gives pixels a framebuffer takes as they are', function (RaycastDriver $driver): void {
-    $pixels = $driver->caster(raycastRoom())->view(eastward(2.5, 2.5), 8, 6, new Scenery([1 => 0xFF0000FF, 2 => 0xFF0000FF], 0x111111FF, 0x222222FF));
-    $frame = (new PHPLandFramebufferDriver())->full(FormatSpec::rgba8(), 8, 6)->writeRgba8($pixels, 8, 6);
-
-    expect($frame->toRgba8())->toBe($pixels)
-        ->and($frame->getPixel(0, 0))->toBe(0x111111FF)
-        ->and($frame->getPixel(4, 3))->toBe(0xFF0000FF)
-        ->and($frame->getPixel(7, 5))->toBe(0x222222FF);
 })->with('raycast drivers');
 
 it('refuses a ray that hits a wall the scenery has no entry for', function (RaycastDriver $driver): void {

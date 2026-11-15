@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 use Surface\Contracts\Rendering\Framebuffers\DamageGranularity;
 use Surface\Contracts\Rendering\Framebuffers\Region;
-use Surface\VelvetGE\Framebuffers\DamageRecord;
+use VelvetGE\Framebuffers\DamageRecord;
 
 /** @return list<array{int, int, int, int}> */
 function boxes(array $regions): array

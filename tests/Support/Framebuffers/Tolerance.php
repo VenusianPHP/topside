@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Venusian\Topside\Tests\Support\Framebuffers;
 
-use Surface\Contracts\Rendering\Framebuffers\FramebufferDriver;
+use Surface\Rendering\Framebuffers\FramebufferDriver;
 
 /**
  * How far a driver's blended pixel bytes may be from VelvetGE's. VelvetGE's drivers are the

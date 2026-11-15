@@ -2,7 +2,7 @@
 
 namespace Surface\Contracts\Rendering\Raycasting;
 
-use Surface\Contracts\Rendering\Framebuffers\Framebuffer;
+use Surface\Contracts\Rendering\Framebuffers\InstanceThatManagesAFramebuffer;
 
 /** A picture stretched over each face of a wall: RGBA8 pixels, top row first. */
 readonly class Texture
@@ -28,7 +28,7 @@ readonly class Texture
     }
 
     /** What a framebuffer holds now, as a texture. */
-    public static function of(Framebuffer $frame): self
+    public static function of(InstanceThatManagesAFramebuffer $frame): self
     {
         return new self($frame->toRgba8(), $frame->viewportWidth(), $frame->viewportHeight());
     }

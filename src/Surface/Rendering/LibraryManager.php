@@ -21,7 +21,7 @@ use Voyager\NutsAndBolts\Manager;
 abstract class LibraryManager extends Manager
 {
     /** VelvetGE's own drivers: what 'auto' tries last, in this order. */
-    protected const array LAST_RESORTS = ['ext', 'native'];
+    protected const array LAST_RESORTS = ['c', 'php'];
 
     /**
      * The first registered driver that can run in this PHP.

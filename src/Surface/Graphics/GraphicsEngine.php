@@ -2,13 +2,13 @@
 
 namespace Surface\Graphics;
 
-use Surface\Contracts\Graphics\ActorStage;
 use Surface\Contracts\Graphics\Backend;
-use Surface\Contracts\Graphics\GraphicsException;
 use Surface\Contracts\Graphics\Resource;
-use Surface\Contracts\Rendering\Framebuffers\FormatSpec;
-use Surface\Contracts\Rendering\Rasterization\Edges;
+use Surface\Contracts\Graphics\ActorStage;
 use Surface\Contracts\Rendering\Raycasting\Grid;
+use Surface\Contracts\Graphics\GraphicsException;
+use Surface\Contracts\Rendering\Rasterization\Edges;
+use Surface\Contracts\Rendering\Framebuffers\FormatSpec;
 
 /**
  * One graphics library, on one backend. Everything drawn with it is made from it, and what it

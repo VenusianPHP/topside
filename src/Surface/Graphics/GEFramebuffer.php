@@ -5,6 +5,7 @@ namespace Surface\Graphics;
 use Surface\Contracts\Graphics\ActorStage;
 use Surface\Contracts\Graphics\GraphicsException;
 use Surface\Contracts\Graphics\PacedStage;
+use Surface\Contracts\HumanInput\InputStage;
 use Surface\Contracts\Rendering\Framebuffers\FormatSpec;
 use Surface\Contracts\Rendering\Framebuffers\Region;
 use Surface\NutsAndBolts\Color;
@@ -92,6 +93,8 @@ abstract class GEFramebuffer extends GEResource
             throw GraphicsException::noStage();
         }
 
+        $this->settleInput();
+
         if (! $this->stage instanceof PacedStage) {
             $this->show();
             $this->shown++;
@@ -124,6 +127,18 @@ abstract class GEFramebuffer extends GEResource
     protected function show(): void
     {
         $this->stage->display($this->read(), $this->width(), $this->height());
+    }
+
+    /**
+     * The frame presented was drawn from the input its stage had: those edges are over. Done as
+     * it is presented, not as it is shown, so input that comes before a paced stage's refresh is
+     * kept for the next frame.
+     */
+    protected function settleInput(): void
+    {
+        if ($this->stage instanceof InputStage) {
+            $this->stage->settleInput();
+        }
     }
 
     /**
