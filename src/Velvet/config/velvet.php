@@ -7,14 +7,10 @@ return [
     |--------------------------------------------------------------------------
     |
     | On the CPU, Velvet is built from Topside's rendering parts. Here you may
-    | name the driver Velvet uses for each part: "native" (PHP), "ext" (C), a
-    | library binding your application has installed, or "auto" to take the
-    | first of those that can run.
-    |
-    | Each part is "auto" unless you say otherwise. What you name here changes
-    | Velvet alone: code that asks Rendering for the part itself still gets
-    | the default from config/rendering.php. Set a part to null to have Velvet
-    | follow that default too.
+    | name the driver Velvet uses for each part: one of Lustrous's ("lustrous-php"
+    | in plain PHP, "lustrous-c" in C) or one a module your application has
+    | installed registers. What you name here changes Velvet alone: code that
+    | asks Rendering for a part by its own name still gets Rendering's default.
     |
     */
     'cpu' => [
@@ -22,10 +18,13 @@ return [
         |--------------------------------------------------------------------------
         | Framebuffers
         |--------------------------------------------------------------------------
-        | Framebuffers are <placeholder_pretend_explanation>
+        | Framebuffers hold the pixels everything else draws into, and hand
+        | them to whatever shows them.
         |
-        | Available - 'lustrous-c', 'lustrous-php', 'auto'
-        | Supported w/ modules - 'pixman', 'sdl3', 'thor-vg', 'pluto-vg', 'blend2d'
+        | Available - 'lustrous-php', 'lustrous-c' (a full frame), or a kind
+        |             by name: 'lustrous-php-<kind>', 'lustrous-c-<kind>' with
+        |             kind one of 'full', 'dirty', 'epaper', 'paged', 'ring'
+        | Supported w/ modules - 'pixman', 'sdl3', 'thorvg', 'plutovg', 'blend2d'
         | Still looking into - 'opengl', 'vulkan'
         */
         'framebuffers' => [
@@ -41,14 +40,15 @@ return [
         /*
         |--------------------------------------------------------------------------
         | Rasterizers
-        |--------------------------------------------------------------------------
+        |-------------------z2-------------------------------------------------------
         | Rasterizers contain all those fun and exciting effects use all that crazy
         | math you had to learn in school but forgot, that make your application
         | visually appealing while its eat all your compute, Really tho, they
         | calculate effects like shadows and update the framebuffers to show this.
         |
-        | Available - 'lustrous-c', 'lustrous-php', 'auto'
-        | Supported w/ modules - 'pixman', 'sdl3', 'thor-vg', 'pluto-vg', 'blend2d'
+        | Available - 'lustrous-c', 'lustrous-php', 'auto' (lustrous-c where
+        |             ext-rasterize is loaded, else lustrous-php)
+        | Supported w/ modules - 'thorvg', 'plutovg', 'blend2d'
         | Still looking into - 'opengl', 'vulkan'
         */
         'rasterizers' => [
@@ -63,8 +63,9 @@ return [
         | shapes and the fonts using a digital paint brush implemented
         | by any of these fine drivers (if you have them installed)
         |
-        | Available - 'lustrous-c', 'lustrous-php', 'auto'
-        | Supported w/ modules - 'pixman', 'sdl3', 'thor-vg', 'pluto-vg', 'blend2d'
+        | Available - 'lustrous-c', 'lustrous-php', 'auto' (lustrous-c where
+        |             ext-paint is loaded, else lustrous-php)
+        | Supported w/ modules - 'plutovg'
         | Still looking into - 'opengl', 'vulkan'
         */
         'painters' => [
@@ -77,9 +78,13 @@ return [
         | Plug them in here.
         | Raycasters, path tracing, Tile Mappers, Post Processing, etc
         |
+        | Raycasting - 'lustrous-c', 'lustrous-php', 'auto' (lustrous-c where
+        |              ext-raycast is loaded, else lustrous-php)
         */
         'advanced' => [
-            //'raycasting' => ['default' => 'lustrous-c']
+            'raycasting' => [
+                'default' => env('VELVET_RAYCASTER', 'auto'),
+            ],
         ]
     ],
     'gpu' => [

@@ -119,15 +119,15 @@ class VelvetPainter extends Painter
     }
 
     /**
-     * The shape commands of the last frame that were not drawn, as they were recorded: the active
-     * rasterizer has no way to draw them (a shadow or a one-pixel line, on a scanner without
-     * them). Nothing else drew them and nothing threw.
+     * The commands of the last frame that were not drawn, as they were recorded or called: a shape
+     * the active rasterizer has no way to draw (a shadow or a one-pixel line, on a scanner without
+     * them), or a dashed stroke the stroker in use cannot cut. Nothing else drew them and nothing threw.
      *
      * @return list<array<int, mixed>>
      */
     public function undrawn(): array
     {
-        return $this->undrawn;
+        return [...$this->recorder()->undrawn(), ...$this->undrawn];
     }
 
     protected function execute(array $commands): void

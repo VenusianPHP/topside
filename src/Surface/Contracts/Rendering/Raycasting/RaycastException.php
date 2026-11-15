@@ -51,9 +51,9 @@ class RaycastException extends RenderingException
         return new self("Raycasting is off. Turn it on with 'enabled' => true under 'raycaster' in config/rendering.php, or RENDERING_RAYCASTER=true in the environment.");
     }
 
-    public static function extensionMissing(string $version): self
+    public static function extensionMissing(string $driver, string $version): self
     {
-        return new self("The 'ext' raycasting driver needs ext-raycast {$version} or newer loaded in this PHP (".PHP_BINARY.').');
+        return new self("The '{$driver}' raycasting driver needs ext-raycast {$version} or newer loaded in this PHP (".PHP_BINARY.').');
     }
 
     /** A number as text: NAN by name, since PHP 8.5 warns when it is turned into a string. */

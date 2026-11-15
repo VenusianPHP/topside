@@ -72,6 +72,14 @@ interface Recorder
      */
     public function finish(): array;
 
+    /**
+     * The draw calls of the open or last frame that were not recorded, as they were called: a dashed
+     * stroke when the stroker in use cannot cut dashes. Nothing else drew them and nothing threw.
+     *
+     * @return list<array<int, mixed>> ['stroke', Path, Color|Gradient, StrokeStyle]
+     */
+    public function undrawn(): array;
+
     public function push(): void;
 
     /** @throws DrawingException Without a push(). */

@@ -11,8 +11,9 @@ return [
         'default' => 'auto',
     ],
 
-    // What turns a polyline into a stroke: 'auto' takes ext-rasterize's stroker when it has one and
-    // PHP's otherwise; 'ext' insists on ext-rasterize's; 'native' is PHP's.
+    // What turns a polyline into a stroke: the stroking driver a package registers, by name. Lustrous
+    // registers 'lustrous-php', 'lustrous-c' and 'auto' (lustrous-c where ext-rasterize can stroke,
+    // else lustrous-php); Blend2D, ThorVG and PlutoVG register 'blend2d', 'thorvg' and 'plutovg'.
     'stroker' => [
         'default' => 'auto',
     ],
@@ -23,13 +24,6 @@ return [
 
     // What a painter records a frame with, and compares it to the frame before with.
     'recorder' => [
-        'default' => 'auto',
-    ],
-
-    // Raycasting is off unless an application asks for it: with 'enabled' false no raycasting
-    // driver is registered and Raycasters refuses, saying how to turn it on.
-    'raycaster' => [
-        'enabled' => (bool) env('RENDERING_RAYCASTER', false),
         'default' => 'auto',
     ],
 ];

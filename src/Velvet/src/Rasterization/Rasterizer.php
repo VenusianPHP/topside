@@ -2,6 +2,7 @@
 
 namespace VelvetGE\Rasterization;
 
+use Surface\Rendering\Stroker;
 use Surface\Contracts\Rendering\Framebuffers\Region;
 use Surface\Contracts\Rendering\Rasterization\Edges;
 use Surface\Contracts\Rendering\Rasterization\Scanner;

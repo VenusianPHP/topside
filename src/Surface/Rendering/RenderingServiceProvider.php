@@ -6,7 +6,7 @@ use ReflectionException;
 use Surface\Rendering\Framebuffers\FramebufferLibraryManager;
 use Surface\Rendering\Painters\PaintingLibraryManager;
 use Surface\Rendering\Rasterization\RasterizationLibraryManager;
-use Surface\Rendering\Raycasting\RaycastingLibraryManager;
+use Surface\Rendering\Stroking\StrokingLibraryManager;
 use Surface\Rendering\Recording\RecordingLibraryManager;
 use Surface\Rendering\Recording\Drivers\CLandRecordingDriver;
 use Surface\Rendering\Recording\Drivers\PHPLandRecordingDriver;
@@ -22,22 +22,10 @@ class RenderingServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->bootstrapRecorder();
+        $this->bootstrapStroker();
         $this->bootstrapFramebuffers();
         $this->bootstrapRasterization();
-
-
-
-        $this->app->registerSingleton('painters', fn (FrameworkCore $app) => new PaintingLibraryManager($app));
-        $this->app->alias('painters', PaintingLibraryManager::class);
-
-
-
-        /*
-        // Opt-in: config/rendering.php raycaster.enabled.
-        if (Raycasters::enabled()) {
-            $this->app->registerSingleton('raycasters', fn (FrameworkCore $app) => new RaycastingLibraryManager($app));
-            $this->app->alias('raycasters', RaycastingLibraryManager::class);
-        }*/
+        $this->bootstrapPainters();
     }
 
     /**
@@ -51,6 +39,18 @@ class RenderingServiceProvider extends ServiceProvider
         // Recording is Topside's, for every engine: its two drivers are registered here.
         $this->app->make('recorders')->extend('native', fn () => new PHPLandRecordingDriver());
         $this->app->make('recorders')->extend('ext', fn () => new CLandRecordingDriver());
+    }
+
+    /**
+     * Stroking is Topside's, for every engine: the recorder and the GPU engines stroke through it. It
+     * brings no stroker of its own; packages register theirs here.
+     *
+     * @throws ReflectionException
+     */
+    protected function bootstrapStroker(): void
+    {
+        $this->app->registerSingleton('strokers', fn (FrameworkCore $app) => new StrokingLibraryManager($app));
+        $this->app->alias('strokers', StrokingLibraryManager::class);
     }
 
     /**
@@ -69,6 +69,15 @@ class RenderingServiceProvider extends ServiceProvider
     {
         $this->app->registerSingleton('rasterize', fn (FrameworkCore $app) => new RasterizationLibraryManager($app));
         $this->app->alias('rasterize', RasterizationLibraryManager::class);
+    }
+
+    /**
+     * @throws ReflectionException
+     */
+    protected function bootstrapPainters(): void
+    {
+        $this->app->registerSingleton('painters', fn (FrameworkCore $app) => new PaintingLibraryManager($app));
+        $this->app->alias('painters', PaintingLibraryManager::class);
     }
 
     public function boot(): void

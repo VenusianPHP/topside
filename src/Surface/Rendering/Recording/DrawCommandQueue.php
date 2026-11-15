@@ -7,7 +7,7 @@ use Surface\NutsAndBolts\Color;
 use Surface\NutsAndBolts\Affine;
 use Surface\NutsAndBolts\Gradient;
 use Surface\Contracts\Graphics\StrokeStyle;
-use VelvetGE\Rasterization\Stroker;
+use Surface\Rendering\Stroker;
 use Surface\Contracts\Graphics\Effects\Glass;
 use Surface\Contracts\Graphics\DrawingException;
 use Surface\Contracts\Rendering\Recording\Queue;
@@ -28,6 +28,9 @@ class DrawCommandQueue implements Recorder
 
     private ?Region $surface = null;
 
+    /** @var list<array<int, mixed>> this frame's calls left undrawn */
+    private array $undrawn = [];
+
     /** A turned ellipse becomes a polygon that strays from it by less than this many pixels. */
     protected const float FLATNESS = 0.1;
 
@@ -42,6 +45,7 @@ class DrawCommandQueue implements Recorder
     public function begin(Region $surface): void
     {
         $this->surface = $surface;
+        $this->undrawn = [];
         $this->queue->begin($surface);
     }
 
@@ -58,6 +62,11 @@ class DrawCommandQueue implements Recorder
     public function finish(): array
     {
         return $this->queue->finish();
+    }
+
+    public function undrawn(): array
+    {
+        return $this->undrawn;
     }
 
     public function push(): void
@@ -255,6 +264,12 @@ class DrawCommandQueue implements Recorder
             $pieces = $style->dash === []
                 ? [['points' => $points, 'closed' => $closed, 'direction' => null]]
                 : Stroker::dashed($points, $closed, array_map(fn ($l) => $l * $factor, $style->dash), $style->dashOffset * $factor);
+            if (is_null($pieces)) {
+                // the stroker in use cannot cut dashes: the stroke is handed back, not drawn solid
+                $this->undrawn[] = ['stroke', $path, $paint, $style];
+
+                return;
+            }
             foreach ($pieces as $piece) {
                 foreach (Stroker::outline($piece['points'], $width, $piece['closed'], $style->cap, $style->join, $style->miterLimit, $piece['direction']) as $flat) {
                     $contours[] = array_chunk($flat, 2);

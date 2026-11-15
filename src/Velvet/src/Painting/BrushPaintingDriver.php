@@ -8,7 +8,6 @@ use Surface\Contracts\Rendering\Rasterization\Edges;
 use Surface\Contracts\Rendering\Rasterization\RasterizeDriver;
 use Surface\Contracts\Rendering\Recording\RecordDriver;
 use Surface\Rendering\Painters\PaintingDriver;
-use Surface\Rendering\Rasterization;
 use Surface\Rendering\Recorders;
 use VelvetGE\Contracts\Framebuffers\CompositingFramebuffer;
 use Surface\Contracts\Rendering\Painting\PaintTarget;
@@ -39,7 +38,7 @@ use Surface\Contracts\Rendering\Painting\PaintTarget;
 abstract class BrushPaintingDriver extends PaintingDriver
 {
     /**
-     * @param  RasterizeDriver|null  $rasterize  What VelvetGE's painter rasterizes with; null takes Rendering's default.
+     * @param  RasterizeDriver|null  $rasterize  What VelvetGE's painter rasterizes with; null takes Velvet's own rasterizer (velvet.cpu.rasterizers.default).
      * @param  bool  $directFill  As VelvetPainter takes it.
      * @param  RecordDriver|null  $record  What each painter's frames are recorded with; null takes Rendering's default.
      */
@@ -54,6 +53,6 @@ abstract class BrushPaintingDriver extends PaintingDriver
 
     public function painter(CompositingFramebuffer&PaintTarget $target, ?Edges $edges = null): Painter
     {
-        return new VelvetPainter($target, $this->rasterize ??= Rasterization::driver(), $edges, $this->directFill, $this->brush(), ($this->record ??= Recorders::driver())->recorder());
+        return new VelvetPainter($target, $this->rasterize ??= app('velvet.rasterizers')->driver(), $edges, $this->directFill, $this->brush(), ($this->record ??= Recorders::driver())->recorder());
     }
 }

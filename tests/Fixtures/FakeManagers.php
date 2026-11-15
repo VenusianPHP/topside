@@ -3,9 +3,6 @@
 declare(strict_types=1);
 
 use Surface\Graphics\GraphicsEngineDeviceManager;
-use Surface\Rendering\Raycasting\RaycastingLibraryManager;
-use Surface\VelvetGE\Drivers\Raycasting\CLandRaycastingDriver;
-use Surface\VelvetGE\Drivers\Raycasting\PHPLandRaycastingDriver;
 
 /** A config repository over an array, for managers built without a container. */
 function fakeConfig(array $items): object
@@ -18,30 +15,6 @@ function fakeConfig(array $items): object
             return $this->items[$key] ?? $default;
         }
     };
-}
-
-/**
- * A raycasters manager reading the given config, without a container, with VelvetGE's two
- * drivers registered as VelvetGEServiceProvider registers them.
- */
-function raycasters(array $config = []): RaycastingLibraryManager
-{
-    $manager = new class($config) extends RaycastingLibraryManager {
-        public function __construct(array $config)
-        {
-            $this->config = fakeConfig($config);
-        }
-
-        /** No container here: a creator is called with nothing. */
-        protected function callCustomCreator(string $driver): mixed
-        {
-            return $this->customCreators[$driver]();
-        }
-    };
-
-    return $manager
-        ->extend('native', fn () => new PHPLandRaycastingDriver())
-        ->extend('ext', fn () => new CLandRaycastingDriver());
 }
 
 /**

@@ -48,7 +48,6 @@ class TopsideServiceProvider extends AggregateServiceProvider
             'human-input' => "{$dir}/human-input.php",
             'rendering' => "{$dir}/rendering.php",
             'toolkits' => "{$dir}/toolkits.php",
-            'velvet' => "{$dir}/velvet.php",
             'windows' => "{$dir}/windows.php",
             'main.presentation' => "{$dir}/presentation.php",
         ];

@@ -14,6 +14,7 @@ use VelvetGE\Rasterization\TopsideRasterizationDriver;
 use VelvetGE\Rasterization\VelvetRasterizationManager;
 use VelvetGE\Painting\TopsidePaintbrushDriver;
 use VelvetGE\Painting\VelvetPaintbrushManager;
+use VelvetGE\Raycasting\VelvetRaycastingManager;
 
 class VelvetGEServiceProvider extends ServiceProvider
 {
@@ -32,6 +33,9 @@ class VelvetGEServiceProvider extends ServiceProvider
         signal('velvet-ge-loaded');
     }
 
+    /**
+     * @throws ReflectionException
+     */
     public function boot(): void
     {
         $this->publishes([__DIR__.'/../../config/velvet.php' => config_path('velvet.php')], 'velvet-config');
@@ -70,8 +74,15 @@ class VelvetGEServiceProvider extends ServiceProvider
         $this->app->alias('velvet.painters', VelvetPaintbrushManager::class);
     }
 
+    /**
+     * Velvet's own techniques, beyond framebuffers, rasterization and painting. Each has its own
+     * manager here, which modules register on; none is registered on Rendering.
+     *
+     * @throws ReflectionException
+     */
     protected function boostrapAdvanceRenderingServices(): void
     {
-        // register and bootstrap ray-casting
+        $this->app->registerSingleton('velvet.raycasters', fn (FrameworkCore $app) => new VelvetRaycastingManager($app));
+        $this->app->alias('velvet.raycasters', VelvetRaycastingManager::class);
     }
 }
