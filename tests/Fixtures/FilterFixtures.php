@@ -11,14 +11,13 @@ use Surface\Contracts\Graphics\Effects\CompositeOperator;
 use Surface\Contracts\Graphics\Effects\Displace;
 use Surface\Contracts\Graphics\Effects\EdgeMode;
 use Surface\Contracts\Graphics\Effects\Field;
-use Surface\Contracts\Graphics\Effects\FilterChain;
 use Surface\Contracts\Graphics\Effects\Flood;
 use Surface\Contracts\Graphics\Effects\Noise;
 use Surface\Contracts\Graphics\Effects\Table;
-use Surface\NutsAndBolts\Color;
-use VelvetGE\Framebuffers\PHP\PHPLandFilters;
-use Venusian\Topside\Tests\Support\Framebuffers\Rgba8Source;
+use Surface\Contracts\Graphics\Effects\FilterChain;
 use Surface\Contracts\Rendering\Framebuffers\InstanceThatManagesAFramebuffer;
+use Surface\NutsAndBolts\Color;
+use Venusian\Topside\Tests\Support\Framebuffers\Rgba8Source;
 
 function filterImage(int $w, int $h): string
 {

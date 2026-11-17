@@ -2,8 +2,8 @@
 
 namespace VelvetGE\Contracts\Framebuffers;
 
-use Surface\Contracts\Rendering\Framebuffers\Region;
 use Surface\Contracts\Graphics\Effects\FilterChain;
+use Surface\Contracts\Rendering\Framebuffers\Region;
 
 /**
  * A store that runs effects: filter chains, the levels of a blur pyramid and

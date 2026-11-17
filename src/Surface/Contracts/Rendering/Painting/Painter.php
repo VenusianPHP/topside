@@ -2,10 +2,9 @@
 
 namespace Surface\Contracts\Rendering\Painting;
 
-use Surface\Contracts\Graphics\StrokeStyle;
-
-use Surface\Contracts\Graphics\Effects\FilterChain;
 use Surface\Contracts\Graphics\Effects\Glass;
+use Surface\Contracts\Graphics\StrokeStyle;
+use Surface\Contracts\Graphics\Effects\FilterChain;
 use Surface\Contracts\Rendering\Framebuffers\Filter;
 use Surface\Contracts\Rendering\Framebuffers\Region;
 use Surface\Contracts\Rendering\Rasterization\FillRule;
@@ -13,6 +12,7 @@ use Surface\NutsAndBolts\Affine;
 use Surface\NutsAndBolts\Color;
 use Surface\NutsAndBolts\Gradient;
 use Surface\NutsAndBolts\Path;
+use Surface\Contracts\Typography\TypesetText;
 
 /**
  * Something that draws into a framebuffer: the software engine on the CPU, or
@@ -243,4 +243,9 @@ interface Painter
      */
     public function glass(float $x, float $y, float $width, float $height, ?array $radii, Glass $glass, float $opacity = 1.0): static;
 
+    /**
+     * Typeset text drawn with its top-left at (x, y), in one colour, under the transform and the clip.
+     * Each glyph lands with its origin on a whole pixel.
+     */
+    public function text(TypesetText $text, float $x, float $y, Color $color): static;
 }

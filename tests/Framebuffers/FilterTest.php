@@ -5,17 +5,15 @@ declare(strict_types=1);
 use Surface\Contracts\Graphics\Effects\Blend;
 use Surface\Contracts\Graphics\Effects\BlendMode;
 use Surface\Contracts\Graphics\Effects\Blur;
-use Surface\Contracts\Graphics\Effects\ColorMatrix;
 use Surface\Contracts\Graphics\Effects\Composite;
 use Surface\Contracts\Graphics\Effects\CompositeOperator;
 use Surface\Contracts\Graphics\Effects\Displace;
 use Surface\Contracts\Graphics\Effects\EdgeMode;
 use Surface\Contracts\Graphics\Effects\Field;
-use Surface\Contracts\Graphics\Effects\FilterChain;
 use Surface\Contracts\Graphics\Effects\Flood;
 use Surface\Contracts\Graphics\Effects\Noise;
 use Surface\Contracts\Graphics\Effects\Table;
-use Surface\Contracts\Rendering\Framebuffers\Region;
+use Surface\Contracts\Graphics\Effects\FilterChain;
 use Surface\NutsAndBolts\Color;
 use VelvetGE\Framebuffers\PHP\PHPLandFilters;
 use Venusian\Topside\Tests\Support\Framebuffers\Rgba8Source;
@@ -121,11 +119,11 @@ it('inverts the red of an opaque pixel and leaves green and blue', function (): 
 });
 
 it('refuses what a GPU could not do within its limits, the same on every path', function (): void {
-    expect(fn () => Blur::gaussian(Blur::MAX_DEVIATION + 1))->toThrow(Surface\Contracts\Graphics\DrawingException::class)
-        ->and(fn () => Blur::gaussian(Blur::MAX_DEVIATION))->not->toThrow(Surface\Contracts\Graphics\DrawingException::class)
-        ->and(fn () => Blur::spiral(500.0, Blur::MAX_SAMPLES))->not->toThrow(Surface\Contracts\Graphics\DrawingException::class)
-        ->and(fn () => Noise::turbulence(0.1, 0.1, Noise::MAX_OCTAVES + 1))->toThrow(Surface\Contracts\Graphics\DrawingException::class)
-        ->and(fn () => Field::ramp(1.0, 1.0))->toThrow(Surface\Contracts\Graphics\DrawingException::class)
-        ->and(fn () => Field::ramp(0.0, 1e-31))->toThrow(Surface\Contracts\Graphics\DrawingException::class)
-        ->and(fn () => Field::ramp(0.0, 1e-6))->not->toThrow(Surface\Contracts\Graphics\DrawingException::class);
+    expect(fn () => Blur::gaussian(Blur::MAX_DEVIATION + 1))->toThrow(\Surface\Contracts\Graphics\DrawingException::class)
+        ->and(fn () => Blur::gaussian(Blur::MAX_DEVIATION))->not->toThrow(\Surface\Contracts\Graphics\DrawingException::class)
+        ->and(fn () => Blur::spiral(500.0, Blur::MAX_SAMPLES))->not->toThrow(\Surface\Contracts\Graphics\DrawingException::class)
+        ->and(fn () => Noise::turbulence(0.1, 0.1, Noise::MAX_OCTAVES + 1))->toThrow(\Surface\Contracts\Graphics\DrawingException::class)
+        ->and(fn () => Field::ramp(1.0, 1.0))->toThrow(\Surface\Contracts\Graphics\DrawingException::class)
+        ->and(fn () => Field::ramp(0.0, 1e-31))->toThrow(\Surface\Contracts\Graphics\DrawingException::class)
+        ->and(fn () => Field::ramp(0.0, 1e-6))->not->toThrow(\Surface\Contracts\Graphics\DrawingException::class);
 });

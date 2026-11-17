@@ -3,6 +3,7 @@
 namespace Surface\Contracts\Graphics\Effects;
 
 use Surface\Contracts\Graphics\DrawingException;
+use Surface\Contracts\Graphics\Effects\FilterStep;
 
 /**
  * An image made from the position of each pixel on the surface, as feFlood makes one from nothing and feTurbulence

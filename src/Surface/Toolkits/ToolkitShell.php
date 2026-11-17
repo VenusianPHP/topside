@@ -3,9 +3,9 @@
 namespace Surface\Toolkits;
 
 use ReflectionException;
-use Surface\Contracts\Graphics\GraphicsException;
 use Surface\Graphics\Gfx;
-use Surface\Graphics\GraphicsEngine;
+use Surface\Contracts\Graphics\GraphicsEngine;
+use Surface\Contracts\Graphics\GraphicsException;
 use Voyager\Contracts\NutsAndBolts\ApplicationShell;
 
 class ToolkitShell implements ApplicationShell

@@ -14,11 +14,11 @@ use Surface\Contracts\Graphics\Effects\Displace;
 use Surface\Contracts\Graphics\Effects\EdgeMode;
 use Surface\Contracts\Graphics\Effects\Field;
 use Surface\Contracts\Graphics\Effects\FieldKind;
-use Surface\Contracts\Graphics\Effects\FilterChain;
 use Surface\Contracts\Graphics\Effects\Flood;
 use Surface\Contracts\Graphics\Effects\Noise;
 use Surface\Contracts\Graphics\Effects\NoiseType;
 use Surface\Contracts\Graphics\Effects\Table;
+use Surface\Contracts\Graphics\Effects\FilterChain;
 use VelvetGE\Framebuffers\PHP\PHPLandFilters;
 
 /**

@@ -2,6 +2,8 @@
 
 namespace Surface\Contracts\Graphics\Effects;
 
+use Surface\Contracts\Graphics\Effects\FilterStep;
+
 /** SVG's feBlend: the input (on top) blended with $in2 (below) by a mode, on premultiplied colours. */
 final readonly class Blend extends FilterStep
 {

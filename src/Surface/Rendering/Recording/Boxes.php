@@ -65,6 +65,7 @@ final class Boxes
             'roundrect', 'roundring' => [$command[1] - 1.0, $command[2] - 1.0, $command[3] + 1.0, $command[4] + 1.0],
             'shadow' => [$command[1] - $command[6] - 1.0, $command[2] - $command[6] - 1.0, $command[3] + $command[6] + 1.0, $command[4] + $command[6] + 1.0],
             'layer', 'glass' => [$command[1]->x, $command[1]->y, $command[1]->right(), $command[1]->bottom()],
+            'glyphs' => $command[4],
         };
     }
 

@@ -2,10 +2,10 @@
 
 namespace Surface\Toolkits\Demo\Animations;
 
+use Surface\Contracts\Graphics\StrokeStyle;
 use Surface\Contracts\Rendering\Rasterization\FillRule;
 use Surface\Contracts\Toolkits\ViewBuilder;
-use Surface\Graphics\GEPainter;
-use Surface\Contracts\Graphics\StrokeStyle;
+use Surface\Contracts\Graphics\DrawingContext;
 use Surface\NutsAndBolts\Color;
 use Surface\NutsAndBolts\Gradient;
 use Surface\NutsAndBolts\LinearGradient;
@@ -124,7 +124,7 @@ class Paths extends Animation
         };
     }
 
-    public function draw(GEPainter $g): void
+    public function draw(DrawingContext $g): void
     {
         $g->clear(Color::rgba(0, 0, 0, 1.0));
 

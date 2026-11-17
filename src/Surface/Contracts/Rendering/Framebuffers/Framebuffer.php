@@ -2,10 +2,10 @@
 
 namespace Surface\Contracts\Rendering\Framebuffers;
 
-use Surface\NutsAndBolts\Affine;
-use Surface\NutsAndBolts\GradientSpread;
 use Surface\Contracts\Graphics\Effects\FilterChain;
 use Surface\Contracts\Rendering\Painting\PaintTarget;
+use Surface\NutsAndBolts\Affine;
+use Surface\NutsAndBolts\GradientSpread;
 
 /** @deprecated Replaced by InstanceThatManagesAFramebuffer and its optional contracts. */
 interface Framebuffer extends PaintTarget

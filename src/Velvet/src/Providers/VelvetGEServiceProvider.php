@@ -3,9 +3,13 @@
 namespace VelvetGE\Providers;
 
 use ReflectionException;
+use Surface\Contracts\Graphics\Backend;
+use Surface\Graphics\Gfx;
 use Surface\Rendering\Framebuffers;
+use Surface\Rendering\Glyphs;
 use Surface\Rendering\Painters;
 use Surface\Rendering\Rasterization;
+use VelvetGE\VelvetDevice;
 use Voyager\NutsAndBolts\ServiceProvider;
 use Voyager\Contracts\Core\FrameworkCore;
 use VelvetGE\Framebuffers\TopsideFramebufferDriver;
@@ -15,6 +19,8 @@ use VelvetGE\Rasterization\VelvetRasterizationManager;
 use VelvetGE\Painting\TopsidePaintbrushDriver;
 use VelvetGE\Painting\VelvetPaintbrushManager;
 use VelvetGE\Raycasting\VelvetRaycastingManager;
+use VelvetGE\Glyphs\TopsideGlyphDriver;
+use VelvetGE\Glyphs\VelvetGlyphManager;
 
 class VelvetGEServiceProvider extends ServiceProvider
 {
@@ -28,9 +34,12 @@ class VelvetGEServiceProvider extends ServiceProvider
         $this->bootstrapFramebufferService();
         $this->bootstrapRasterizerService();
         $this->bootstrapPaintbrushService();
+        $this->bootstrapGlyphService();
         $this->boostrapAdvanceRenderingServices();
+        $this->registerGraphicsEngine();
 
         signal('velvet-ge-loaded');
+
     }
 
     /**
@@ -75,6 +84,27 @@ class VelvetGEServiceProvider extends ServiceProvider
     }
 
     /**
+     * @throws ReflectionException
+     */
+    protected function bootstrapGlyphService(): void
+    {
+        Glyphs::manager()->extend('velvet', fn() => new TopsideGlyphDriver());
+
+        $this->app->registerSingleton('velvet.glyphs', fn (FrameworkCore $app) => new VelvetGlyphManager($app));
+        $this->app->alias('velvet.glyphs', VelvetGlyphManager::class);
+    }
+
+    /**
+     * Velvet as a graphics engine: what Gfx::engine('velvet') makes. It runs on the CPU only.
+     *
+     * @throws ReflectionException
+     */
+     protected function registerGraphicsEngine(): void
+     {
+        Gfx::extend('velvet', fn (Backend $backend) => new VelvetDevice($backend), Backend::CPU);
+     }
+
+     /**
      * Velvet's own techniques, beyond framebuffers, rasterization and painting. Each has its own
      * manager here, which modules register on; none is registered on Rendering.
      *

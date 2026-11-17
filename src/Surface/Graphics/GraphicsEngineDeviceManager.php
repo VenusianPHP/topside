@@ -4,6 +4,7 @@ namespace Surface\Graphics;
 
 use Closure;
 use Surface\Contracts\Graphics\Backend;
+use Surface\Contracts\Graphics\GraphicsEngine;
 use Surface\Contracts\Graphics\GraphicsException;
 use Voyager\NutsAndBolts\Manager;
 
@@ -17,9 +18,6 @@ class GraphicsEngineDeviceManager extends Manager
 {
     /** @var array<string, list<Backend>> what each engine offers, in the order it was registered with */
     protected array $backends = [];
-
-    /** @var array<string, list<Backend>> backends an engine will have and does not yet */
-    protected array $pending = [];
 
     /** @var array<string, GraphicsEngine> "name|backend" => the engine made for it */
     protected array $engines = [];
@@ -74,17 +72,6 @@ class GraphicsEngineDeviceManager extends Manager
         return parent::extend($driver, $callback);
     }
 
-    /**
-     * Marks a backend an engine will have and does not yet: asking for it says so. 'auto' never
-     * takes it.
-     */
-    public function notReady(string $name, Backend $backend): static
-    {
-        $this->pending[$name][] = $backend;
-
-        return $this;
-    }
-
     /** @return list<string> the names registered */
     public function engines(): array
     {
@@ -116,9 +103,6 @@ class GraphicsEngineDeviceManager extends Manager
             return in_array(Backend::GPU, $offered, true) ? Backend::GPU : $offered[0];
         }
         $backend = Backend::tryFrom($asked) ?? throw GraphicsException::unknownBackend($asked);
-        if (in_array($backend, $this->pending[$name] ?? [], true)) {
-            throw GraphicsException::backendNotReady($name, $backend);
-        }
         if (! in_array($backend, $offered, true)) {
             throw GraphicsException::backendNotOffered($name, $backend, $offered);
         }

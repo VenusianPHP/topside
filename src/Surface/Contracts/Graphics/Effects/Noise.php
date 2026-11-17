@@ -3,6 +3,7 @@
 namespace Surface\Contracts\Graphics\Effects;
 
 use Surface\Contracts\Graphics\DrawingException;
+use Surface\Contracts\Graphics\Effects\FilterStep;
 
 /**
  * Noise, to grain an image or to drive a displacement: SVG's feTurbulence (the spec's reference code, so the same

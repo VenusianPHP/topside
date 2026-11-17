@@ -3,6 +3,7 @@
 namespace Surface\Contracts\Graphics\Effects;
 
 use Surface\Contracts\Graphics\DrawingException;
+use Surface\Contracts\Graphics\Effects\FilterStep;
 
 /** SVG's feComposite: the input and $in2 combined by an operator, on premultiplied colours. */
 final readonly class Composite extends FilterStep

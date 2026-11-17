@@ -3,6 +3,7 @@
 namespace Surface\Contracts\Graphics\Effects;
 
 use Surface\Contracts\Graphics\DrawingException;
+use Surface\Contracts\Graphics\Effects\FilterStep;
 
 /**
  * SVG's feComponentTransfer with type="table" on 8-bit values, CoreImage's CIColorCurves by a table: each channel of the

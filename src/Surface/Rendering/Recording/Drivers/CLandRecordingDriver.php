@@ -14,16 +14,17 @@ use Surface\Rendering\Recording\Drivers\QueueRecordingDriver;
 class CLandRecordingDriver extends QueueRecordingDriver
 {
     /**
-     * @throws RenderingException When ext-pixel-queue is not loaded: 'auto' then passes over this driver.
+     * @throws RenderingException When ext-pixel-queue is not loaded, or too old to record text: 'auto' then passes over this driver.
      */
     public function __construct()
     {
         extension_loaded('pixel_queue') || throw new RenderingException('ext-pixel-queue is not loaded in this PHP.');
+        method_exists(\PixelQueue::class, 'glyphs') || throw new RenderingException('ext-pixel-queue is too old: it has no PixelQueue::glyphs(), which records text.');
     }
 
     public function driver(): string
     {
-        return 'ext';
+        return 'c';
     }
 
     public function queue(): Queue

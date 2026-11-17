@@ -3,7 +3,7 @@
 namespace Surface\Toolkits\Demo\Animations;
 
 use Surface\Contracts\Toolkits\ViewBuilder;
-use Surface\Graphics\GEPainter;
+use Surface\Contracts\Graphics\DrawingContext;
 use Surface\NutsAndBolts\Color;
 use Surface\NutsAndBolts\Path;
 
@@ -101,7 +101,7 @@ class Particles extends Animation
         }
     }
 
-    public function draw(GEPainter $g): void
+    public function draw(DrawingContext $g): void
     {
         $g->clear(Color::rgba(0, 0, 0, 1.0));
         [$cx, $cy] = [$this->width / 2, $this->height / 2];

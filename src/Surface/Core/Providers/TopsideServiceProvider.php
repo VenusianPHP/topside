@@ -6,6 +6,7 @@ use Surface\Graphics\GraphicsServiceProvider;
 use Surface\HumanInput\HumanInputServiceProvider;
 use Surface\Rendering\RenderingServiceProvider;
 use Surface\Toolkits\ToolkitsServiceProvider;
+use Surface\Typography\TypographyServiceProvider;
 use Surface\VelvetGE\VelvetGEServiceProvider;
 use Voyager\NutsAndBolts\AggregateServiceProvider;
 
@@ -13,6 +14,7 @@ class TopsideServiceProvider extends AggregateServiceProvider
 {
     protected array $providers = [
         ToolkitsServiceProvider::class,
+        TypographyServiceProvider::class,
         RenderingServiceProvider::class,
         GraphicsServiceProvider::class,
         HumanInputServiceProvider::class,
@@ -48,6 +50,7 @@ class TopsideServiceProvider extends AggregateServiceProvider
             'human-input' => "{$dir}/human-input.php",
             'rendering' => "{$dir}/rendering.php",
             'toolkits' => "{$dir}/toolkits.php",
+            'typography' => "{$dir}/typography.php",
             'windows' => "{$dir}/windows.php",
             'main.presentation' => "{$dir}/presentation.php",
         ];

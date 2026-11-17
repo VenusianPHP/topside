@@ -3,6 +3,7 @@
 namespace Surface\Contracts\Graphics\Effects;
 
 use Surface\Contracts\Graphics\DrawingException;
+use Surface\Contracts\Graphics\Effects\FilterStep;
 use Surface\Contracts\Rendering\Framebuffers\InstanceThatManagesAFramebuffer;
 
 /**

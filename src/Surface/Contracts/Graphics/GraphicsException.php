@@ -36,15 +36,9 @@ class GraphicsException extends TopsideException
         return new self("The [{$engine}] engine was registered with no backend: name at least one.");
     }
 
-    /** @param string $hint what would give it one, when something would */
-    public static function unsupported(string $engine, Resource $resource, string $hint = ''): self
-    {
-        return new self(rtrim("The [{$engine}] engine has no {$resource->value}. {$hint}"));
-    }
-
     public static function foreignResource(string $own, string $other): self
     {
-        return new self("A resource of the [{$own}] engine was given one of the [{$other}] engine: an engine's resources work only with each other.");
+        return new self("A surface of the [{$own}] engine was given one of the [{$other}] engine: an engine's surfaces work only with each other.");
     }
 
     public static function outsideSurface(Region $region, int $width, int $height): self
@@ -61,16 +55,16 @@ class GraphicsException extends TopsideException
 
     public static function noStage(): self
     {
-        return new self('This framebuffer has no stage to present on: make it with the engine\'s attach().');
+        return new self('This surface has no stage to present on: make it with the engine\'s surface().');
     }
 
     public static function stageHasNoSize(): self
     {
-        return new self('The stage has no size yet: attach once it is laid out and shown.');
+        return new self('The stage has no size yet: make its surface once it is laid out and shown.');
     }
 
     public static function badSize(int $width, int $height): self
     {
-        return new self("A framebuffer of {$width}x{$height} cannot be made: both sides are 1 or more.");
+        return new self("A surface of {$width}x{$height} cannot be made: both sides are 1 or more.");
     }
 }

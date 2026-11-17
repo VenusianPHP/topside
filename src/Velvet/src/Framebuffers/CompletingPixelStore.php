@@ -4,17 +4,17 @@ namespace VelvetGE\Framebuffers;
 
 use Closure;
 use Surface\Contracts\Graphics\Effects\FilterChain;
-use VelvetGE\Contracts\Framebuffers\CompletePixelStore;
 use Surface\Contracts\Rendering\Framebuffers\DamageGranularity;
-use VelvetGE\Contracts\Framebuffers\EffectsPixelStore;
 use Surface\Contracts\Rendering\Framebuffers\Filter;
 use Surface\Contracts\Rendering\Framebuffers\FormatSpec;
-use VelvetGE\Contracts\Framebuffers\PaintingPixelStore;
 use Surface\Contracts\Rendering\Framebuffers\PixelMemory;
-use VelvetGE\Contracts\Framebuffers\PixelStore;
-use VelvetGE\Contracts\Framebuffers\PixelStoreMinter;
 use Surface\Contracts\Rendering\Framebuffers\Region;
 use Surface\NutsAndBolts\GradientSpread;
+use VelvetGE\Contracts\Framebuffers\CompletePixelStore;
+use VelvetGE\Contracts\Framebuffers\EffectsPixelStore;
+use VelvetGE\Contracts\Framebuffers\PaintingPixelStore;
+use VelvetGE\Contracts\Framebuffers\PixelStore;
+use VelvetGE\Contracts\Framebuffers\PixelStoreMinter;
 
 /**
  * Any store as a complete one. What the store does itself goes straight to it. A tier it leaves

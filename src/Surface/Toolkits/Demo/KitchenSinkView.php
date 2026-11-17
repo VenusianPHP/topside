@@ -3,17 +3,19 @@
 namespace Surface\Toolkits\Demo;
 
 use Surface\Contracts\Graphics\ActorStage;
+use Surface\Contracts\Graphics\CastsRays;
+use Surface\Contracts\Graphics\DrawingContext;
+use Surface\Contracts\Graphics\DrawingSurface;
+use Surface\Contracts\Graphics\Feature;
 use Surface\Contracts\Graphics\StrokeStyle;
-use Surface\Graphics\GEPainter;
-use Surface\NutsAndBolts\Color;
-use Surface\NutsAndBolts\Path;
-use Surface\NutsAndBolts\RadialGradient;
-use Surface\Contracts\Graphics\Resource;
 use Surface\Contracts\Rendering\Raycasting\Camera;
 use Surface\Contracts\Rendering\Raycasting\Grid;
 use Surface\Contracts\Rendering\Raycasting\Scenery;
 use Surface\Contracts\Toolkits\Composition;
 use Surface\Contracts\Toolkits\ViewBuilder;
+use Surface\NutsAndBolts\Color;
+use Surface\NutsAndBolts\Path;
+use Surface\NutsAndBolts\RadialGradient;
 use Surface\Toolkits\Navigation\Navigator;
 use Surface\Toolkits\Support\Live;
 
@@ -261,66 +263,55 @@ class KitchenSinkView implements Composition
      *
      * $page->engine() is the engine the application draws its canvases with: the presentation
      * config's PRESENTATION_CANVAS_DRIVER, which left unset is the Graphics default. A view asks
-     * the builder for it, and never asks Gfx for an engine itself. An engine with no painter is
-     * named on the card and not drawn with. attach() gives a framebuffer of the stage's size in pixels; the painter draws a
-     * frame onto it; present() shows it on the stage. A stage on a dense display has more pixels
-     * than points, so the frame is scaled by pixelScale() and drawn in points.
+     * the builder for it, and never asks Gfx for an engine itself. surface() gives a surface of the
+     * stage's size in pixels; render() draws one frame on it; present() shows it on the stage. A
+     * stage on a dense display has more pixels than points, so the frame is scaled by pixelScale()
+     * and drawn in points.
      *
      * The wave moves: Play starts a timer on the event loop that draws a frame each time it fires,
-     * and Stop forgets it, which leaves the last frame showing. The painter is kept between
-     * frames, so each frame redraws only where the wave changed.
+     * and Stop forgets it, which leaves the last frame showing. The surface is kept between frames.
      *
      * The rate buttons set how often the timer fires: 30, 60, 120 or 240 times a second, or "uncapped",
-     * which asks for 100,000 so a frame is drawn on every turn of the loop. Two numbers are shown: frames
-     * drawn a second, and frames shown. Drawn below the target, the engine is the limit. A canvas that
-     * knows its display's refresh (a PacedStage) shows the latest frame once a refresh, so shown stops
-     * at the display's rate however many are drawn. Uncapped keeps a CPU core busy, and
-     * draws frames the display never shows.
+     * which asks for 100,000 so a frame is drawn on every turn of the loop. The rate shown is frames
+     * drawn a second: drawn below the target, the engine is the limit. Uncapped keeps a CPU core busy.
      *
-     * When the engine has a raycaster (Metal's always; Velvet's with config/rendering.php's raycaster.enabled), three more buttons
+     * When the engine casts rays (it is a CastsRays whose has(Feature::RAY_CASTING) is true: Velvet's with a raycasting
+     * module installed), three more buttons
      * choose what fills the canvas. Both of the new scenes cast rays through a grid of walls, and
      * differ in what they do with where a ray stops:
      *
      *  - "Raycast a room": one ray a screen column from a turning camera, and the distance to the wall
      *    is how tall that column's slice of wall is drawn. The raycaster writes the picture straight
-     *    into the framebuffer: no painter is involved.
+     *    onto the surface: nothing is drawn through a context.
      *  - "Cast shadows": the grid seen from above, with a light moving through it. Rays go out from
      *    the light and stop at the first block: the points where they stop outline what the light
-     *    reaches. The painter fills that outline, and whatever is outside it is in shadow.
+     *    reaches. The context fills that outline, and whatever is outside it is in shadow.
      */
     private function graphics(ViewBuilder $page): void
     {
         $card = $page->card('graphics', 'Graphics');
         $engine = $page->engine();
-        if (! $engine->supports(Resource::PAINTER)) {
-            // every scene here is drawn by a painter: an engine without one is named, not drawn with
-            $card->label('about', 'The "'.$engine->name().'" engine has no painter yet, so nothing here is drawn with it.', 'body');
-
-            return;
-        }
         $card->label('about', fn (): string => 'Drawn by the "'.$engine->name().'" engine on the '.$engine->backend()->value.' backend, shown in a canvas.', 'body');
 
-        // what the engine is built from: for Velvet, the Rendering driver behind each part
+        // what the engine is built from: for Velvet, the module behind each part
         $modules = $engine->modules();
         if ($modules !== []) {
             $card->label('modules', implode('  ·  ', array_map(fn (string $part, string $driver): string => "{$part}: {$driver}", array_keys($modules), $modules)), 'footnote');
         }
 
-        /** @var GEPainter|null $painter what draws on the framebuffer attached at the canvas's current size */
-        $painter = null;
+        /** @var DrawingSurface|null $surface on the canvas, at its current size */
+        $surface = null;
         $scale = 1.0;
         $phase = 0.0;
         $drawn = 0;          // frames since the rate was last worked out
         $since = microtime(true);
         $rate = null;        // frames drawn a second over the last second; 0.0 until the first second is up, null while stopped
-        $showing = 0.0;      // frames shown a second over that second: the display shows no more than it refreshes
-        $shownAt = 0;        // the framebuffer's shown() when the rate was last worked out
         $target = 30;                  // frames a second asked for; 0 is uncapped
         $last = microtime(true);       // when the wave last moved
         $scene = 'shapes';             // what fills the canvas: 'shapes', 'room' or 'light'
 
         // the room: 0 is open floor, a number is a wall of that kind. Made once; null when the engine has no raycaster
-        $caster = $engine->supports(Resource::RAYCASTER) ? $engine->raycaster(Grid::of([
+        $caster = $engine instanceof CastsRays && $engine->has(Feature::RAY_CASTING) ? $engine->raycaster(Grid::of([
             [1, 1, 1, 1, 1, 1, 1, 1, 1],
             [1, 0, 0, 0, 0, 0, 0, 0, 1],
             [1, 0, 2, 0, 0, 0, 3, 0, 1],
@@ -363,8 +354,8 @@ class KitchenSinkView implements Composition
             $corners[implode(',', $corner)] = $corner;
         }
 
-        // the light scene. Everything is drawn in cells: the painter's transform sizes a cell to the canvas
-        $light = function (GEPainter $g, float $width, float $height) use ($floor, $lamp, $blocks, $corners, &$scale, &$phase): void {
+        // the light scene. Everything is drawn in cells: the context's transform sizes a cell to the canvas
+        $light = function (DrawingContext $g, float $width, float $height) use ($floor, $lamp, $blocks, $corners, &$scale, &$phase): void {
             // where the light is: round and round the middle block
             [$lx, $ly] = [12.0 + 8.0 * cos($phase * 0.4), 4.0 + 1.6 * sin($phase * 0.4)];
 
@@ -412,30 +403,28 @@ class KitchenSinkView implements Composition
             $g->fillEllipse($lx, $ly, 0.22, 0.22, Color::hex('#fff7d6'));
         };
 
-        $draw = function () use (&$painter, &$scale, &$phase, &$drawn, &$scene, $caster, $scenery, $light): void {
-            if (is_null($painter)) {
+        $draw = function () use (&$surface, &$scale, &$phase, &$drawn, &$scene, $caster, $scenery, $light): void {
+            if (is_null($surface)) {
                 return;
             }
             $drawn++;
-            $screen = $painter->framebuffer();
 
             if ($scene === 'room') {
                 // a camera in the middle of the room, turning: the raycaster paints what it sees
-                $caster->paint(new Camera(4.5, 4.0, $phase * 0.25), $scenery, $screen);
-                $screen->present();
+                $caster->paint(new Camera(4.5, 4.0, $phase * 0.25), $scenery, $surface);
+                $surface->present();
 
                 return;
             }
-            [$width, $height] = [$screen->width() / $scale, $screen->height() / $scale];
+            [$width, $height] = [$surface->width() / $scale, $surface->height() / $scale];
 
             if ($scene === 'light') {
-                $painter->frame(fn (GEPainter $g) => $light($g, $width, $height));
-                $screen->present();
+                $surface->render(fn (DrawingContext $g) => $light($g, $width, $height))->present();
 
                 return;
             }
 
-            $painter->frame(function (GEPainter $g) use ($scale, $width, $height, $phase): void {
+            $surface->render(function (DrawingContext $g) use ($scale, $width, $height, $phase): void {
                 $g->clear(Color::hex('#101820'));
                 $g->scale($scale);
 
@@ -450,26 +439,24 @@ class KitchenSinkView implements Composition
                     $x === 240.0 ? $wave->moveTo($x, $y) : $wave->lineTo($x, $y);
                 }
                 $g->stroke($wave, Color::hex('#f7f052'), new StrokeStyle(4.0));
-            });
-
-            $screen->present();
+            })->present();
         };
 
-        $card->canvas('scene', 180, function (ActorStage $stage) use (&$painter, &$scale, $draw, $engine): void {
-            $painter = $engine->painter($engine->attach($stage));
+        $card->canvas('scene', 180, function (ActorStage $stage) use (&$surface, &$scale, $draw, $engine): void {
+            $surface?->release();
+            $surface = $engine->surface($stage);
             $scale = $stage->pixelScale();
             $draw();
         });
 
-        // every() under a name replaces the timer of that name, so Play twice is one timer; a frame
+        // a frame clock under a name replaces the one of that name, so Play twice is one clock; a frame
         // is drawn only while the kitchen sink is the page showing
-        $play = function () use ($draw, &$target, &$last, &$phase, &$drawn, &$since, &$rate, &$painter, &$showing, &$shownAt): void {
+        $play = function () use ($draw, &$target, &$last, &$phase, &$drawn, &$since, &$rate): void {
             [$drawn, $since, $last, $rate] = [0, microtime(true), microtime(true), 0.0];
             app(Live::class)->refresh();
 
-            // a timer skips the firings it is late for, so one asked for 100,000 times a second fires
-            // once a turn of the loop: as often as a frame can be drawn
-            app('event-loop')->every(1 / ($target ?: 100000), function () use ($draw, &$last, &$phase, &$drawn, &$since, &$rate, &$painter, &$showing, &$shownAt): void {
+            // uncapped (0): a frame every turn of the loop, as often as one can be drawn
+            FrameClock::run('kitchen-sink.wave', (float) $target, function () use ($draw, &$last, &$phase, &$drawn, &$since, &$rate): void {
                 if (app(Navigator::class)->current() !== '/kitchen-sink') {
                     return;
                 }
@@ -483,16 +470,13 @@ class KitchenSinkView implements Composition
                 $elapsed = microtime(true) - $since;
                 if ($elapsed >= 1.0) {
                     $rate = $drawn / $elapsed;
-                    // a canvas resized has a new framebuffer, counting from 0 again
-                    $shown = $painter?->framebuffer()->shown() ?? 0;
-                    $showing = max(0, $shown - $shownAt) / $elapsed;
-                    [$drawn, $since, $shownAt] = [0, microtime(true), $shown];
+                    [$drawn, $since] = [0, microtime(true)];
                     app(Live::class)->refresh();
                 }
-            }, 'kitchen-sink.wave');
+            });
         };
         $stop = function () use (&$rate): void {
-            app('event-loop')->forget('kitchen-sink.wave');
+            FrameClock::stop('kitchen-sink.wave');
             $rate = null;
             app(Live::class)->refresh();
         };
@@ -517,21 +501,19 @@ class KitchenSinkView implements Composition
         if (! is_null($caster)) {
             $what = $card->row('what', 8);
             foreach (['shapes' => 'Shapes', 'room' => 'Raycast a room', 'light' => 'Cast shadows'] as $name => $label) {
-                $what->button($name, $label, function () use ($name, &$scene, &$painter, $draw): void {
+                $what->button($name, $label, function () use ($name, &$scene, $draw): void {
                     $scene = $name;
-                    // the room is written over the painter's last frame, so the painter draws its next one whole
-                    $painter?->invalidate();
                     $draw();
                 });
             }
         }
 
         // a Closure with use (&$rate): an arrow function would keep the value $rate had when it was made
-        $row->label('fps', function () use (&$rate, &$showing): string {
+        $row->label('fps', function () use (&$rate): string {
             return match (true) {
                 is_null($rate) => 'Stopped',
                 $rate === 0.0 => 'Measuring…',
-                default => sprintf('%.0f drawn, %.0f shown a second', $rate, $showing),
+                default => sprintf('%.0f frames a second', $rate),
             };
         });
 

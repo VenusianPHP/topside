@@ -7,3 +7,4 @@ require_once __DIR__.'/Fixtures/FakeManagers.php';
 require_once __DIR__.'/Fixtures/FakeInput.php';
 require_once __DIR__.'/Fixtures/RaycastHelpers.php';
 require_once __DIR__.'/Fixtures/FilterFixtures.php';
+require_once __DIR__.'/Fixtures/FakeTypography.php';

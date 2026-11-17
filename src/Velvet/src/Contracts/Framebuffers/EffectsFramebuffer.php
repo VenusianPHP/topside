@@ -2,9 +2,9 @@
 
 namespace VelvetGE\Contracts\Framebuffers;
 
+use Surface\Contracts\Graphics\Effects\FilterChain;
 use Surface\Contracts\Rendering\Framebuffers\InstanceThatManagesAFramebuffer;
 use Surface\Contracts\Rendering\Framebuffers\Region;
-use Surface\Contracts\Graphics\Effects\FilterChain;
 
 /** A framebuffer that runs effects over its own pixels: filter chains, Kawase blur levels, glass. */
 interface EffectsFramebuffer extends InstanceThatManagesAFramebuffer

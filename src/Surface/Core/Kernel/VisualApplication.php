@@ -21,7 +21,7 @@ abstract class VisualApplication extends ApplicationKernel
     protected array $surface_bootstrappers = [
         LoadDeathWatcher::class,
         LoadSignals::class,
-        LoadHumanInputBackend::class,
+        //LoadHumanInputBackend::class,
         LoadAudioVideoServices::class,
         LoadRoutingMailListeners::class,
     ];

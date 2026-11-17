@@ -3,6 +3,7 @@
 namespace Surface\Contracts\Graphics\Effects;
 
 use Surface\Contracts\Graphics\DrawingException;
+use Surface\Contracts\Graphics\Effects\FilterStep;
 
 /**
  * SVG's feColorMatrix, CSS saturate(), brightness() and the like, CoreImage's CIColorMatrix: a 4 x 5 matrix on the

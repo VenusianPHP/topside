@@ -37,8 +37,8 @@ function recorders(array $config = []): \Surface\Rendering\Recording\RecordingLi
     };
 
     return $manager
-        ->extend('native', fn () => new \Surface\Rendering\Recording\Drivers\PHPLandRecordingDriver())
-        ->extend('ext', fn () => new \Surface\Rendering\Recording\Drivers\CLandRecordingDriver());
+        ->extend('php', fn () => new \Surface\Rendering\Recording\Drivers\PHPLandRecordingDriver())
+        ->extend('c', fn () => new \Surface\Rendering\Recording\Drivers\CLandRecordingDriver());
 }
 
 /**
@@ -47,7 +47,7 @@ function recorders(array $config = []): \Surface\Rendering\Recording\RecordingLi
  */
 function recorderUnderTest(): \Surface\Contracts\Rendering\Recording\Recorder
 {
-    return recorders()->driver(getenv('TOPSIDE_RECORDER') ?: 'native')->recorder();
+    return recorders()->driver(getenv('TOPSIDE_RECORDER') ?: 'php')->recorder();
 }
 
 /** A graphics manager reading the given config, without a container. */

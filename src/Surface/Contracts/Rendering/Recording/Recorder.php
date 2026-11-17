@@ -2,15 +2,17 @@
 
 namespace Surface\Contracts\Rendering\Recording;
 
-use Surface\Contracts\Graphics\DrawingException;
-use Surface\Contracts\Graphics\Effects\FilterChain;
 use Surface\Contracts\Graphics\Effects\Glass;
 use Surface\Contracts\Graphics\StrokeStyle;
+use Surface\Contracts\Graphics\DrawingException;
+use Surface\Contracts\Graphics\Effects\FilterChain;
 use Surface\Contracts\Rendering\Framebuffers\DamageGranularity;
 use Surface\Contracts\Rendering\Framebuffers\Filter;
 use Surface\Contracts\Rendering\Framebuffers\Region;
 use Surface\Contracts\Rendering\Painting\PaintTarget;
 use Surface\Contracts\Rendering\Rasterization\FillRule;
+use Surface\Contracts\Typography\TypesetText;
+use Surface\Contracts\Typography\TypographyException;
 use Surface\NutsAndBolts\Affine;
 use Surface\NutsAndBolts\Color;
 use Surface\NutsAndBolts\Gradient;
@@ -49,6 +51,11 @@ use Surface\NutsAndBolts\Path;
  *                                                         rim, alpha] in device pixels; blur: the radius in device pixels
  *     ['layer', Region area, [x0, y0, x1, y1, [tl, tr, br, bl]], children, alpha 0..255, FilterChain|null filter, FilterChain|null backdrop, clip]
  *                                                         children: the commands drawn inside, clipped to the area
+ *     ['glyphs', runs, [a, b, c, d, e, f], rgba, [x0, y0, x1, y1], clip]
+ *                                                         runs: the text's GlyphRuns as they were typeset (from the text's top-left, y down);
+ *                                                         [a .. f]: the transform with its origin moved to the text's (a point (x, y) of the
+ *                                                         text lands at (a·x + c·y + e, b·x + d·y + f)); [x0 .. y1]: how far its ink reaches
+ *                                                         in pixels, grown by a pixel for anti-aliased edges and a glyph placed on whole pixels
  */
 interface Recorder
 {
@@ -138,6 +145,15 @@ interface Recorder
     public function layer(float $x, float $y, float $width, float $height, callable $draw, float $opacity = 1.0, ?array $radii = null, ?FilterChain $filter = null, ?FilterChain $backdrop = null): void;
 
     public function glass(float $x, float $y, float $width, float $height, ?array $radii, Glass $glass, float $opacity = 1.0): void;
+
+    /**
+     * Typeset text with its top-left at (x, y), in one colour: a 'glyphs' command, or nothing when
+     * the text has no ink or the clip is empty.
+     *
+     * @throws DrawingException As the other draw calls: no frame open, a number not finite, or past the limit once transformed.
+     * @throws TypographyException When a run's source cannot be read for its ink.
+     */
+    public function text(TypesetText $text, float $x, float $y, Color $color): void;
 
     /**
      * Where the last frame draws: every command's box, with $also, merged until no two overlap.

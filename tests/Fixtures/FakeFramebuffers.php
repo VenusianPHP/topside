@@ -4,17 +4,17 @@ declare(strict_types=1);
 
 namespace Venusian\Topside\Tests\Fixtures;
 
-use VelvetGE\Contracts\Framebuffers\CompletePixelStore;
 use Surface\Contracts\Rendering\Framebuffers\DamageGranularity;
 use Surface\Contracts\Rendering\Framebuffers\Filter;
 use Surface\Contracts\Rendering\Framebuffers\FormatSpec;
 use Surface\Contracts\Rendering\Framebuffers\FramebufferException;
-use VelvetGE\Contracts\Framebuffers\PaintingPixelStore;
 use Surface\Contracts\Rendering\Framebuffers\PixelMemory;
-use VelvetGE\Contracts\Framebuffers\PixelStore;
-use VelvetGE\Contracts\Framebuffers\PixelStoreMinter;
 use Surface\Contracts\Rendering\Framebuffers\Region;
 use Surface\Contracts\Rendering\Framebuffers\Spans;
+use VelvetGE\Contracts\Framebuffers\CompletePixelStore;
+use VelvetGE\Contracts\Framebuffers\PaintingPixelStore;
+use VelvetGE\Contracts\Framebuffers\PixelStore;
+use VelvetGE\Contracts\Framebuffers\PixelStoreMinter;
 use VelvetGE\Framebuffers\C\CLandPixelStore;
 use VelvetGE\Framebuffers\PHP\PHPLandPixelStore;
 

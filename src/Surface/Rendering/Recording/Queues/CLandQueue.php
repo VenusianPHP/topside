@@ -2,16 +2,16 @@
 
 namespace Surface\Rendering\Recording\Queues;
 
+use InvalidArgumentException;
 use PixelQueue;
 use PixelQueueException;
-use InvalidArgumentException;
+use Surface\Contracts\Graphics\DrawingException;
+use Surface\Contracts\Rendering\Framebuffers\DamageGranularity;
+use Surface\Contracts\Rendering\Framebuffers\Region;
+use Surface\Contracts\Rendering\Rasterization\FillRule;
+use Surface\Contracts\Rendering\Recording\ShapeQueue;
 use Surface\NutsAndBolts\Affine;
 use Surface\Rendering\Recording\Boxes;
-use Surface\Contracts\Graphics\DrawingException;
-use Surface\Contracts\Rendering\Framebuffers\Region;
-use Surface\Contracts\Rendering\Recording\ShapeQueue;
-use Surface\Contracts\Rendering\Rasterization\FillRule;
-use Surface\Contracts\Rendering\Framebuffers\DamageGranularity;
 
 /**
  * VelvetGE's queue in C: ext-pixel-queue holds the frame, the transform, the clip and the pushes,
@@ -243,6 +243,15 @@ final class CLandQueue implements ShapeQueue
             $this->queue->shadow($x, $y, $width, $height, $radius, $blur, $rgba, $dx, $dy);
         } catch (PixelQueueException $e) {
             throw self::refused($e, 'shadow');
+        }
+    }
+
+    public function glyphs(array $runs, float $x, float $y, ?array $ink, int $rgba): void
+    {
+        try {
+            $this->queue->glyphs($runs, $x, $y, $ink, $rgba);
+        } catch (PixelQueueException $e) {
+            throw self::refused($e, 'text');
         }
     }
 

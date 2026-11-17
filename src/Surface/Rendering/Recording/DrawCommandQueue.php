@@ -2,24 +2,25 @@
 
 namespace Surface\Rendering\Recording;
 
-use Surface\NutsAndBolts\Path;
-use Surface\NutsAndBolts\Color;
-use Surface\NutsAndBolts\Affine;
-use Surface\NutsAndBolts\Gradient;
-use Surface\Contracts\Graphics\StrokeStyle;
-use Surface\Rendering\Stroker;
 use Surface\Contracts\Graphics\Effects\Glass;
+use Surface\Contracts\Graphics\StrokeStyle;
 use Surface\Contracts\Graphics\DrawingException;
-use Surface\Contracts\Rendering\Recording\Queue;
-use Surface\Contracts\Rendering\Painting\Painter;
 use Surface\Contracts\Graphics\Effects\FilterChain;
-use Surface\Contracts\Rendering\Recording\Recorder;
+use Surface\Contracts\Rendering\Framebuffers\DamageGranularity;
 use Surface\Contracts\Rendering\Framebuffers\Filter;
 use Surface\Contracts\Rendering\Framebuffers\Region;
+use Surface\Contracts\Rendering\Painting\Painter;
 use Surface\Contracts\Rendering\Painting\PaintTarget;
-use Surface\Contracts\Rendering\Recording\ShapeQueue;
 use Surface\Contracts\Rendering\Rasterization\FillRule;
-use Surface\Contracts\Rendering\Framebuffers\DamageGranularity;
+use Surface\Contracts\Rendering\Recording\Queue;
+use Surface\Contracts\Rendering\Recording\Recorder;
+use Surface\Contracts\Rendering\Recording\ShapeQueue;
+use Surface\NutsAndBolts\Affine;
+use Surface\NutsAndBolts\Color;
+use Surface\NutsAndBolts\Gradient;
+use Surface\NutsAndBolts\Path;
+use Surface\Contracts\Typography\TypesetText;
+use Surface\Rendering\Stroker;
 
 class DrawCommandQueue implements Recorder
 {
@@ -36,8 +37,10 @@ class DrawCommandQueue implements Recorder
 
     private const float LIMIT = Painter::LIMIT;
 
+    /** @param  InkBoxes|null  $ink  Where text puts ink; null shares InkBoxes::shared(). */
     public function __construct(
-        private Queue $queue
+        private Queue $queue,
+        private ?InkBoxes $ink = null,
     ) {
         $this->shapes = $queue instanceof ShapeQueue ? $queue : null;
     }
@@ -532,6 +535,30 @@ class DrawCommandQueue implements Recorder
             ? ['shadow', $x0, $y0, $x1, $y1, $device[0], $glass->shadow * $s, self::rgba($glass->shadowColor), $clip]
             : null;
         $this->queue->append(['glass', $area, [$x0, $y0, $x1, $y1, $device], $look, $glass->blur * $s, $shadow, $area]);
+    }
+
+    public function text(TypesetText $text, float $x, float $y, Color $color): void
+    {
+        $this->open('text');
+        $ink = ($this->ink ??= InkBoxes::shared())->of($text);
+        if (! is_null($this->shapes)) {
+            $this->shapes->glyphs($text->runs(), $x, $y, $ink, self::rgba($color));
+
+            return;
+        }
+        self::finite(['x' => $x, 'y' => $y]);
+        [$ox, $oy] = $this->point($x, $y);
+        $clip = $this->queue->clipRegion();
+        if (is_null($ink) || $clip->isEmpty()) {
+            return;
+        }
+
+        // the ink's box through the transform, grown by a pixel: anti-aliased edges, and each glyph moved to a whole pixel
+        $corners = [$this->point($x + $ink[0], $y + $ink[1]), $this->point($x + $ink[2], $y + $ink[1]), $this->point($x + $ink[2], $y + $ink[3]), $this->point($x + $ink[0], $y + $ink[3])];
+        $xs = array_column($corners, 0);
+        $ys = array_column($corners, 1);
+        $m = $this->queue->matrix();
+        $this->queue->append(['glyphs', $text->runs(), [$m->a, $m->b, $m->c, $m->d, $ox, $oy], self::rgba($color), [min($xs) - 1.0, min($ys) - 1.0, max($xs) + 1.0, max($ys) + 1.0], $clip]);
     }
 
     public function drawn(Region $surface, DamageGranularity $granularity, array $also = []): array

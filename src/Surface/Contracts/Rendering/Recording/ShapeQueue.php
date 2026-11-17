@@ -38,4 +38,12 @@ interface ShapeQueue extends Queue
     public function roundRect(float $x, float $y, float $width, float $height, array $radii, int $fill, ?int $border, float $borderWidth): void;
 
     public function shadow(float $x, float $y, float $width, float $height, float $radius, float $blur, int $rgba, float $dx, float $dy): void;
+
+    /**
+     * Recorder::text(), given the text's runs and the box of its ink in the text's own space.
+     *
+     * @param  list<\Surface\Contracts\Typography\GlyphRun>  $runs  Unchecked: carried into the command as they are.
+     * @param  array{float, float, float, float}|null  $ink  [x0, y0, x1, y1] from the text's top-left, y down; null for none.
+     */
+    public function glyphs(array $runs, float $x, float $y, ?array $ink, int $rgba): void;
 }

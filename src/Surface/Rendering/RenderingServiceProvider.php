@@ -4,6 +4,7 @@ namespace Surface\Rendering;
 
 use ReflectionException;
 use Surface\Rendering\Framebuffers\FramebufferLibraryManager;
+use Surface\Rendering\Glyphs\GlyphLibraryManager;
 use Surface\Rendering\Painters\PaintingLibraryManager;
 use Surface\Rendering\Rasterization\RasterizationLibraryManager;
 use Surface\Rendering\Stroking\StrokingLibraryManager;
@@ -26,6 +27,7 @@ class RenderingServiceProvider extends ServiceProvider
         $this->bootstrapFramebuffers();
         $this->bootstrapRasterization();
         $this->bootstrapPainters();
+        $this->bootstrapGlyphs();
     }
 
     /**
@@ -37,8 +39,8 @@ class RenderingServiceProvider extends ServiceProvider
         $this->app->alias('recorders', RecordingLibraryManager::class);
 
         // Recording is Topside's, for every engine: its two drivers are registered here.
-        $this->app->make('recorders')->extend('native', fn () => new PHPLandRecordingDriver());
-        $this->app->make('recorders')->extend('ext', fn () => new CLandRecordingDriver());
+        $this->app->make('recorders')->extend('php', fn () => new PHPLandRecordingDriver());
+        $this->app->make('recorders')->extend('c', fn () => new CLandRecordingDriver());
     }
 
     /**
@@ -78,6 +80,17 @@ class RenderingServiceProvider extends ServiceProvider
     {
         $this->app->registerSingleton('painters', fn (FrameworkCore $app) => new PaintingLibraryManager($app));
         $this->app->alias('painters', PaintingLibraryManager::class);
+    }
+
+    /**
+     * Glyphs are drawn by the drivers packages register here; Rendering brings none of its own.
+     *
+     * @throws ReflectionException
+     */
+    protected function bootstrapGlyphs(): void
+    {
+        $this->app->registerSingleton('glyphs', fn (FrameworkCore $app) => new GlyphLibraryManager($app));
+        $this->app->alias('glyphs', GlyphLibraryManager::class);
     }
 
     public function boot(): void

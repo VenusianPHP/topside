@@ -5,13 +5,13 @@ namespace Surface\Graphics;
 use Closure;
 use ReflectionException;
 use Surface\Contracts\Graphics\Backend;
+use Surface\Contracts\Graphics\GraphicsEngine;
 
 /**
  * The way in to the graphics engines:
  *
- *     $engine = Gfx::engine('velvet', 'cpu');
- *     $frame = $engine->framebuffer(640, 480);
- *     $engine->painter($frame)->frame(fn ($g) => $g->fillRect(10, 10, 50, 50, $red));
+ *     $surface = Gfx::engine('velvet')->surface($stage);
+ *     $surface->render(fn ($g) => $g->fillRect(10, 10, 50, 50, $red))->present();
  */
 class Gfx
 {
@@ -28,6 +28,8 @@ class Gfx
 
     /**
      * Registers an engine, with the backends it offers.
+     *
+     * @param Closure(Backend): GraphicsEngine $creator
      *
      * @throws ReflectionException
      */

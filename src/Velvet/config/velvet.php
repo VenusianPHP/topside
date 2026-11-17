@@ -40,7 +40,7 @@ return [
         /*
         |--------------------------------------------------------------------------
         | Rasterizers
-        |-------------------z2-------------------------------------------------------
+        |--------------------------------------------------------------------------
         | Rasterizers contain all those fun and exciting effects use all that crazy
         | math you had to learn in school but forgot, that make your application
         | visually appealing while its eat all your compute, Really tho, they
@@ -70,6 +70,22 @@ return [
         */
         'painters' => [
             'default' => env('VELVET_PAINTER','auto'),
+        ],
+        /*
+        |--------------------------------------------------------------------------
+        | Glyphs
+        |--------------------------------------------------------------------------
+        | Text is drawn a glyph at a time. Each glyph is made once from its
+        | face's outline at the size it is drawn, kept where the framebuffer's
+        | pixels live, and placed wherever the text puts it.
+        |
+        | Available - 'lustrous-c' (kept in C, ext-rasterize; draws into frames
+        |             in C memory), 'lustrous-php', 'auto' (lustrous-c for a
+        |             frame in C memory where ext-rasterize is loaded, else
+        |             lustrous-php)
+        */
+        'glyphs' => [
+            'default' => env('VELVET_GLYPHS', 'auto'),
         ],
         /*
         |--------------------------------------------------------------------------

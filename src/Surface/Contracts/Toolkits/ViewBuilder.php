@@ -2,9 +2,9 @@
 
 namespace Surface\Contracts\Toolkits;
 
-use Surface\Contracts\Graphics\ActorStage;
-use Surface\Graphics\GraphicsEngine;
 use Closure;
+use Surface\Contracts\Graphics\ActorStage;
+use Surface\Contracts\Graphics\GraphicsEngine;
 
 interface ViewBuilder
 {

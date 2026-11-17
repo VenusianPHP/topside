@@ -11,8 +11,8 @@ use Voyager\NutsAndBolts\Manager;
  * 'auto' takes the first driver that can run in this PHP, in this order:
  *   1. every driver a package registered under its own name (a C library binding), in the
  *      order they were registered;
- *   2. 'ext', VelvetGE's own C extension;
- *   3. 'native', VelvetGE in PHP, which needs nothing.
+ *   2. 'c', the driver in C;
+ *   3. 'php', the driver in PHP, which needs nothing.
  *
  * A driver that cannot run here says so by throwing a RenderingException from its creator or
  * constructor (its extension is not loaded, or is too old); 'auto' then tries the next one.

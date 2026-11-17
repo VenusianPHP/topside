@@ -2,21 +2,18 @@
 
 namespace VelvetGE\Painting;
 
+use Surface\Contracts\Graphics\Effects\Glass;
 use Surface\Contracts\Graphics\DrawingException;
 use Surface\Contracts\Graphics\Effects\FilterChain;
-use Surface\Contracts\Graphics\Effects\Glass;
 use Surface\Contracts\Rendering\Framebuffers\Filter;
 use Surface\Contracts\Rendering\Framebuffers\FormatSpec;
 use Surface\Contracts\Rendering\Framebuffers\InstanceThatManagesAFramebuffer;
-use Surface\Contracts\Rendering\Painting\PaintTarget;
-use VelvetGE\Contracts\Framebuffers\CompositingFramebuffer;
-use VelvetGE\Contracts\Framebuffers\EffectsFramebuffer;
-use VelvetGE\Contracts\Framebuffers\GradientFramebuffer;
-use VelvetGE\Contracts\Framebuffers\PagedFramebuffer;
 use Surface\Contracts\Rendering\Framebuffers\PixelMemory;
 use Surface\Contracts\Rendering\Framebuffers\Region;
-use VelvetGE\Contracts\Framebuffers\RingFramebuffer;
+use Surface\Contracts\Rendering\Glyphs\GlyphDriver;
+use Surface\Contracts\Rendering\Glyphs\GlyphPainter;
 use Surface\Contracts\Rendering\Painting\Brush;
+use Surface\Contracts\Rendering\Painting\PaintTarget;
 use Surface\Contracts\Rendering\Rasterization\Edges;
 use Surface\Contracts\Rendering\Rasterization\RasterizeDriver;
 use Surface\Contracts\Rendering\Rasterization\Rasterizer;
@@ -25,9 +22,14 @@ use Surface\NutsAndBolts\Affine;
 use Surface\NutsAndBolts\GradientSpread;
 use Surface\Rendering\Painters\GlassGroups;
 use Surface\Rendering\Painters\Painter;
-use Surface\Rendering\Recording\Queues\PHPLandQueue;
 use Surface\Rendering\Recording\DrawCommandQueue;
+use Surface\Rendering\Recording\Queues\PHPLandQueue;
 use Throwable;
+use VelvetGE\Contracts\Framebuffers\CompositingFramebuffer;
+use VelvetGE\Contracts\Framebuffers\EffectsFramebuffer;
+use VelvetGE\Contracts\Framebuffers\GradientFramebuffer;
+use VelvetGE\Contracts\Framebuffers\PagedFramebuffer;
+use VelvetGE\Contracts\Framebuffers\RingFramebuffer;
 use VelvetGE\Framebuffers\PixelMapper;
 use VelvetGE\Framebuffers\PixelMapperMode;
 
@@ -83,12 +85,16 @@ class VelvetPainter extends Painter
     /** @var list<array<int, mixed>> The last frame's shape commands the rasterizer had no way to draw, as they were recorded. */
     private array $undrawn = [];
 
+    /** What draws this painter's text, made at the first text it draws: its glyphs are kept for its life. */
+    private ?GlyphPainter $glyphPainter = null;
+
     /**
      * @param  Edges|null  $edges  Null picks by format: anti-aliased where the format can blend (RGB, grey), hard where it cannot (mono, palette, planar).
      * @param  bool  $directFill  Shapes painted straight into the framebuffer's memory where the drivers can;
      *                            false sends every shape's spans through paintSpans(). The pixels are the same.
      * @param  Brush|null  $brush  What paints the commands it takes in this painter's place.
      * @param  Recorder|null  $recorder  What records this painter's frames; null is VelvetGE's recorder over its queue in PHP.
+     * @param  GlyphDriver|null  $glyphs  What draws its text; null takes Velvet's own (velvet.cpu.glyphs.default) at the first text.
      */
     public function __construct(
         protected CompositingFramebuffer&PaintTarget $framebuffer,
@@ -97,6 +103,7 @@ class VelvetPainter extends Painter
         protected bool $directFill = true,
         protected ?Brush $brush = null,
         ?Recorder $recorder = null,
+        protected ?GlyphDriver $glyphs = null,
     ) {
         $this->recordWith($recorder ?? new DrawCommandQueue(new PHPLandQueue()));
         $this->mapper = PixelMapper::for($framebuffer->hostFormat());
@@ -173,7 +180,9 @@ class VelvetPainter extends Painter
             }
         }
         $built = [];
-        // a run of commands the brush takes waits in $strokes and is painted by one paint()
+        // a run of commands the brush takes waits in $strokes and is painted by one paint(). $memory
+        // says whether the brush can draw here; each paint() is given the memory as it is then, as a
+        // command between (a clear, an image) may have moved the framebuffer's pixels elsewhere
         $memory = $this->brushMemory($target);
         $strokes = [];
         foreach ($commands as $index => $command) {
@@ -187,7 +196,7 @@ class VelvetPainter extends Painter
                 continue;
             }
             if ($strokes !== []) {
-                $target->drewInto(...$this->brush->paint($strokes, $rows, $memory, $this->edges));
+                $target->drewInto(...$this->brush->paint($strokes, $rows, $target->memory(), $this->edges));
                 $strokes = [];
             }
             $at = self::SHAPES[$command[0]] ?? null;
@@ -235,6 +244,19 @@ class VelvetPainter extends Painter
                         throw DrawingException::badLayer('the framebuffer module ('.$target::class.') does not paint glass (EffectsFramebuffer); swap in one that does.');
                     }
                     $target->paintGlass($command[2], $panes['samples'][Glass::levels($command[4])], 2, $command[3][0] < 1.0 ? $panes['sharp'] : null, $panes['region']->x, $panes['region']->y, $command[3], $clip);
+                }
+
+                continue;
+            }
+            if ($command[0] === 'glyphs') {
+                $clip = $command[5]->intersect($rows);
+                if (! is_null($clip)) {
+                    // a glyph painter that cannot draw into the target says so (DrawingException): nothing falls back
+                    $glyphs = $this->glyphPainter ??= ($this->glyphs ?? app('velvet.glyphs')->driver())->glyphs($this->edges);
+                    $written = $glyphs->draw($command, $clip, $target);
+                    if ($written !== []) {
+                        $target->drewInto(...$written);
+                    }
                 }
 
                 continue;
@@ -303,7 +325,7 @@ class VelvetPainter extends Painter
             array_push($this->undrawn, ...$this->rasterizer($batchClip)->fillBatch($batch, $target, $this->directFill));
         }
         if ($strokes !== []) {
-            $target->drewInto(...$this->brush->paint($strokes, $rows, $memory, $this->edges));
+            $target->drewInto(...$this->brush->paint($strokes, $rows, $target->memory(), $this->edges));
         }
         $this->rasterizers = [];
 

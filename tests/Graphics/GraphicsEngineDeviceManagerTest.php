@@ -2,17 +2,18 @@
 
 declare(strict_types=1);
 
+use Surface\Contracts\Graphics\ActorStage;
 use Surface\Contracts\Graphics\Backend;
+use Surface\Contracts\Graphics\DrawingSurface;
+use Surface\Contracts\Graphics\Feature;
 use Surface\Contracts\Graphics\GraphicsException;
-use Surface\Contracts\Graphics\Resource;
 use Surface\Contracts\Rendering\Framebuffers\FormatSpec;
-use Surface\Graphics\GEFramebuffer;
-use Surface\Graphics\GraphicsEngine;
+use Surface\Graphics\GfxDevice;
 
-/** An engine with a framebuffer and nothing else, which counts its release() calls. */
-function fakeEngine(string $name, Backend $backend): GraphicsEngine
+/** An engine that makes no surfaces, which counts its release() calls. */
+function fakeEngine(string $name, Backend $backend): GfxDevice
 {
-    return new class($name, $backend) extends GraphicsEngine {
+    return new class($name, $backend) extends GfxDevice {
         public int $released = 0;
 
         public function __construct(private readonly string $called, Backend $backend)
@@ -25,46 +26,19 @@ function fakeEngine(string $name, Backend $backend): GraphicsEngine
             return $this->called;
         }
 
-        public function supports(Resource $resource): bool
+        public function has(Feature $feature): bool
         {
-            return $resource === Resource::FRAMEBUFFER;
+            return false;
         }
 
-        public function framebuffer(int $width, int $height, ?FormatSpec $format = null): GEFramebuffer
+        public function surface(ActorStage $stage, ?FormatSpec $format = null): DrawingSurface
         {
-            return new class($this) extends GEFramebuffer {
-                public function accepts(GEFramebuffer $other): void
-                {
-                    $this->mine($other);
-                }
+            throw new LogicException('The manager tests make no surfaces.');
+        }
 
-                public function width(): int
-                {
-                    return 4;
-                }
-
-                public function height(): int
-                {
-                    return 4;
-                }
-
-                public function format(): FormatSpec
-                {
-                    return FormatSpec::rgba8();
-                }
-
-                public function clear(Surface\NutsAndBolts\Color $color): static
-                {
-                    return $this;
-                }
-
-                protected function readRgba8(Surface\Contracts\Rendering\Framebuffers\Region $region): string
-                {
-                    return '';
-                }
-
-                protected function writeRgba8(string $rgba8, Surface\Contracts\Rendering\Framebuffers\Region $region): void {}
-            };
+        public function offscreen(int $width, int $height, ?FormatSpec $format = null): DrawingSurface
+        {
+            throw new LogicException('The manager tests make no surfaces.');
         }
 
         public function release(): void
@@ -151,22 +125,4 @@ it('releases every engine it made when they are forgotten, and makes new ones af
 
     expect($first->released)->toBe(1)
         ->and($gfx->engine('soft'))->not->toBe($first);
-});
-
-it('throws for a resource the engine does not have', function () {
-    $engine = fakeEngine('soft', Backend::CPU);
-
-    expect($engine->supports(Resource::PAINTER))->toBeFalse()
-        ->and(fn () => $engine->rasterizer())->toThrow(GraphicsException::class, 'The [soft] engine has no rasterizer.')
-        ->and(fn () => $engine->painter($engine->framebuffer(4, 4)))->toThrow(GraphicsException::class, 'The [soft] engine has no painter.');
-});
-
-it('keeps an engine\'s resources to that engine', function () {
-    [$a, $b] = [fakeEngine('a', Backend::CPU), fakeEngine('b', Backend::CPU)];
-    $frame = $a->framebuffer(4, 4);
-
-    $frame->accepts($a->framebuffer(4, 4));
-
-    expect($frame->engine())->toBe($a)
-        ->and(fn () => $frame->accepts($b->framebuffer(4, 4)))->toThrow(GraphicsException::class, 'A resource of the [a] engine was given one of the [b] engine');
 });

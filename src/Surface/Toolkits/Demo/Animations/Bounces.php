@@ -3,7 +3,7 @@
 namespace Surface\Toolkits\Demo\Animations;
 
 use Surface\Contracts\Toolkits\ViewBuilder;
-use Surface\Graphics\GEPainter;
+use Surface\Contracts\Graphics\DrawingContext;
 use Surface\NutsAndBolts\Color;
 use Surface\NutsAndBolts\LinearGradient;
 use Surface\NutsAndBolts\RadialGradient;
@@ -62,7 +62,7 @@ class Bounces extends Animation
         $this->time += 2.0 * $ticks;
     }
 
-    public function draw(GEPainter $g): void
+    public function draw(DrawingContext $g): void
     {
         $g->clear(Color::rgba(0, 0, 0, 1.0));
 

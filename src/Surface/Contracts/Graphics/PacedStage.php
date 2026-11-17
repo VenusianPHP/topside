@@ -3,6 +3,7 @@
 namespace Surface\Contracts\Graphics;
 
 use Closure;
+use Surface\Contracts\Graphics\ActorStage;
 
 /**
  * A stage that knows when the display it is on is due a frame. A framebuffer presented on one is

@@ -5,7 +5,7 @@ namespace Surface\Toolkits\Demo\Animations;
 use Random\Engine\Mt19937;
 use Random\Randomizer;
 use Surface\Contracts\Toolkits\ViewBuilder;
-use Surface\Graphics\GEPainter;
+use Surface\Contracts\Graphics\DrawingContext;
 use Surface\NutsAndBolts\Color;
 use Surface\NutsAndBolts\Path;
 
@@ -48,7 +48,7 @@ abstract class Animation
     /** Move everything on by $ticks (1.0 is one of Blend2D's 120-a-second steps). */
     abstract public function step(float $ticks): void;
 
-    abstract public function draw(GEPainter $g): void;
+    abstract public function draw(DrawingContext $g): void;
 
     /** How many things one frame draws: the page shows it beside the frame rate. */
     abstract public function count(): int;

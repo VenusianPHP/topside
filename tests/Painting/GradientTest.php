@@ -2,19 +2,12 @@
 
 declare(strict_types=1);
 
-use Surface\Contracts\Graphics\StrokeStyle;
-use Surface\Contracts\Rendering\Framebuffers\FormatSpec;
-use Surface\Contracts\Rendering\Painting\Painter;
-use Surface\Contracts\Rendering\Rasterization\Edges;
-use Surface\Contracts\Rendering\Rasterization\RasterizeDriver;
 use Surface\NutsAndBolts\Affine;
 use Surface\NutsAndBolts\Color;
 use Surface\NutsAndBolts\Gradient;
 use Surface\NutsAndBolts\GradientSpread;
 use Surface\NutsAndBolts\LinearGradient;
-use Surface\NutsAndBolts\Path;
 use Surface\NutsAndBolts\RadialGradient;
-use VelvetGE\Painting\VelvetPainter;
 
 /*
  * A gradient is baked into a ramp of 256 colours; a point picks the entry floor(t × 255 + ½) of its position t along

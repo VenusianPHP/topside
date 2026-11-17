@@ -5,25 +5,15 @@ namespace Surface\Rendering\Recording;
 use ReflectionException;
 use Surface\Contracts\Rendering\RenderingException;
 use Surface\Rendering\LibraryManager;
-use Surface\Rendering\Recording\Drivers\CLandRecordingDriver;
-use Surface\Rendering\Recording\Drivers\PHPLandRecordingDriver;
 
+/**
+ * Rendering's recorders, by name: 'php' (in PHP) and 'c' (ext-pixel-queue), registered by
+ * RenderingServiceProvider, and any a package registers.
+ */
 class RecordingLibraryManager extends LibraryManager
 {
-    public function createCDriver(): CLandRecordingDriver
-    {
-        extension_loaded('pixel_queue') || throw new RenderingException('ext-pixel-queue is not loaded in this PHP.');
-
-        return new CLandRecordingDriver();
-    }
-
-    public function createPhpDriver(): PHPLandRecordingDriver
-    {
-        return new PHPLandRecordingDriver();
-    }
-
     /**
-     * The first driver that can run here: a registered library binding, then 'ext', then 'native'.
+     * The first driver that can run here: a registered library binding, then 'c', then 'php'.
      *
      * @throws RenderingException When no registered driver can run.
      */

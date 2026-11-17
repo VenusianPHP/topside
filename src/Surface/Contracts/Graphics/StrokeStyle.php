@@ -2,6 +2,7 @@
 
 namespace Surface\Contracts\Graphics;
 
+use Surface\Contracts\Graphics\DrawingException;
 use Surface\Contracts\Rendering\Rasterization\StrokeCap;
 use Surface\Contracts\Rendering\Rasterization\StrokeJoin;
 

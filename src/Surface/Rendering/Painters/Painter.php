@@ -2,24 +2,25 @@
 
 namespace Surface\Rendering\Painters;
 
-use Surface\Contracts\Graphics\DrawingException;
-use Surface\Contracts\Graphics\Effects\FilterChain;
 use Surface\Contracts\Graphics\Effects\Glass;
 use Surface\Contracts\Graphics\StrokeStyle;
+use Surface\Contracts\Graphics\DrawingException;
+use Surface\Contracts\Graphics\Effects\FilterChain;
 use Surface\Contracts\Rendering\Framebuffers\Filter;
-use VelvetGE\Contracts\Framebuffers\PagedFramebuffer;
 use Surface\Contracts\Rendering\Framebuffers\Region;
-use VelvetGE\Contracts\Framebuffers\RingFramebuffer;
-use Surface\Contracts\Rendering\Painting\PaintTarget;
 use Surface\Contracts\Rendering\Painting\Painter as RenderingEngineContract;
+use Surface\Contracts\Rendering\Painting\PaintTarget;
 use Surface\Contracts\Rendering\Rasterization\FillRule;
 use Surface\Contracts\Rendering\Recording\Recorder;
 use Surface\NutsAndBolts\Affine;
 use Surface\NutsAndBolts\Color;
 use Surface\NutsAndBolts\Gradient;
 use Surface\NutsAndBolts\Path;
+use Surface\Contracts\Typography\TypesetText;
 use Surface\Rendering\Recorders;
 use Throwable;
+use VelvetGE\Contracts\Framebuffers\PagedFramebuffer;
+use VelvetGE\Contracts\Framebuffers\RingFramebuffer;
 
 /**
  * What every painter shares: frames, and what a frame's end draws. The draw and state calls go to
@@ -43,6 +44,17 @@ abstract class Painter implements RenderingEngineContract
 
     /** @var list<Region> scrolled since the last end(): the framebuffer no longer holds the last frame there */
     private array $scrolled = [];
+
+    /**
+     * The most regions a frame is redrawn in. Every command is carried out once for each region it
+     * reaches, each under its own clip, so a frame that changed in many small places costs more
+     * region by region than drawn once over the box that holds them all. Past this many, the
+     * regions become that one box.
+     *
+     * Measured 2026-11-15, 200 small shapes on a 1600x840 frame: by region is the cheaper up to
+     * about 20 regions and the dearer from about 40, on Lustrous's C painter and on Blend2D's.
+     */
+    protected int $regionLimit = 24;
 
     /**
      * Carry out one frame.
@@ -116,7 +128,7 @@ abstract class Painter implements RenderingEngineContract
         }
 
         // A scrolled region no longer holds what the last frame drew there: it is drawn again.
-        $this->damage = $recorder->changed($this->surface(), $framebuffer->damageGranularity(), $scrolled);
+        $this->damage = $this->held($recorder->changed($this->surface(), $framebuffer->damageGranularity(), $scrolled));
         if ($this->damage !== []) {
             $this->execute($this->keepsFrame($framebuffer) ? $recorder->scissor($commands, $this->damage) : $commands);
         }
@@ -170,6 +182,26 @@ abstract class Painter implements RenderingEngineContract
         }
 
         return $this->end();
+    }
+
+    /**
+     * $regions as they are while there are no more than the limit, and otherwise the one box that
+     * holds them all. What is reported as damage is what is redrawn, so the box is damage too.
+     *
+     * @param  list<Region>  $regions
+     * @return list<Region>
+     */
+    private function held(array $regions): array
+    {
+        if (count($regions) <= $this->regionLimit) {
+            return $regions;
+        }
+        $box = array_shift($regions);
+        foreach ($regions as $region) {
+            $box = $box->union($region);
+        }
+
+        return [$box];
     }
 
     public function replay(): static
@@ -367,6 +399,13 @@ abstract class Painter implements RenderingEngineContract
     public function glass(float $x, float $y, float $width, float $height, ?array $radii, Glass $glass, float $opacity = 1.0): static
     {
         $this->recorder()->glass($x, $y, $width, $height, $radii, $glass, $opacity);
+
+        return $this;
+    }
+
+    public function text(TypesetText $text, float $x, float $y, Color $color): static
+    {
+        $this->recorder()->text($text, $x, $y, $color);
 
         return $this;
     }

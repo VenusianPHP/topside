@@ -2,6 +2,7 @@
 
 namespace Surface\Contracts\Graphics\Effects;
 
+use Surface\Contracts\Graphics\Effects\FilterStep;
 use Surface\NutsAndBolts\Color;
 
 /** SVG's feFlood: the colour, everywhere. */

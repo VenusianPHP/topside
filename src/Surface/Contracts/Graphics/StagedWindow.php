@@ -2,9 +2,9 @@
 
 namespace Surface\Contracts\Graphics;
 
-use Surface\Contracts\Core\NativeOSWindow;
+use Surface\Contracts\HumanInput\InputStage;
 
-interface StagedWindow extends NativeOSWindow, ActorStage
+interface StagedWindow extends InputStage
 {
 
 }
