@@ -2,8 +2,8 @@
 
 namespace VelvetGE\Framebuffers\PHP\Packings;
 
-use Surface\Contracts\Rendering\Framebuffers\BitOrder;
-use Surface\Contracts\Rendering\Framebuffers\FormatSpec;
+use Surface\Contracts\Rendering\deprecated\Framebuffers\BitOrder;
+use Surface\Contracts\Rendering\deprecated\Framebuffers\FormatSpec;
 
 /** One bit per pixel, row-major, each row padded to a byte. MSB_FIRST: x0 is bit 7. */
 class MonoHorizontalPacking extends Packing

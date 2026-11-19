@@ -3,13 +3,13 @@
 namespace VelvetGE\Framebuffers;
 
 use ReflectionException;
-use Surface\Rendering\Framebuffers\FramebufferDriver;
-use Surface\Contracts\Rendering\Framebuffers\FormatSpec;
-use Surface\Contracts\Rendering\Framebuffers\InstanceThatManagesAFramebuffer;
-use VelvetGE\Contracts\Framebuffers\RingFramebuffer;
-use VelvetGE\Contracts\Framebuffers\PagedFramebuffer;
+use Surface\Contracts\Rendering\deprecated\Framebuffers\DamageTrackingFramebuffer;
+use Surface\Contracts\Rendering\deprecated\Framebuffers\FormatSpec;
+use Surface\Contracts\Rendering\deprecated\Framebuffers\InstanceThatManagesAFramebuffer;
+use Surface\Rendering\deprecated\Framebuffers\FramebufferDriver;
 use VelvetGE\Contracts\Framebuffers\ePaperFramebuffer;
-use Surface\Contracts\Rendering\Framebuffers\DamageTrackingFramebuffer;
+use VelvetGE\Contracts\Framebuffers\PagedFramebuffer;
+use VelvetGE\Contracts\Framebuffers\RingFramebuffer;
 
 class TopsideFramebufferDriver extends FramebufferDriver
 {

@@ -13,12 +13,12 @@ readonly class Affine
 {
     /** @throws InvalidArgumentException When a component is not finite. */
     public function __construct(
-        public float $a,
-        public float $b,
-        public float $c,
-        public float $d,
-        public float $e,
-        public float $f,
+        public float $a = 1.0,
+        public float $b = 0.0,
+        public float $c = 0.0,
+        public float $d = 1.0,
+        public float $e = 0.0,
+        public float $f = 0.0,
     ) {
         foreach ([$a, $b, $c, $d, $e, $f] as $component) {
             if (! is_finite($component)) {
@@ -104,6 +104,19 @@ readonly class Affine
     public function isAxisAligned(): bool
     {
         return $this->b == 0.0 && $this->c == 0.0;
+    }
+
+    /** One transform that does $inner first, then this one. */
+    public function after(Affine $inner): self
+    {
+        return new self(
+            $this->a * $inner->a + $this->c * $inner->b,
+            $this->b * $inner->a + $this->d * $inner->b,
+            $this->a * $inner->c + $this->c * $inner->d,
+            $this->b * $inner->c + $this->d * $inner->d,
+            $this->a * $inner->e + $this->c * $inner->f + $this->e,
+            $this->b * $inner->e + $this->d * $inner->f + $this->f,
+        );
     }
 
     /** @return array{float, float, float, float, float, float} a, b, c, d, e, f */

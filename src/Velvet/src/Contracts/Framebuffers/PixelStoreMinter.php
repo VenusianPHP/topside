@@ -2,7 +2,7 @@
 
 namespace VelvetGE\Contracts\Framebuffers;
 
-use Surface\Contracts\Rendering\Framebuffers\FormatSpec;
+use Surface\Contracts\Rendering\deprecated\Framebuffers\FormatSpec;
 
 /**
  * Where a framebuffer's pixels come from: one PixelStore per surface.

@@ -3,13 +3,13 @@
 namespace VelvetGE\Framebuffers\C;
 
 use FbFormat;
-use Surface\Contracts\Rendering\Framebuffers\BitOrder;
-use Surface\Contracts\Rendering\Framebuffers\ChannelOrder;
-use Surface\Contracts\Rendering\Framebuffers\ChannelSpec;
-use Surface\Contracts\Rendering\Framebuffers\EInkColor;
-use Surface\Contracts\Rendering\Framebuffers\Endianness;
-use Surface\Contracts\Rendering\Framebuffers\FormatSpec;
-use Surface\Contracts\Rendering\Framebuffers\ScanDirection;
+use Surface\Contracts\Rendering\deprecated\Framebuffers\BitOrder;
+use Surface\Contracts\Rendering\deprecated\Framebuffers\ChannelOrder;
+use Surface\Contracts\Rendering\deprecated\Framebuffers\ChannelSpec;
+use Surface\Contracts\Rendering\deprecated\Framebuffers\EInkColor;
+use Surface\Contracts\Rendering\deprecated\Framebuffers\Endianness;
+use Surface\Contracts\Rendering\deprecated\Framebuffers\FormatSpec;
+use Surface\Contracts\Rendering\deprecated\Framebuffers\ScanDirection;
 use VelvetGE\Framebuffers\Layout;
 
 /** A FormatSpec in ext-fb's own vocabulary. ext-fb knows nothing of Surface; this is the one place that translates. */

@@ -3,7 +3,7 @@
 namespace VelvetGE\Framebuffers\PHP;
 
 use Closure;
-use Surface\Contracts\Rendering\Framebuffers\Region;
+use Surface\Contracts\Rendering\deprecated\Framebuffers\Region;
 
 /**
  * Glass in PHP, the arithmetic of ext-fb's fb_kawase_down(), fb_kawase_up() and fb_paint_glass() step for step, so

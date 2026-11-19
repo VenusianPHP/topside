@@ -2,13 +2,13 @@
 
 namespace VelvetGE\Framebuffers;
 
-use Surface\Contracts\Rendering\Framebuffers\BitDepth;
-use Surface\Contracts\Rendering\Framebuffers\BitOrder;
-use Surface\Contracts\Rendering\Framebuffers\ChannelOrder;
-use Surface\Contracts\Rendering\Framebuffers\FormatSpec;
-use Surface\Contracts\Rendering\Framebuffers\FramebufferException;
-use Surface\Contracts\Rendering\Framebuffers\PageAxis;
-use Surface\Contracts\Rendering\Framebuffers\PixelFormat;
+use Surface\Contracts\Rendering\deprecated\Framebuffers\BitDepth;
+use Surface\Contracts\Rendering\deprecated\Framebuffers\BitOrder;
+use Surface\Contracts\Rendering\deprecated\Framebuffers\ChannelOrder;
+use Surface\Contracts\Rendering\deprecated\Framebuffers\FormatSpec;
+use Surface\Contracts\Rendering\deprecated\Framebuffers\FramebufferException;
+use Surface\Contracts\Rendering\deprecated\Framebuffers\PageAxis;
+use Surface\Contracts\Rendering\deprecated\Framebuffers\PixelFormat;
 
 /**
  * The byte layouts a FormatSpec can name, and the one rule set that says which

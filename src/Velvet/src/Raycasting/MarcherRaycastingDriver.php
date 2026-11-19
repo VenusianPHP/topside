@@ -2,10 +2,10 @@
 
 namespace VelvetGE\Raycasting;
 
-use Surface\Contracts\Rendering\Raycasting\Grid;
-use Surface\Contracts\Rendering\Raycasting\Marcher;
-use Surface\Contracts\Rendering\Raycasting\RaycastDriver;
-use Surface\Contracts\Rendering\Raycasting\Raycaster;
+use Surface\Contracts\Rendering\deprecated\Raycasting\Grid;
+use Surface\Contracts\Rendering\deprecated\Raycasting\Marcher;
+use Surface\Contracts\Rendering\deprecated\Raycasting\RaycastDriver;
+use Surface\Contracts\Rendering\deprecated\Raycasting\Raycaster;
 
 /**
  * A raycasting module of Velvet: it says how its marcher is made, and that is all. Checking, the

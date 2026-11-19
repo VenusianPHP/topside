@@ -2,21 +2,21 @@
 
 namespace Surface\Core\Providers;
 
-use Surface\Graphics\GraphicsServiceProvider;
+
 use Surface\HumanInput\HumanInputServiceProvider;
-use Surface\Rendering\RenderingServiceProvider;
 use Surface\Toolkits\ToolkitsServiceProvider;
-use Surface\Typography\TypographyServiceProvider;
-use Surface\VelvetGE\VelvetGEServiceProvider;
+use Surface\Graphics\GraphicsServiceProvider;
+use Surface\Rendering\RenderingServiceProvider;
 use Voyager\NutsAndBolts\AggregateServiceProvider;
 
 class TopsideServiceProvider extends AggregateServiceProvider
 {
     protected array $providers = [
         ToolkitsServiceProvider::class,
-        TypographyServiceProvider::class,
+        //TypographyServiceProvider::class,
         RenderingServiceProvider::class,
         GraphicsServiceProvider::class,
+        //ImagesServiceProvider::class,
         HumanInputServiceProvider::class,
     ];
 
@@ -45,12 +45,13 @@ class TopsideServiceProvider extends AggregateServiceProvider
         $dir = dirname(__DIR__, 4).'/config';
 
         return [
-            'av' => "{$dir}/av.php",
+            //'av' => "{$dir}/av.php",
             'graphics' => "{$dir}/graphics.php",
-            'human-input' => "{$dir}/human-input.php",
+            //'images' => "{$dir}/images.php",
+            //'human-input' => "{$dir}/human-input.php",
             'rendering' => "{$dir}/rendering.php",
             'toolkits' => "{$dir}/toolkits.php",
-            'typography' => "{$dir}/typography.php",
+            //'typography' => "{$dir}/typography.php",
             'windows' => "{$dir}/windows.php",
             'main.presentation' => "{$dir}/presentation.php",
         ];

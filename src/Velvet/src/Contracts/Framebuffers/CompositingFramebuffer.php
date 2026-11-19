@@ -2,9 +2,9 @@
 
 namespace VelvetGE\Contracts\Framebuffers;
 
-use Surface\Contracts\Rendering\Framebuffers\Filter;
-use Surface\Contracts\Rendering\Framebuffers\InstanceThatManagesAFramebuffer;
-use Surface\Contracts\Rendering\Framebuffers\Region;
+use Surface\Contracts\Rendering\deprecated\Framebuffers\Filter;
+use Surface\Contracts\Rendering\deprecated\Framebuffers\InstanceThatManagesAFramebuffer;
+use Surface\Contracts\Rendering\deprecated\Framebuffers\Region;
 use Surface\NutsAndBolts\Affine;
 
 /**

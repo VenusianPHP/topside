@@ -2,8 +2,8 @@
 
 namespace VelvetGE\Framebuffers;
 
-use Surface\Contracts\Rendering\Framebuffers\DamageGranularity;
-use Surface\Contracts\Rendering\Framebuffers\Region;
+use Surface\Contracts\Rendering\deprecated\Framebuffers\DamageGranularity;
+use Surface\Contracts\Rendering\deprecated\Framebuffers\Region;
 
 /**
  * What has been written, as rects. Touching rects merge on the way in; more

@@ -4,8 +4,8 @@ namespace Surface\Toolkits\Demo\Animations;
 
 use Random\Engine\Mt19937;
 use Random\Randomizer;
+use Surface\Contracts\Graphics\Canvas;
 use Surface\Contracts\Toolkits\ViewBuilder;
-use Surface\Contracts\Graphics\DrawingContext;
 use Surface\NutsAndBolts\Color;
 use Surface\NutsAndBolts\Path;
 
@@ -48,7 +48,7 @@ abstract class Animation
     /** Move everything on by $ticks (1.0 is one of Blend2D's 120-a-second steps). */
     abstract public function step(float $ticks): void;
 
-    abstract public function draw(DrawingContext $g): void;
+    abstract public function draw(Canvas $g): void;
 
     /** How many things one frame draws: the page shows it beside the frame rate. */
     abstract public function count(): int;
@@ -78,28 +78,6 @@ abstract class Animation
     protected static function rect(float $x, float $y, float $width, float $height): Path
     {
         return (new Path)->moveTo($x, $y)->lineTo($x + $width, $y)->lineTo($x + $width, $y + $height)->lineTo($x, $y + $height)->close();
-    }
-
-    /** A rounded rectangle as a path, its four corners a quarter circle of $radius each. */
-    protected static function roundRect(float $x, float $y, float $width, float $height, float $radius): Path
-    {
-        $r = min($radius, $width / 2, $height / 2);
-        if ($r <= 0.0) {
-            return self::rect($x, $y, $width, $height);
-        }
-        $k = $r * 0.5522847498; // a cubic's control arm for a quarter circle
-
-        return (new Path)
-            ->moveTo($x + $r, $y)
-            ->lineTo($x + $width - $r, $y)
-            ->cubicTo($x + $width - $r + $k, $y, $x + $width, $y + $r - $k, $x + $width, $y + $r)
-            ->lineTo($x + $width, $y + $height - $r)
-            ->cubicTo($x + $width, $y + $height - $r + $k, $x + $width - $r + $k, $y + $height, $x + $width - $r, $y + $height)
-            ->lineTo($x + $r, $y + $height)
-            ->cubicTo($x + $r - $k, $y + $height, $x, $y + $height - $r + $k, $x, $y + $height - $r)
-            ->lineTo($x, $y + $r)
-            ->cubicTo($x, $y + $r - $k, $x + $r - $k, $y, $x + $r, $y)
-            ->close();
     }
 
     /** Adds a circle to $path as its own contour, as Blend2D's add_circle does. */

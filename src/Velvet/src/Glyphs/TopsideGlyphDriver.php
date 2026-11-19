@@ -3,9 +3,9 @@
 namespace VelvetGE\Glyphs;
 
 use ReflectionException;
-use Surface\Contracts\Rendering\Glyphs\GlyphPainter;
-use Surface\Contracts\Rendering\Rasterization\Edges;
-use Surface\Rendering\Glyphs\GlyphDrawingDriver;
+use Surface\Contracts\Rendering\deprecated\Glyphs\GlyphPainter;
+use Surface\Contracts\Rendering\deprecated\Rasterization\Edges;
+use Surface\Rendering\deprecated\Glyphs\GlyphDrawingDriver;
 
 /**
  * Velvet on Topside's glyphs manager: the driver registered there as 'velvet', which hands every

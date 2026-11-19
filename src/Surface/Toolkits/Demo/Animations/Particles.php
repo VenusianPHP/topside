@@ -2,8 +2,9 @@
 
 namespace Surface\Toolkits\Demo\Animations;
 
+use Surface\Contracts\Graphics\Canvas;
+use Surface\Contracts\Rendering\Enums\FillRule;
 use Surface\Contracts\Toolkits\ViewBuilder;
-use Surface\Contracts\Graphics\DrawingContext;
 use Surface\NutsAndBolts\Color;
 use Surface\NutsAndBolts\Path;
 
@@ -101,7 +102,7 @@ class Particles extends Animation
         }
     }
 
-    public function draw(DrawingContext $g): void
+    public function draw(Canvas $g): void
     {
         $g->clear(Color::rgba(0, 0, 0, 1.0));
         [$cx, $cy] = [$this->width / 2, $this->height / 2];
@@ -113,7 +114,7 @@ class Particles extends Animation
         }
 
         foreach ($paths as $i => $path) {
-            $path->isEmpty() || $g->fill($path, $this->colored ? self::argb(self::COLORS[$i]) : Color::rgba(255, 255, 255, 1.0));
+            $path->isEmpty() || $g->fillPath($path, FillRule::NON_ZERO, $this->colored ? self::argb(self::COLORS[$i]) : Color::rgba(255, 255, 255, 1.0));
         }
     }
 }

@@ -2,8 +2,8 @@
 
 namespace VelvetGE\Framebuffers\PHP\Packings;
 
-use Surface\Contracts\Rendering\Framebuffers\ChannelOrder;
-use Surface\Contracts\Rendering\Framebuffers\FormatSpec;
+use Surface\Contracts\Rendering\deprecated\Framebuffers\ChannelOrder;
+use Surface\Contracts\Rendering\deprecated\Framebuffers\FormatSpec;
 
 /** Four bytes per pixel in the spec's channel order (R G B A unless it says otherwise). Word is 0xRRGGBBAA. */
 class Rgba8888Packing extends Packing

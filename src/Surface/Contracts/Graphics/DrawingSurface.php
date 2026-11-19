@@ -3,35 +3,26 @@
 namespace Surface\Contracts\Graphics;
 
 use Closure;
-use Surface\Contracts\Rendering\Framebuffers\FormatSpec;
-use Surface\Contracts\Rendering\Framebuffers\Region;
 
+/**
+ * Where an engine draws: one surface, one stage (or none, offscreen).
+ */
 interface DrawingSurface
 {
-    public function engine(): GraphicsEngine;
-
-    public function width(): int;
-
-    public function height(): int;
-
-    public function format(): FormatSpec;
-
-    public function render(Closure $draw): static;  // one frame; $draw receives the painter
+    /** @return array{int, int} width and height in pixels: the stage's now, or the offscreen size */
+    public function size(): array;
 
     /**
-     * Between frames, moves the pixels of $region by ($dx, $dy): what moves past the region's edge
-     * is dropped, and the strip left behind keeps its old pixels until the next render() draws it.
-     * The next frame redraws the region, so what it draws there lands right. A surface that draws
-     * into a back buffer (a ring) moves the back one: the move shows with the next frame. For an
-     * engine whose has(Feature::SCROLLING) is true.
+     * Draws one frame: $frame is given the Canvas to draw it with.
      *
-     * @throws DrawingException When the engine cannot scroll this surface, or a frame is open.
+     * @param Closure(Canvas): void $frame
      */
-    public function scroll(Region $region, int $dx, int $dy): static;
+    public function draw(Closure $frame): static;
 
-    public function present(): void;                // hand the finished frame to the stage
-
-    public function read(): string;                 // RGBA8 bytes, for capture and tests
-
-    public function release(): void;
+    /**
+     * Shows what was drawn since the last present on the stage.
+     *
+     * @throws GraphicsException for an offscreen surface: it has no stage
+     */
+    public function present(): static;
 }

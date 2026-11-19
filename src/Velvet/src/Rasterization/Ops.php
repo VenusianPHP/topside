@@ -2,10 +2,10 @@
 
 namespace VelvetGE\Rasterization;
 
-use Surface\Contracts\Rendering\Rasterization\BatchScanner;
-use Surface\Contracts\Rendering\Rasterization\FillRule;
-use Surface\Contracts\Rendering\Rasterization\RasterizeException;
-use Surface\Contracts\Rendering\Rasterization\Scanner;
+use Surface\Contracts\Rendering\deprecated\Rasterization\BatchScanner;
+use Surface\Contracts\Rendering\deprecated\Rasterization\FillRule;
+use Surface\Contracts\Rendering\deprecated\Rasterization\RasterizeException;
+use Surface\Contracts\Rendering\deprecated\Rasterization\Scanner;
 
 /**
  * Scanner ops answered by the scanner they were lowered for. A rasterizer only lowers a shape to

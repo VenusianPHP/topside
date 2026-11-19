@@ -3,6 +3,7 @@
 namespace Surface\Toolkits\Factory;
 
 use Closure;
+use Surface\Contracts\Graphics\GraphicsEngine;
 use Surface\Contracts\Toolkits\Field;
 use Surface\Contracts\Toolkits\Mail\Views\SelectionChanged;
 use Surface\Contracts\Toolkits\Mail\Views\TextChanged;
@@ -19,7 +20,6 @@ use Surface\Contracts\Toolkits\Styling\FontWeight;
 use Surface\Contracts\Toolkits\Styling\TextAlignment;
 use Surface\Contracts\Toolkits\ToolkitRuntimeException;
 use Surface\Contracts\Toolkits\ViewBuilder;
-use Surface\Contracts\Graphics\GraphicsEngine;
 use Surface\NutsAndBolts\Color;
 use Surface\Toolkits\Support\Live;
 use Surface\Toolkits\Support\Reveals;

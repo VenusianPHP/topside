@@ -2,25 +2,24 @@
 
 namespace Surface\Contracts\Graphics;
 
-use Surface\Contracts\Rendering\Framebuffers\FormatSpec;
-
+/**
+ * What runs the rendering pipeline and presents to a stage. How it gets to pixels is its own: Graphics asks only for
+ * a surface to draw on and for that surface to be shown.
+ */
 interface GraphicsEngine
 {
-    // Identity
-    public function name(): string;                 // 'velvet', 'metal', 'vulkan', 'opengl', 'sdl3'
+    /** The name it is registered under: 'velvet', 'blend2d', 'thorvg', ... */
+    public function name(): string;
 
-    public function backend(): Backend;             // CPU or GPU
+    /** Whether it draws on the GPU. */
+    public function gpu(): bool;
 
-    public function modules(): array;               // part => what drives it, for display
+    /** A surface that draws for this stage and presents to it, at the stage's size each frame. */
+    public function surface(ActorStage $stage): DrawingSurface;
 
-    // Capabilities
-    public function has(Feature $feature): bool;    // GRADIENTS, EFFECTS, SCROLLING, RAYCASTING, ...
+    /** A surface of its own, shown nowhere. */
+    public function offscreen(int $width, int $height): DrawingSurface;
 
-    // Surfaces: where pixels go
-    public function surface(ActorStage $stage, ?FormatSpec $format = null): DrawingSurface;
-
-    public function offscreen(int $width, int $height, ?FormatSpec $format = null): DrawingSurface;
-
-    // Lifetime
+    /** Lets go of everything it made. */
     public function release(): void;
 }

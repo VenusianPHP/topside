@@ -8,10 +8,12 @@ use Surface\Contracts\Toolkits\Primitives\TKCanvas as PrimitiveContract;
 use Surface\Contracts\Toolkits\ToolkitRuntimeException;
 use Surface\HumanInput\HumanInput;
 use Surface\HumanInput\InputChannel;
+use Surface\Contracts\Rendering\PixelMemory;
+use Surface\Contracts\Rendering\Region;
 
 /**
- * A region of a toolkit window that shows a graphics engine's frames. It has no size of its own:
- * the layout sizes it, so give it fill() or a minSize().
+ * A region of a toolkit window that shows a graphics engine's frames: the engine's memory, read where it lies by the
+ * toolkit's own image calls. It has no size of its own: the layout sizes it, so give it fill() or a minSize().
  */
 abstract class TKCanvas extends TKPrimitive implements PrimitiveContract
 {
@@ -33,20 +35,10 @@ abstract class TKCanvas extends TKPrimitive implements PrimitiveContract
         return $this->nativeScale();
     }
 
-    /** @throws ToolkitRuntimeException When the bytes are not $width x $height pixels. */
-    public function display(string $rgba8, int $width, int $height): void
+    public function present(PixelMemory $memory, Region ...$changed): void
     {
         $this->live();
-        if ($width < 1 || $height < 1 || strlen($rgba8) !== $width * $height * 4) {
-            throw new ToolkitRuntimeException("Canvas '{$this->path()}' was given ".strlen($rgba8)." bytes for {$width}x{$height} pixels: RGBA8 takes ".($width * $height * 4).'.');
-        }
-        $this->applyPixels($rgba8, $width, $height);
-    }
-
-    /** A canvas lends nothing unless its toolkit says what it is to the platform. */
-    public function nativeSurface(): ?object
-    {
-        return null;
+        $this->applyMemory($memory, ...$changed);
     }
 
     /**
@@ -89,6 +81,12 @@ abstract class TKCanvas extends TKPrimitive implements PrimitiveContract
     /** Device pixels to one unit of the toolkit's layout, where this canvas is shown. */
     abstract protected function nativeScale(): float;
 
-    /** The pixels as what the native shows, stretched over its bounds. */
-    abstract protected function applyPixels(string $rgba8, int $width, int $height): void;
+    /**
+     * The memory as what the native shows, stretched over its bounds: read in place, in the memory's own channel order
+     * and alpha model. $changed is where it differs from what the native showed last; a toolkit that replaces its
+     * whole image may show all of it.
+     *
+     * @throws ToolkitRuntimeException When the toolkit cannot make an image of the memory.
+     */
+    abstract protected function applyMemory(PixelMemory $memory, Region ...$changed): void;
 }

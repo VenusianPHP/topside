@@ -2,8 +2,8 @@
 
 namespace VelvetGE\Framebuffers;
 
-use Surface\Contracts\Rendering\Framebuffers\FramebufferException;
-use Surface\Contracts\Rendering\Framebuffers\Region;
+use Surface\Contracts\Rendering\deprecated\Framebuffers\FramebufferException;
+use Surface\Contracts\Rendering\deprecated\Framebuffers\Region;
 use Surface\NutsAndBolts\Affine;
 
 /**

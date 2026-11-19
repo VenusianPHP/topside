@@ -2,9 +2,9 @@
 
 namespace VelvetGE\Framebuffers\PHP\Packings;
 
-use Surface\Contracts\Rendering\Framebuffers\BitOrder;
-use Surface\Contracts\Rendering\Framebuffers\DamageGranularity;
-use Surface\Contracts\Rendering\Framebuffers\FormatSpec;
+use Surface\Contracts\Rendering\deprecated\Framebuffers\BitOrder;
+use Surface\Contracts\Rendering\deprecated\Framebuffers\DamageGranularity;
+use Surface\Contracts\Rendering\deprecated\Framebuffers\FormatSpec;
 
 /** SSD1306: one byte per column per 8-row page, page-major. LSB_FIRST: bit 0 is the page's top row. */
 class MonoVerticalPagePacking extends Packing

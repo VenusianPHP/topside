@@ -2,24 +2,24 @@
 
 namespace VelvetGE\Framebuffers\PHP;
 
-use Surface\Contracts\Graphics\Effects\Blend;
-use Surface\Contracts\Graphics\Effects\BlendMode;
-use Surface\Contracts\Graphics\Effects\Blur;
-use Surface\Contracts\Graphics\Effects\BlurSampling;
-use Surface\Contracts\Graphics\Effects\Channel;
-use Surface\Contracts\Graphics\Effects\ColorMatrix;
-use Surface\Contracts\Graphics\Effects\Composite;
-use Surface\Contracts\Graphics\Effects\CompositeOperator;
-use Surface\Contracts\Graphics\Effects\Displace;
-use Surface\Contracts\Graphics\Effects\EdgeMode;
-use Surface\Contracts\Graphics\Effects\Field;
-use Surface\Contracts\Graphics\Effects\FieldKind;
-use Surface\Contracts\Graphics\Effects\Flood;
-use Surface\Contracts\Graphics\Effects\Noise;
-use Surface\Contracts\Graphics\Effects\NoiseType;
-use Surface\Contracts\Graphics\Effects\Table;
-use Surface\Contracts\Graphics\Effects\FilterChain;
-use Surface\Contracts\Graphics\Effects\FilterStep;
+use Surface\Contracts\Graphics\deprecated2\Effects\Blend;
+use Surface\Contracts\Graphics\deprecated2\Effects\BlendMode;
+use Surface\Contracts\Graphics\deprecated2\Effects\Blur;
+use Surface\Contracts\Graphics\deprecated2\Effects\BlurSampling;
+use Surface\Contracts\Graphics\deprecated2\Effects\Channel;
+use Surface\Contracts\Graphics\deprecated2\Effects\ColorMatrix;
+use Surface\Contracts\Graphics\deprecated2\Effects\Composite;
+use Surface\Contracts\Graphics\deprecated2\Effects\CompositeOperator;
+use Surface\Contracts\Graphics\deprecated2\Effects\Displace;
+use Surface\Contracts\Graphics\deprecated2\Effects\EdgeMode;
+use Surface\Contracts\Graphics\deprecated2\Effects\Field;
+use Surface\Contracts\Graphics\deprecated2\Effects\FieldKind;
+use Surface\Contracts\Graphics\deprecated2\Effects\FilterChain;
+use Surface\Contracts\Graphics\deprecated2\Effects\FilterStep;
+use Surface\Contracts\Graphics\deprecated2\Effects\Flood;
+use Surface\Contracts\Graphics\deprecated2\Effects\Noise;
+use Surface\Contracts\Graphics\deprecated2\Effects\NoiseType;
+use Surface\Contracts\Graphics\deprecated2\Effects\Table;
 use Surface\NutsAndBolts\Color;
 
 /**

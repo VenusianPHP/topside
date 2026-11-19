@@ -2,8 +2,8 @@
 
 namespace VelvetGE\Framebuffers;
 
-use Surface\Contracts\Rendering\Framebuffers\FramebufferException;
-use Surface\Contracts\Rendering\Framebuffers\Region;
+use Surface\Contracts\Rendering\deprecated\Framebuffers\FramebufferException;
+use Surface\Contracts\Rendering\deprecated\Framebuffers\Region;
 
 /** A mask list checked whole before anything paints it, by ext-fb's FbBuffer::paintMasks() rules: native stores and paged buffers. */
 final class MaskList

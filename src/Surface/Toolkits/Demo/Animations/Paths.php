@@ -2,10 +2,9 @@
 
 namespace Surface\Toolkits\Demo\Animations;
 
-use Surface\Contracts\Graphics\StrokeStyle;
-use Surface\Contracts\Rendering\Rasterization\FillRule;
+use Surface\Contracts\Graphics\Canvas;
+use Surface\Contracts\Rendering\Enums\FillRule;
 use Surface\Contracts\Toolkits\ViewBuilder;
-use Surface\Contracts\Graphics\DrawingContext;
 use Surface\NutsAndBolts\Color;
 use Surface\NutsAndBolts\Gradient;
 use Surface\NutsAndBolts\LinearGradient;
@@ -124,7 +123,7 @@ class Paths extends Animation
         };
     }
 
-    public function draw(DrawingContext $g): void
+    public function draw(Canvas $g): void
     {
         $g->clear(Color::rgba(0, 0, 0, 1.0));
 
@@ -151,7 +150,7 @@ class Paths extends Animation
 
         $stroke = $this->op % 4;
         $stroke === 0
-            ? $g->fill($path, $this->paint(), FillRule::EVEN_ODD)
-            : $g->stroke($path, $this->paint(), new StrokeStyle(($stroke - 1) * 2 + 1));
+            ? $g->fillPath($path, FillRule::EVEN_ODD, $this->paint())
+            : $g->strokePath($path, ($stroke - 1) * 2 + 1, $this->paint());
     }
 }

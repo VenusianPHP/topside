@@ -2,11 +2,11 @@
 
 namespace VelvetGE\Framebuffers;
 
-use Surface\Contracts\Rendering\Framebuffers\BitDepth;
-use Surface\Contracts\Rendering\Framebuffers\EInkColor;
-use Surface\Contracts\Rendering\Framebuffers\FormatSpec;
-use Surface\Contracts\Rendering\Framebuffers\FramebufferException;
-use Surface\Contracts\Rendering\Framebuffers\PixelFormat;
+use Surface\Contracts\Rendering\deprecated\Framebuffers\BitDepth;
+use Surface\Contracts\Rendering\deprecated\Framebuffers\EInkColor;
+use Surface\Contracts\Rendering\deprecated\Framebuffers\FormatSpec;
+use Surface\Contracts\Rendering\deprecated\Framebuffers\FramebufferException;
+use Surface\Contracts\Rendering\deprecated\Framebuffers\PixelFormat;
 use Surface\NutsAndBolts\Color;
 
 /**

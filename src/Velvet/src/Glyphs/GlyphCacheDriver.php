@@ -2,8 +2,8 @@
 
 namespace VelvetGE\Glyphs;
 
-use Surface\Contracts\Rendering\Rasterization\Edges;
-use Surface\Rendering\Glyphs\GlyphDrawingDriver;
+use Surface\Contracts\Rendering\deprecated\Rasterization\Edges;
+use Surface\Rendering\deprecated\Glyphs\GlyphDrawingDriver;
 use Surface\Typography\Faces\FontFaceDriver;
 use VelvetGE\Contracts\Glyphs\GlyphStore;
 

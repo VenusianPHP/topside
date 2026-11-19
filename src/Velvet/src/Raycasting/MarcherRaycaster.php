@@ -2,14 +2,14 @@
 
 namespace VelvetGE\Raycasting;
 
-use Surface\Contracts\Rendering\Framebuffers\Region;
-use Surface\Contracts\Rendering\Raycasting\Camera;
-use Surface\Contracts\Rendering\Raycasting\Grid;
-use Surface\Contracts\Rendering\Raycasting\Marcher;
-use Surface\Contracts\Rendering\Raycasting\Scenery;
+use Surface\Contracts\Rendering\deprecated\Framebuffers\InstanceThatManagesAFramebuffer;
+use Surface\Contracts\Rendering\deprecated\Framebuffers\Region;
+use Surface\Contracts\Rendering\deprecated\Raycasting\Camera;
+use Surface\Contracts\Rendering\deprecated\Raycasting\Grid;
+use Surface\Contracts\Rendering\deprecated\Raycasting\Marcher;
+use Surface\Contracts\Rendering\deprecated\Raycasting\Scenery;
+use Surface\Rendering\deprecated\Raycasting\Raycaster;
 use VelvetGE\Rasterization\DirectDraw;
-use Surface\Rendering\Raycasting\Raycaster;
-use Surface\Contracts\Rendering\Framebuffers\InstanceThatManagesAFramebuffer;
 
 /**
  * Velvet's raycaster: the one every raycasting module's driver mints, Lustrous's and any

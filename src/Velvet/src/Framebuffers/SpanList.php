@@ -2,9 +2,9 @@
 
 namespace VelvetGE\Framebuffers;
 
-use Surface\Contracts\Rendering\Framebuffers\FramebufferException;
-use Surface\Contracts\Rendering\Framebuffers\Region;
-use Surface\Contracts\Rendering\Framebuffers\Spans;
+use Surface\Contracts\Rendering\deprecated\Framebuffers\FramebufferException;
+use Surface\Contracts\Rendering\deprecated\Framebuffers\Region;
+use Surface\Contracts\Rendering\deprecated\Framebuffers\Spans;
 
 /** A span list read and checked whole before anything paints it: the one rule set for native stores and paged buffers. */
 final class SpanList

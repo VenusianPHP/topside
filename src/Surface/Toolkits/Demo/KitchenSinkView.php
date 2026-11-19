@@ -3,14 +3,14 @@
 namespace Surface\Toolkits\Demo;
 
 use Surface\Contracts\Graphics\ActorStage;
-use Surface\Contracts\Graphics\CastsRays;
-use Surface\Contracts\Graphics\DrawingContext;
+use Surface\Contracts\Graphics\Canvas;
 use Surface\Contracts\Graphics\DrawingSurface;
-use Surface\Contracts\Graphics\Feature;
-use Surface\Contracts\Graphics\StrokeStyle;
-use Surface\Contracts\Rendering\Raycasting\Camera;
-use Surface\Contracts\Rendering\Raycasting\Grid;
-use Surface\Contracts\Rendering\Raycasting\Scenery;
+use Surface\Contracts\Graphics\deprecated2\CastsRays;
+use Surface\Contracts\Graphics\deprecated2\Feature;
+use Surface\Contracts\Rendering\deprecated\Raycasting\Camera;
+use Surface\Contracts\Rendering\deprecated\Raycasting\Grid;
+use Surface\Contracts\Rendering\deprecated\Raycasting\Scenery;
+use Surface\Contracts\Rendering\Enums\FillRule;
 use Surface\Contracts\Toolkits\Composition;
 use Surface\Contracts\Toolkits\ViewBuilder;
 use Surface\NutsAndBolts\Color;
@@ -291,13 +291,7 @@ class KitchenSinkView implements Composition
     {
         $card = $page->card('graphics', 'Graphics');
         $engine = $page->engine();
-        $card->label('about', fn (): string => 'Drawn by the "'.$engine->name().'" engine on the '.$engine->backend()->value.' backend, shown in a canvas.', 'body');
-
-        // what the engine is built from: for Velvet, the module behind each part
-        $modules = $engine->modules();
-        if ($modules !== []) {
-            $card->label('modules', implode('  ·  ', array_map(fn (string $part, string $driver): string => "{$part}: {$driver}", array_keys($modules), $modules)), 'footnote');
-        }
+        $card->label('about', fn (): string => 'Drawn by the "'.$engine->name().'" engine on the '.($engine->gpu() ? 'GPU' : 'CPU').', shown in a canvas.', 'body');
 
         /** @var DrawingSurface|null $surface on the canvas, at its current size */
         $surface = null;
@@ -310,6 +304,12 @@ class KitchenSinkView implements Composition
         $last = microtime(true);       // when the wave last moved
         $scene = 'shapes';             // what fills the canvas: 'shapes', 'room' or 'light'
 
+        // Raycasting is switched off until the raycasting slice brings it onto Graphics' port: nothing below that
+        // casts rays runs, and the scene buttons are not shown. The code stays as it was, to come back on.
+        $raycasting = false;
+        [$caster, $lamp, $floor, $blocks, $corners, $scenery] = [null, null, null, [], [], null];
+
+        if ($raycasting) {
         // the room: 0 is open floor, a number is a wall of that kind. Made once; null when the engine has no raycaster
         $caster = $engine instanceof CastsRays && $engine->has(Feature::RAY_CASTING) ? $engine->raycaster(Grid::of([
             [1, 1, 1, 1, 1, 1, 1, 1, 1],
@@ -353,9 +353,10 @@ class KitchenSinkView implements Composition
         foreach ([[1, 1], [$floor->width - 1, 1], [1, $floor->height - 1], [$floor->width - 1, $floor->height - 1]] as $corner) {
             $corners[implode(',', $corner)] = $corner;
         }
+        }
 
         // the light scene. Everything is drawn in cells: the context's transform sizes a cell to the canvas
-        $light = function (DrawingContext $g, float $width, float $height) use ($floor, $lamp, $blocks, $corners, &$scale, &$phase): void {
+        $light = function (Canvas $g, float $width, float $height) use ($floor, $lamp, $blocks, $corners, &$scale, &$phase): void {
             // where the light is: round and round the middle block
             [$lx, $ly] = [12.0 + 8.0 * cos($phase * 0.4), 4.0 + 1.6 * sin($phase * 0.4)];
 
@@ -380,13 +381,13 @@ class KitchenSinkView implements Composition
 
             $cell = min($width / $floor->width, $height / $floor->height);
             $g->clear(Color::hex('#05070a'));
-            $g->scale($scale);
+            $g->scale($scale, $scale);
             $g->translate(($width - $floor->width * $cell) / 2, ($height - $floor->height * $cell) / 2);
-            $g->scale($cell);
+            $g->scale($cell, $cell);
 
             // the floor in the dark, then what the light reaches: brightest at the light, fading with distance
             $g->fillRect(1, 1, $floor->width - 2, $floor->height - 2, Color::hex('#141b22'));
-            $g->fill($lit, new RadialGradient($lx, $ly, 14.0, [
+            $g->fillPath($lit, FillRule::NON_ZERO, new RadialGradient($lx, $ly, 14.0, [
                 [0.0, Color::rgba(255, 236, 170, 0.95)],
                 [1.0, Color::rgba(255, 236, 170, 0.10)],
             ]));
@@ -416,20 +417,21 @@ class KitchenSinkView implements Composition
 
                 return;
             }
-            [$width, $height] = [$surface->width() / $scale, $surface->height() / $scale];
+            [$width, $height] = $surface->size();
+            [$width, $height] = [$width / $scale, $height / $scale];
 
             if ($scene === 'light') {
-                $surface->render(fn (DrawingContext $g) => $light($g, $width, $height))->present();
+                $surface->draw(fn (Canvas $g) => $light($g, $width, $height))->present();
 
                 return;
             }
 
-            $surface->render(function (DrawingContext $g) use ($scale, $width, $height, $phase): void {
+            $surface->draw(function (Canvas $g) use ($scale, $width, $height, $phase): void {
                 $g->clear(Color::hex('#101820'));
-                $g->scale($scale);
+                $g->scale($scale, $scale);
 
                 // filled shapes: a rounded panel, a circle over it, half see-through
-                $g->roundRect(16, 16, 150, $height - 32, [14, 14, 14, 14], Color::hex('#ff6b35'));
+                $g->fillRoundRect(16, 16, 150, $height - 32, 14, Color::hex('#ff6b35'));
                 $g->fillEllipse(166, $height / 2, 52, 52, Color::rgba(64, 200, 255, 0.6));
 
                 // a stroked sine wave, the width of the canvas: $phase slides it along
@@ -438,13 +440,17 @@ class KitchenSinkView implements Composition
                     $y = $height / 2 + 40 * sin($x / 28 - $phase);
                     $x === 240.0 ? $wave->moveTo($x, $y) : $wave->lineTo($x, $y);
                 }
-                $g->stroke($wave, Color::hex('#f7f052'), new StrokeStyle(4.0));
+                $g->strokePath($wave, 4.0, Color::hex('#f7f052'));
             })->present();
         };
 
-        $card->canvas('scene', 180, function (ActorStage $stage) use (&$surface, &$scale, $draw, $engine): void {
-            $surface?->release();
-            $surface = $engine->surface($stage);
+        // a surface follows its stage's size frame by frame: one is made per stage, kept while the stage is
+        $shown = null;
+        $card->canvas('scene', 180, function (ActorStage $stage) use (&$surface, &$scale, &$shown, $draw, $engine): void {
+            if ($shown !== $stage) {
+                $surface = $engine->surface($stage);
+                $shown = $stage;
+            }
             $scale = $stage->pixelScale();
             $draw();
         });

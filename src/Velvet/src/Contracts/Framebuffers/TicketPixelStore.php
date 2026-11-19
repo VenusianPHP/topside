@@ -2,9 +2,9 @@
 
 namespace VelvetGE\Contracts\Framebuffers;
 
-use Surface\Contracts\Rendering\Framebuffers\Filter;
-use Surface\Contracts\Rendering\Framebuffers\PixelMemory;
-use Surface\Contracts\Rendering\Framebuffers\Region;
+use Surface\Contracts\Rendering\deprecated\Framebuffers\Filter;
+use Surface\Contracts\Rendering\deprecated\Framebuffers\PixelMemory;
+use Surface\Contracts\Rendering\deprecated\Framebuffers\Region;
 
 /**
  * A store that works from another frame's ticket (its PixelMemory) instead of an RGBA8 copy of

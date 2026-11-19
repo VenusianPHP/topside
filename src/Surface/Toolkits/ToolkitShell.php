@@ -3,7 +3,6 @@
 namespace Surface\Toolkits;
 
 use ReflectionException;
-use Surface\Graphics\Gfx;
 use Surface\Contracts\Graphics\GraphicsEngine;
 use Surface\Contracts\Graphics\GraphicsException;
 use Voyager\Contracts\NutsAndBolts\ApplicationShell;
@@ -30,6 +29,6 @@ class ToolkitShell implements ApplicationShell
      */
     public function canvasEngine(): GraphicsEngine
     {
-        return Gfx::engine(config('main.presentation.toolkit.canvas_driver'));
+        return app('gfx')->engine(config('main.presentation.toolkit.canvas_driver'), false);
     }
 }

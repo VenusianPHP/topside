@@ -3,7 +3,7 @@
 namespace Surface\Toolkits\Demo;
 
 use Surface\Contracts\Graphics\ActorStage;
-use Surface\Contracts\Graphics\DrawingContext;
+use Surface\Contracts\Graphics\Canvas;
 use Surface\Contracts\Graphics\DrawingSurface;
 use Surface\Contracts\Toolkits\Composition;
 use Surface\Contracts\Toolkits\ViewBuilder;
@@ -43,9 +43,7 @@ class AnimationsView implements Composition
         $top->label('heading', 'Animations', 'title');
 
         $engine = $ui->engine();
-        $modules = $engine->modules();
-        $ui->label('engine', 'Drawn by the "'.$engine->name().'" engine on the '.$engine->backend()->value.' backend'
-            .($modules === [] ? '.' : ': '.implode('  ·  ', array_map(fn (string $part, string $driver): string => "{$part}: {$driver}", array_keys($modules), $modules))), 'footnote');
+        $ui->label('engine', 'Drawn by the "'.$engine->name().'" engine on the '.($engine->gpu() ? 'GPU' : 'CPU').'.', 'footnote');
 
         /** @var array<string, Animation> $animations by name */
         $animations = [];
@@ -82,19 +80,24 @@ class AnimationsView implements Composition
             }
             $start = hrtime(true);
             $animation = $animations[$current];
-            $animation->resize($surface->width() / $scale, $surface->height() / $scale);
+            [$width, $height] = $surface->size();
+            $animation->resize($width / $scale, $height / $scale);
 
-            $surface->render(function (DrawingContext $g) use ($animation, $scale): void {
-                $g->scale($scale);
+            $surface->draw(function (Canvas $g) use ($animation, $scale): void {
+                $g->scale($scale, $scale);
                 $animation->draw($g);
             })->present();
             $spent += (hrtime(true) - $start) / 1e9;
             $drawn++;
         };
 
-        $ui->canvas('scene', 420, function (ActorStage $stage) use (&$surface, &$scale, $draw, $engine): void {
-            $surface?->release();
-            $surface = $engine->surface($stage);
+        // a surface follows its stage's size frame by frame: one is made per stage, kept while the stage is
+        $shown = null;
+        $ui->canvas('scene', 420, function (ActorStage $stage) use (&$surface, &$scale, &$shown, $draw, $engine): void {
+            if ($shown !== $stage) {
+                $surface = $engine->surface($stage);
+                $shown = $stage;
+            }
             $scale = $stage->pixelScale();
             $draw();
         });

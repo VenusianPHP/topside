@@ -2,8 +2,8 @@
 
 namespace VelvetGE\Framebuffers\PHP\Packings;
 
-use Surface\Contracts\Rendering\Framebuffers\BitOrder;
-use Surface\Contracts\Rendering\Framebuffers\FormatSpec;
+use Surface\Contracts\Rendering\deprecated\Framebuffers\BitOrder;
+use Surface\Contracts\Rendering\deprecated\Framebuffers\FormatSpec;
 
 /** 2, 4 or 8 bits per pixel, row-major, rows byte-padded. MSB_FIRST: x0 is the high crumb/nibble. */
 class PackedIndexPacking extends Packing

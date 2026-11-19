@@ -2,10 +2,10 @@
 
 namespace VelvetGE\Contracts\Framebuffers;
 
-use Surface\Contracts\Rendering\Framebuffers\DamageGranularity;
-use Surface\Contracts\Rendering\Framebuffers\FormatSpec;
-use Surface\Contracts\Rendering\Framebuffers\PixelMemory;
-use Surface\Contracts\Rendering\Framebuffers\Region;
+use Surface\Contracts\Rendering\deprecated\Framebuffers\DamageGranularity;
+use Surface\Contracts\Rendering\deprecated\Framebuffers\FormatSpec;
+use Surface\Contracts\Rendering\deprecated\Framebuffers\PixelMemory;
+use Surface\Contracts\Rendering\deprecated\Framebuffers\Region;
 
 /**
  * The pixel glob: one surface's bytes in one FormatSpec at one size, and the

@@ -3,10 +3,10 @@
 namespace VelvetGE\Painting;
 
 use ReflectionException;
-use Surface\Contracts\Rendering\Painting\PaintTarget;
-use Surface\Contracts\Rendering\Painting\Painter;
-use Surface\Contracts\Rendering\Rasterization\Edges;
-use Surface\Rendering\Painters\PaintingDriver;
+use Surface\Contracts\Rendering\deprecated\Painting\Painter;
+use Surface\Contracts\Rendering\deprecated\Painting\PaintTarget;
+use Surface\Contracts\Rendering\deprecated\Rasterization\Edges;
+use Surface\Rendering\deprecated\Painters\PaintingDriver;
 use VelvetGE\Contracts\Framebuffers\CompositingFramebuffer;
 
 /**

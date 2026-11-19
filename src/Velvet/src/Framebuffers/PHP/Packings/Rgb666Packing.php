@@ -2,7 +2,7 @@
 
 namespace VelvetGE\Framebuffers\PHP\Packings;
 
-use Surface\Contracts\Rendering\Framebuffers\FormatSpec;
+use Surface\Contracts\Rendering\deprecated\Framebuffers\FormatSpec;
 
 /**
  * Three bytes per pixel, six significant bits left-aligned in each (ST77xx

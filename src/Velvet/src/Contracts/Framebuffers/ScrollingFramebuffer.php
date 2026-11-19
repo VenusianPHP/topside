@@ -2,8 +2,8 @@
 
 namespace VelvetGE\Contracts\Framebuffers;
 
-use Surface\Contracts\Rendering\Framebuffers\InstanceThatManagesAFramebuffer;
-use Surface\Contracts\Rendering\Framebuffers\Region;
+use Surface\Contracts\Rendering\deprecated\Framebuffers\InstanceThatManagesAFramebuffer;
+use Surface\Contracts\Rendering\deprecated\Framebuffers\Region;
 
 /** A framebuffer that moves its own pixels. */
 interface ScrollingFramebuffer extends InstanceThatManagesAFramebuffer

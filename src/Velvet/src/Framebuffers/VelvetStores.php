@@ -3,8 +3,8 @@
 namespace VelvetGE\Framebuffers;
 
 use Jovian\Engines\Velvet\Lustrous\Framebuffers\CLandFramebufferDriver;
+use Surface\Contracts\Rendering\deprecated\Framebuffers\FormatSpec;
 use VelvetGE\Contracts\Framebuffers\CompletePixelStore;
-use Surface\Contracts\Rendering\Framebuffers\FormatSpec;
 use VelvetGE\Contracts\Framebuffers\PixelStoreMinter;
 use VelvetGE\Framebuffers\C\CLandPixelStore;
 use VelvetGE\Framebuffers\PHP\PHPLandPixelStore;

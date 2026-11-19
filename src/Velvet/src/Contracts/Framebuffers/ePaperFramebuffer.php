@@ -2,8 +2,8 @@
 
 namespace VelvetGE\Contracts\Framebuffers;
 
-use Surface\Contracts\Rendering\Framebuffers\EInkColor;
-use Surface\Contracts\Rendering\Framebuffers\InstanceThatManagesAFramebuffer;
+use Surface\Contracts\Rendering\deprecated\Framebuffers\EInkColor;
+use Surface\Contracts\Rendering\deprecated\Framebuffers\InstanceThatManagesAFramebuffer;
 
 /**
  * A whole ePaper frame in the controller's own RAM layout: single-ink mono,

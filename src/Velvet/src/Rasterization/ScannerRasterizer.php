@@ -3,9 +3,9 @@
 namespace VelvetGE\Rasterization;
 
 use Closure;
-use Surface\Contracts\Rendering\Framebuffers\Region;
-use Surface\Contracts\Rendering\Rasterization\Scanner;
-use Surface\Contracts\Rendering\Rasterization\Edges;
+use Surface\Contracts\Rendering\deprecated\Framebuffers\Region;
+use Surface\Contracts\Rendering\deprecated\Rasterization\Edges;
+use Surface\Contracts\Rendering\deprecated\Rasterization\Scanner;
 use VelvetGE\Contracts\Framebuffers\CompositingFramebuffer;
 
 /**
@@ -16,7 +16,7 @@ class ScannerRasterizer extends Rasterizer
 {
     /**
      * @param string $driver the minting driver's name
-     * @param Closure(Region, Edges): \Surface\Contracts\Rendering\Rasterization\Scanner $minter
+     * @param Closure(Region, Edges): \Surface\Contracts\Rendering\deprecated\Rasterization\Scanner $minter
      */
     public function __construct(
         private readonly string $driver,

@@ -3,12 +3,12 @@
 namespace VelvetGE\Framebuffers;
 
 use Closure;
-use Surface\Contracts\Graphics\Effects\FilterChain;
-use Surface\Contracts\Rendering\Framebuffers\DamageGranularity;
-use Surface\Contracts\Rendering\Framebuffers\Filter;
-use Surface\Contracts\Rendering\Framebuffers\FormatSpec;
-use Surface\Contracts\Rendering\Framebuffers\PixelMemory;
-use Surface\Contracts\Rendering\Framebuffers\Region;
+use Surface\Contracts\Graphics\deprecated2\Effects\FilterChain;
+use Surface\Contracts\Rendering\deprecated\Framebuffers\DamageGranularity;
+use Surface\Contracts\Rendering\deprecated\Framebuffers\Filter;
+use Surface\Contracts\Rendering\deprecated\Framebuffers\FormatSpec;
+use Surface\Contracts\Rendering\deprecated\Framebuffers\PixelMemory;
+use Surface\Contracts\Rendering\deprecated\Framebuffers\Region;
 use Surface\NutsAndBolts\GradientSpread;
 use VelvetGE\Contracts\Framebuffers\CompletePixelStore;
 use VelvetGE\Contracts\Framebuffers\EffectsPixelStore;

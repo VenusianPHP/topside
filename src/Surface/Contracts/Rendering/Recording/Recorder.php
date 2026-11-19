@@ -2,195 +2,155 @@
 
 namespace Surface\Contracts\Rendering\Recording;
 
-use Surface\Contracts\Graphics\Effects\Glass;
-use Surface\Contracts\Graphics\StrokeStyle;
-use Surface\Contracts\Graphics\DrawingException;
-use Surface\Contracts\Graphics\Effects\FilterChain;
-use Surface\Contracts\Rendering\Framebuffers\DamageGranularity;
-use Surface\Contracts\Rendering\Framebuffers\Filter;
-use Surface\Contracts\Rendering\Framebuffers\Region;
-use Surface\Contracts\Rendering\Painting\PaintTarget;
-use Surface\Contracts\Rendering\Rasterization\FillRule;
-use Surface\Contracts\Typography\TypesetText;
-use Surface\Contracts\Typography\TypographyException;
-use Surface\NutsAndBolts\Affine;
-use Surface\NutsAndBolts\Color;
-use Surface\NutsAndBolts\Gradient;
-use Surface\NutsAndBolts\Path;
+use Surface\Contracts\Rendering\Enums\FillRule;
+
+use Surface\Contracts\Rendering\Recording\Enums\CommandReach;
 
 /**
- * What a painter records a frame with: the transform and clip state, the lowering of each draw
- * call to a command in framebuffer pixels, and the comparison of a frame with the one before it.
- * A painter has one recorder for its whole life; every painter, on the CPU or the GPU, draws the
- * commands a recorder hands it.
+ * A frame of drawing commands, recorded under a transform and a clip, and what changed since the frame before.
+ * It draws nothing. Every point goes through the current transform when its shape is recorded, so a command holds
+ * frame pixels. Commands are lists: [kind, ...]. A path command carries FillRule::NON_ZERO or FillRule::EVEN_ODD.
  *
- * The draw and state calls are Painter's, with the same arguments, the same checks and the same
- * DrawingException for each: a painter forwards them here.
- *
- * Commands, in call order, points already transformed, colours 0xRRGGBBAA, every clip a rect
- * inside the surface:
- *
- *     ['clear', rgba]                                     the whole surface
- *     ['clear', rgba, Region]                             only that region (a partial frame)
- *     ['path', contours, FillRule, rgba, clip]            contours: list of lists of [x, y]
- *     ['gradpath', contours, FillRule, gradient, clip]     a path filled with a gradient: ['kind' => 'linear'|'radial', 'inverse' => Affine (a surface point to the gradient's own
- *                                                         space), 'spread' => GradientSpread, 'ramp' => 256 RGBA colours]
- *     ['polyline', points, stroke, closed, rgba, clip]
- *     ['ellipse', cx, cy, rx, ry, rgba, clip]             axis-aligned
- *     ['ring', cx, cy, rx, ry, stroke, rgba, clip]        the band between radii r ± stroke / 2
- *     ['image', PaintTarget, Affine, opacity 1..255, Filter, style, clip]
- *                                                         style: null, or ['tint' => 0xRRGGBBAA, 'window' => [u0, v0, u1, v1]|null (source pixels that paint),
- *                                                         'round' => [x0, y0, x1, y1, [tl, tr, br, bl]]|null (the box whose rounded rect the image is cut to, in pixels)]
- *     ['spans', bytes, rgba, clip]                        whole pixels, already inside the clip, rows top to bottom; 7 bytes each: y, x, length (uint16 LE), coverage 255
- *     ['roundrect', x0, y0, x1, y1, [tl, tr, br, bl], rgba, clip]
- *     ['roundring', x0, y0, x1, y1, [tl, tr, br, bl], inset, rgba, clip]   the band inside the box, inset wide
- *     ['shadow', x0, y0, x1, y1, radius, blur, rgba, clip]                  the box already moved by the caller's offset
- *     ['glass', Region area, [x0, y0, x1, y1, [tl, tr, br, bl]], look, blur, shadow, clip]
- *                                                         shadow: null, or a 'shadow' command painted between the backdrop's capture and the pane
- *                                                         look: [frost, refraction, bevel, saturation, light, grain, tint,
- *                                                         rim, alpha] in device pixels; blur: the radius in device pixels
- *     ['layer', Region area, [x0, y0, x1, y1, [tl, tr, br, bl]], children, alpha 0..255, FilterChain|null filter, FilterChain|null backdrop, clip]
- *                                                         children: the commands drawn inside, clipped to the area
- *     ['glyphs', runs, [a, b, c, d, e, f], rgba, [x0, y0, x1, y1], clip]
- *                                                         runs: the text's GlyphRuns as they were typeset (from the text's top-left, y down);
- *                                                         [a .. f]: the transform with its origin moved to the text's (a point (x, y) of the
- *                                                         text lands at (a·x + c·y + e, b·x + d·y + f)); [x0 .. y1]: how far its ink reaches
- *                                                         in pixels, grown by a pixel for anti-aliased edges and a glyph placed on whole pixels
+ * A shape's paint is an int colour, 0xRRGGBBAA not multiplied by its alpha, or a gradient: a list of four, [kind,
+ * geometry, stops, spread], with kind 'linear' (geometry [x0, y0, x1, y1]) or 'radial' (geometry [cx, cy, r]), stops
+ * [[offset, 0xRRGGBBAA], ...] and spread 'pad', 'repeat' or 'reflect', in the units the shape is given in. A gradient
+ * is recorded as given with the transform it is drawn through appended, [a, b, c, d, e, f]: drawers take it through
+ * that to pixels. Neither recorder reads inside a gradient.
  */
 interface Recorder
 {
-    /**
-     * Open a frame on a surface of this size: the transform is the identity, the clip the whole
-     * surface, nothing is pushed.
-     */
-    public function begin(Region $surface): void;
+    /** Opens a frame width by height: no commands, the identity transform, nothing pushed, the clip the whole frame. */
+    public function begin(int $width, int $height, mixed $clip): void;
 
     /** Whether a frame is open. */
-    public function drawing(): bool;
+    public function recording(): bool;
 
-    /** Drop the open frame: nothing of it is kept, and the last finished frame stays the last. */
+    /** Drops the open frame, its layers and its pushes. The finished frames stay. */
     public function abandon(): void;
 
     /**
-     * Close the open frame and answer its commands. It becomes the last frame, and the frame that
-     * was the last becomes the one drawn() and changed() compare it with.
+     * Closes the frame: it becomes the last frame, and the last frame becomes the one before.
      *
-     * @return list<array<int, mixed>>
+     * @return list<array> its commands, in draw order
      */
     public function finish(): array;
 
-    /**
-     * The draw calls of the open or last frame that were not recorded, as they were called: a dashed
-     * stroke when the stroker in use cannot cut dashes. Nothing else drew them and nothing threw.
-     *
-     * @return list<array<int, mixed>> ['stroke', Path, Color|Gradient, StrokeStyle]
-     */
-    public function undrawn(): array;
-
+    /** Keeps the transform and the clip. */
     public function push(): void;
 
-    /** @throws DrawingException Without a push(). */
+    /** Brings back what the last push() kept. */
     public function pop(): void;
 
-    public function translate(float $x, float $y): void;
+    /** How many pushes wait in the frame or layer being recorded. */
+    public function depth(): int;
 
-    public function scale(float $x, ?float $y = null): void;
+    /** The current transform times this one. */
+    public function concat(float $a, float $b, float $c, float $d, float $e, float $f): void;
 
-    public function rotate(float $radians): void;
+    /** @return array{float, float, float, float, float, float} the current transform, [a, b, c, d, e, f] */
+    public function matrix(): array;
 
-    public function transform(Affine $matrix): void;
+    /** Sets the clip: its rect, and the value every command recorded under it carries. */
+    public function clip(mixed $clip, int $x, int $y, int $width, int $height): void;
 
-    /** The current transform; the identity between frames. */
-    public function matrix(): Affine;
+    /** The current clip's value. */
+    public function clipValue(): mixed;
 
-    /** Null is the whole surface. */
-    public function clip(?Region $region): void;
+    /** Starts a layer: commands go to a list of their own, under this clip. */
+    public function enter(mixed $clip, int $x, int $y, int $width, int $height): void;
 
-    /** The current clip; null between frames. */
-    public function clipRegion(): ?Region;
+    /** @return list<array> the layer's commands; the frame's commands, clip and pushes come back */
+    public function leave(): array;
 
-    public function clear(Color $color): void;
+    /** ['clear', rgba] */
+    public function clear(int $rgba): void;
 
-    public function fillRect(float $x, float $y, float $width, float $height, Color $color): void;
+    /** ['path', [[tl, tr, br, bl]], FillRule::NON_ZERO, rgba, clip] */
+    public function fillRect(float $x, float $y, float $width, float $height, int|array $rgba): void;
 
-    public function strokeRect(float $x, float $y, float $width, float $height, Color $color, float $stroke = 1.0): void;
+    /** ['polyline', [tl, tr, br, bl], stroke, true, rgba, clip] */
+    public function strokeRect(float $x, float $y, float $width, float $height, int|array $rgba, float $stroke): void;
 
-    public function line(float $x0, float $y0, float $x1, float $y1, Color $color, float $stroke = 1.0): void;
+    /** ['polyline', [p0, p1], stroke, false, rgba, clip] */
+    public function line(float $x0, float $y0, float $x1, float $y1, int|array $rgba, float $stroke): void;
 
-    public function polyline(array $points, Color $color, float $stroke = 1.0, bool $closed = false): void;
-
-    public function fillTriangle(float $x0, float $y0, float $x1, float $y1, float $x2, float $y2, Color $color): void;
-
-    public function fillPolygon(array $points, Color $color, FillRule $rule = FillRule::NON_ZERO): void;
-
-    public function fillPath(array $contours, Color $color, FillRule $rule = FillRule::NON_ZERO): void;
-
-    public function fill(Path $path, Color|Gradient $paint, FillRule $rule = FillRule::NON_ZERO): void;
-
-    public function stroke(Path $path, Color|Gradient $paint, StrokeStyle $style): void;
-
-    public function fillEllipse(float $cx, float $cy, float $rx, float $ry, Color $color): void;
-
-    public function strokeEllipse(float $cx, float $cy, float $rx, float $ry, Color $color, float $stroke = 1.0): void;
-
-    public function image(PaintTarget $source, float $x, float $y, ?float $width = null, ?float $height = null, float $opacity = 1.0, Filter $filter = Filter::NEAREST, ?array $radii = null, ?Color $tint = null, ?array $sourceRect = null): void;
-
-    public function roundRect(float $x, float $y, float $width, float $height, array $radii, Color $fill, ?Color $border = null, float $borderWidth = 0.0): void;
-
-    public function shadow(float $x, float $y, float $width, float $height, float $radius, float $blur, Color $color, float $dx = 0.0, float $dy = 0.0): void;
+    /** ['path', [[p0, p1, p2]], FillRule::NON_ZERO, rgba, clip] */
+    public function fillTriangle(float $x0, float $y0, float $x1, float $y1, float $x2, float $y2, int|array $rgba): void;
 
     /**
-     * @param  callable(): void  $draw  Draws the layer's children: every draw call it makes on this recorder is recorded inside the layer.
-     */
-    public function layer(float $x, float $y, float $width, float $height, callable $draw, float $opacity = 1.0, ?array $radii = null, ?FilterChain $filter = null, ?FilterChain $backdrop = null): void;
-
-    public function glass(float $x, float $y, float $width, float $height, ?array $radii, Glass $glass, float $opacity = 1.0): void;
-
-    /**
-     * Typeset text with its top-left at (x, y), in one colour: a 'glyphs' command, or nothing when
-     * the text has no ink or the clip is empty.
+     * ['path', contours, rule, rgba, clip] of every subpath of $ops, through the transform, curves flattened to within
+     * a quarter pixel; nothing for no points.
      *
-     * @throws DrawingException As the other draw calls: no frame open, a number not finite, or past the limit once transformed.
-     * @throws TypographyException When a run's source cannot be read for its ink.
+     * @param list<array> $ops ['M', x, y], ['L', x, y], ['Q', cx, cy, x, y], ['C', c1x, c1y, c2x, c2y, x, y], ['Z']
      */
-    public function text(TypesetText $text, float $x, float $y, Color $color): void;
+    public function fillPath(array $ops, FillRule $rule, int|array $rgba): void;
 
     /**
-     * Where the last frame draws: every command's box, with $also, merged until no two overlap.
+     * ['polyline', points, stroke, closed, rgba, clip] for every subpath of two points or more, flattened as
+     * fillPath()'s, closed where a 'Z' closes it, the stroke scaled as line()'s.
      *
-     * @param  Region  $surface  The surface as it is now.
-     * @param  list<Region>  $also  Regions that count as drawn whatever the commands say.
-     * @return list<Region>
+     * @param list<array> $ops as fillPath()'s
      */
-    public function drawn(Region $surface, DamageGranularity $granularity, array $also = []): array;
+    public function strokePath(array $ops, int|array $rgba, float $stroke): void;
+
+    /** ['ellipse', cx, cy, rx, ry, rgba, clip], or a 'path' of it under a turn or a shear */
+    public function fillEllipse(float $cx, float $cy, float $rx, float $ry, int|array $rgba): void;
+
+    /** ['ring', cx, cy, rx, ry, stroke, rgba, clip], or a closed 'polyline' of it under a turn or a shear */
+    public function strokeEllipse(float $cx, float $cy, float $rx, float $ry, int|array $rgba, float $stroke): void;
 
     /**
-     * Where the last frame differs from the one before it. Commands are compared by position: one
-     * equal to the command at the same place in the frame before changed nothing; every other
-     * command marks its box, and the box of the command it replaced. An image is never equal,
-     * because its source may hold new pixels. A layer or pane that reads its backdrop is redrawn
-     * whole when anything under its reach is.
+     * 'roundrect' and 'roundring' commands, or 'path' commands under a transform that is not even.
      *
-     * @param  Region  $surface  The surface as it is now.
-     * @param  list<Region>  $also  Regions that count as changed whatever the commands say.
-     * @return list<Region> merged until no two overlap; empty when nothing changed
+     * @param array{int|float, int|float, int|float, int|float} $radii top-left, top-right, bottom-right, bottom-left
      */
-    public function changed(Region $surface, DamageGranularity $granularity, array $also = []): array;
+    public function roundRect(float $x, float $y, float $width, float $height, array $radii, int|array $fill, int|array|null $border, float $borderWidth): void;
+
+    /** ['shadow', x0, y0, x1, y1, radius, blur, rgba, clip]; needs an even transform */
+    public function shadow(float $x, float $y, float $width, float $height, float $radius, float $blur, int $rgba, float $dx, float $dy): void;
 
     /**
-     * A frame drawn into each region alone: every clip cut to the region, a clear limited to it,
-     * spans trimmed to it. Commands that miss a region are left out of it.
+     * ['glyphs', runs, [a, b, c, d, e, f], rgba, [x0, y0, x1, y1], clip]; nothing for a null ink.
      *
-     * @param  list<array<int, mixed>>  $commands
-     * @param  list<Region>  $regions
-     * @return list<array<int, mixed>>
+     * @param array{int|float, int|float, int|float, int|float}|null $ink the text's box, [x0, y0, x1, y1]
      */
-    public function scissor(array $commands, array $regions): array;
+    public function glyphs(array $runs, float $x, float $y, ?array $ink, int $rgba): void;
 
     /**
-     * The whole pixels a command can write, cut by its clip; null when it writes nothing.
+     * A command made elsewhere, recorded as it is. $how says where it draws.
      *
-     * @param  array<int, mixed>  $command
+     * @param list<int|float>|null $pieces for CommandReach::PIECES: x0, y0, x1, y1 then a clip's x, y, width, height; 8 numbers, or 16 for two
+     * @param bool $restless its pixels can change with nothing in it changing
+     * @param list<int|float>|null $reads [x, y, width, height, reach]: it reads the pixels under that rect, and reach around it
      */
-    public function box(array $command, Region $surface): ?Region;
+    public function append(array $command, CommandReach $how, float $grow = 0.0, ?array $pieces = null, bool $restless = false, ?array $reads = null): void;
+
+    /**
+     * A recorded command in a simpler form, for a drawer whose library cannot draw it as it is:
+     *   'polygon'     ['path', contours, rule, paint, clip]: curves as straight sides, a stroke as the outline it covers
+     *                 (butt ends, miters up to 4, bevels past it)
+     *   'trapezoids'  ['trapezoids', [[top, bottom, left at top, left at bottom, right at top, right at bottom], ...], paint, clip]
+     *   'triangles'   ['triangles', [[x0, y0, x1, y1, x2, y2], ...], paint, clip]
+     * Each form can be lowered from the one before: a 'trapezoids' command lowers to 'triangles' and to nothing else.
+     * null for a command with no outline ('clear', 'shadow', 'glyphs'). Reads nothing but the command.
+     *
+     * @throws \ValueError for a form not named here
+     */
+    public function lower(array $command, string $form): ?array;
+
+    /**
+     * Where the last frame draws, merged so no two rects overlap.
+     *
+     * @param list<int> $also more rects to merge in, four integers each
+     * @return list<int> x, y, width, height, four integers a rect
+     */
+    public function drawn(int $surfaceWidth, int $surfaceHeight, int $unitWidth, int $unitHeight, int $limitWidth, int $limitHeight, array $also = []): array;
+
+    /**
+     * Where the last frame differs from the one before, merged so no two rects overlap.
+     *
+     * @param list<int> $also more rects to merge in, four integers each
+     * @return list<int> x, y, width, height, four integers a rect
+     */
+    public function changed(int $surfaceWidth, int $surfaceHeight, int $unitWidth, int $unitHeight, int $limitWidth, int $limitHeight, array $also = []): array;
 }

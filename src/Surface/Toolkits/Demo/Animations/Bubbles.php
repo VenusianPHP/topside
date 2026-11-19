@@ -2,8 +2,8 @@
 
 namespace Surface\Toolkits\Demo\Animations;
 
+use Surface\Contracts\Graphics\Canvas;
 use Surface\Contracts\Toolkits\ViewBuilder;
-use Surface\Contracts\Graphics\DrawingContext;
 use Surface\NutsAndBolts\Color;
 use Surface\NutsAndBolts\RadialGradient;
 
@@ -97,7 +97,7 @@ class Bubbles extends Animation
         }
     }
 
-    public function draw(DrawingContext $g): void
+    public function draw(Canvas $g): void
     {
         $g->clear(Color::rgba(0, 0, 0, 1.0));
 
@@ -106,7 +106,7 @@ class Bubbles extends Animation
             // the square round the bubble, moved to it: the gradient moves with the painter's transform
             $g->push();
             $g->translate($b['x'], $b['y']);
-            $g->fill(self::rect(-$r - 1.0, -$r - 1.0, $r * 2.0 + 2.0, $r * 2.0 + 2.0), $b['gradient']);
+            $g->fillRect(-$r - 1.0, -$r - 1.0, $r * 2.0 + 2.0, $r * 2.0 + 2.0, $b['gradient']);
             $g->pop();
         }
     }

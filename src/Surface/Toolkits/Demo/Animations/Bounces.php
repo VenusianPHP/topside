@@ -2,8 +2,8 @@
 
 namespace Surface\Toolkits\Demo\Animations;
 
+use Surface\Contracts\Graphics\Canvas;
 use Surface\Contracts\Toolkits\ViewBuilder;
-use Surface\Contracts\Graphics\DrawingContext;
 use Surface\NutsAndBolts\Color;
 use Surface\NutsAndBolts\LinearGradient;
 use Surface\NutsAndBolts\RadialGradient;
@@ -62,7 +62,7 @@ class Bounces extends Animation
         $this->time += 2.0 * $ticks;
     }
 
-    public function draw(DrawingContext $g): void
+    public function draw(Canvas $g): void
     {
         $g->clear(Color::rgba(0, 0, 0, 1.0));
 
@@ -89,10 +89,10 @@ class Bounces extends Animation
             $g->translate(-$half, -$half);
 
             match ($this->style) {
-                0 => $g->roundRect(self::MARGIN, self::MARGIN, self::SQUARE, self::SQUARE, [$radius, $radius, $radius, $radius], $color),
-                1 => $g->fill(self::roundRect(self::MARGIN, self::MARGIN, self::SQUARE, self::SQUARE, $radius),
+                0 => $g->fillRoundRect(self::MARGIN, self::MARGIN, self::SQUARE, self::SQUARE, $radius, $color),
+                1 => $g->fillRoundRect(self::MARGIN, self::MARGIN, self::SQUARE, self::SQUARE, $radius,
                     new LinearGradient(0.0, self::MARGIN, 0.0, self::MARGIN + self::SQUARE, [[0.0, $orange], [1.0, $color]])),
-                2 => $g->fill(self::roundRect(self::MARGIN, self::MARGIN, self::SQUARE, self::SQUARE, $radius),
+                2 => $g->fillRoundRect(self::MARGIN, self::MARGIN, self::SQUARE, self::SQUARE, $radius,
                     new RadialGradient($half, $half, $half, [[0.0, $orange], [1.0, $color]])),
             };
             $g->pop();

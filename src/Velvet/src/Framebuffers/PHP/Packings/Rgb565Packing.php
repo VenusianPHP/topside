@@ -2,8 +2,8 @@
 
 namespace VelvetGE\Framebuffers\PHP\Packings;
 
-use Surface\Contracts\Rendering\Framebuffers\Endianness;
-use Surface\Contracts\Rendering\Framebuffers\FormatSpec;
+use Surface\Contracts\Rendering\deprecated\Framebuffers\Endianness;
+use Surface\Contracts\Rendering\deprecated\Framebuffers\FormatSpec;
 
 /** Two bytes per pixel. MSB: high byte first (ST77xx wire). Word is RGB565; BGR stores blue in the high five bits. */
 class Rgb565Packing extends Packing

@@ -3,18 +3,13 @@
 namespace Surface\Contracts\Graphics;
 
 use Closure;
-use Surface\Contracts\Graphics\ActorStage;
 
 /**
- * A stage that knows when the display it is on is due a frame. A framebuffer presented on one is
- * shown then, not at once: however often it is drawn, it is shown once a refresh, and what is
- * shown is the latest frame. Frames the display could never show cost nothing to present.
+ * A stage that knows when the display it is on is due a frame. Asked to show something then, it shows the latest
+ * thing asked once a refresh: what the display could never show costs nothing.
  */
 interface PacedStage extends ActorStage
 {
-    /**
-     * Calls $show once, the next time the display is due a frame. Asked again before then, the
-     * new $show takes the place of the old one: a stage shows one framebuffer.
-     */
+    /** Calls $show once, the next time the display is due a frame. Asked again before then, the new $show replaces the old. */
     public function whenDue(Closure $show): void;
 }

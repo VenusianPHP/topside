@@ -2,15 +2,15 @@
 
 namespace VelvetGE\Painting;
 
-use Surface\Contracts\Rendering\Painting\Brush;
-use Surface\Contracts\Rendering\Painting\Painter;
-use Surface\Contracts\Rendering\Rasterization\Edges;
-use Surface\Contracts\Rendering\Rasterization\RasterizeDriver;
-use Surface\Contracts\Rendering\Recording\RecordDriver;
-use Surface\Rendering\Painters\PaintingDriver;
-use Surface\Rendering\Recorders;
+use Surface\Contracts\Rendering\deprecated\Painting\Brush;
+use Surface\Contracts\Rendering\deprecated\Painting\Painter;
+use Surface\Contracts\Rendering\deprecated\Painting\PaintTarget;
+use Surface\Contracts\Rendering\deprecated\Rasterization\Edges;
+use Surface\Contracts\Rendering\deprecated\Rasterization\RasterizeDriver;
+use Surface\Contracts\Rendering\deprecated\Recording\RecordDriver;
+use Surface\Rendering\deprecated\Painters\PaintingDriver;
+use Surface\Rendering\deprecated\Recorders;
 use VelvetGE\Contracts\Framebuffers\CompositingFramebuffer;
-use Surface\Contracts\Rendering\Painting\PaintTarget;
 
 /**
  * A painting driver made of VelvetGE's painter and, for a library or an extension, a brush. A

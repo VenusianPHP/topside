@@ -3,10 +3,10 @@
 namespace VelvetGE\Rasterization;
 
 use ReflectionException;
-use Surface\Contracts\Rendering\Framebuffers\Region;
-use Surface\Contracts\Rendering\Rasterization\Edges;
-use Surface\Contracts\Rendering\Rasterization\Rasterizer;
-use Surface\Rendering\Rasterization\RasterizationDriver;
+use Surface\Contracts\Rendering\deprecated\Framebuffers\Region;
+use Surface\Contracts\Rendering\deprecated\Rasterization\Edges;
+use Surface\Contracts\Rendering\deprecated\Rasterization\Rasterizer;
+use Surface\Rendering\deprecated\Rasterization\RasterizationDriver;
 
 /**
  * Velvet on Topside's rasterization manager: the driver registered there as 'velvet', which hands

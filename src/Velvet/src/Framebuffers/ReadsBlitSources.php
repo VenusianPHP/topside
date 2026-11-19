@@ -2,8 +2,8 @@
 
 namespace VelvetGE\Framebuffers;
 
-use Surface\Contracts\Rendering\Framebuffers\InstanceThatManagesAFramebuffer;
-use Surface\Contracts\Rendering\Framebuffers\PixelMemory;
+use Surface\Contracts\Rendering\deprecated\Framebuffers\InstanceThatManagesAFramebuffer;
+use Surface\Contracts\Rendering\deprecated\Framebuffers\PixelMemory;
 use VelvetGE\Contracts\Framebuffers\PagedFramebuffer as PagedFramebufferContract;
 use VelvetGE\Contracts\Framebuffers\RingFramebuffer as RingFramebufferContract;
 

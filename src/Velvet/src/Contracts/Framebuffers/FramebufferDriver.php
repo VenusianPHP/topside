@@ -2,9 +2,9 @@
 
 namespace VelvetGE\Contracts\Framebuffers;
 
-use Surface\Contracts\Rendering\Framebuffers\DamageTrackingFramebuffer;
-use Surface\Contracts\Rendering\Framebuffers\FormatSpec;
-use Surface\Contracts\Rendering\Framebuffers\Framebuffer;
+use Surface\Contracts\Rendering\deprecated\Framebuffers\DamageTrackingFramebuffer;
+use Surface\Contracts\Rendering\deprecated\Framebuffers\FormatSpec;
+use Surface\Contracts\Rendering\deprecated\Framebuffers\Framebuffer;
 
 /**
  * Where the bytes live. Mints the five buffer kinds; callers never name a buffer class.

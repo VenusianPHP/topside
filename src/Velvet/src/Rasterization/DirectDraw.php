@@ -2,13 +2,13 @@
 
 namespace VelvetGE\Rasterization;
 
-use Surface\Contracts\Rendering\Framebuffers\Region;
-use Surface\Contracts\Rendering\Rasterization\DirectScanner;
-use Surface\Contracts\Rendering\Rasterization\MaskScanner;
-use Surface\Contracts\Rendering\Raycasting\DirectMarcher;
-use Surface\Contracts\Rendering\Raycasting\Marcher;
-use Surface\Contracts\Rendering\Rasterization\Scanner;
-use Surface\Contracts\Rendering\Framebuffers\InstanceThatManagesAFramebuffer;
+use Surface\Contracts\Rendering\deprecated\Framebuffers\InstanceThatManagesAFramebuffer;
+use Surface\Contracts\Rendering\deprecated\Framebuffers\Region;
+use Surface\Contracts\Rendering\deprecated\Rasterization\DirectScanner;
+use Surface\Contracts\Rendering\deprecated\Rasterization\MaskScanner;
+use Surface\Contracts\Rendering\deprecated\Rasterization\Scanner;
+use Surface\Contracts\Rendering\deprecated\Raycasting\DirectMarcher;
+use Surface\Contracts\Rendering\deprecated\Raycasting\Marcher;
 use VelvetGE\Contracts\Framebuffers\CompositingFramebuffer;
 
 /**

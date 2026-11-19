@@ -3,13 +3,13 @@
 namespace VelvetGE\Framebuffers\C;
 
 use FbBuffer;
-use Surface\Contracts\Graphics\Effects\FilterChain;
-use Surface\Contracts\Rendering\Framebuffers\DamageGranularity;
-use Surface\Contracts\Rendering\Framebuffers\Filter;
-use Surface\Contracts\Rendering\Framebuffers\FormatSpec;
-use Surface\Contracts\Rendering\Framebuffers\FramebufferException;
-use Surface\Contracts\Rendering\Framebuffers\PixelMemory;
-use Surface\Contracts\Rendering\Framebuffers\Region;
+use Surface\Contracts\Graphics\deprecated2\Effects\FilterChain;
+use Surface\Contracts\Rendering\deprecated\Framebuffers\DamageGranularity;
+use Surface\Contracts\Rendering\deprecated\Framebuffers\Filter;
+use Surface\Contracts\Rendering\deprecated\Framebuffers\FormatSpec;
+use Surface\Contracts\Rendering\deprecated\Framebuffers\FramebufferException;
+use Surface\Contracts\Rendering\deprecated\Framebuffers\PixelMemory;
+use Surface\Contracts\Rendering\deprecated\Framebuffers\Region;
 use Surface\NutsAndBolts\GradientSpread;
 use ValueError;
 use VelvetGE\Contracts\Framebuffers\CompletePixelStore;
@@ -308,7 +308,10 @@ final class CLandPixelStore implements CompletePixelStore, TicketPixelStore
         }
     }
 
-    /** An FbBuffer standing over the ticket's address, or null when ext-fb cannot: another layout, or padded rows. */
+    /**
+     * An FbBuffer standing over the ticket's address, or null when ext-fb cannot read that layout.
+     * A stride wider than a packed row is the padding between rows; ext-fb reads the pixels and leaves the padding.
+     */
     private static function over(PixelMemory $source): ?FbBuffer
     {
         try {
@@ -316,11 +319,12 @@ final class CLandPixelStore implements CompletePixelStore, TicketPixelStore
         } catch (FramebufferException) {
             return null;
         }
-        if ($format->size($source->width, $source->height) !== $source->stride * $source->height) {
+        $packed = $format->size($source->width, 1);
+        if ($packed < 1 || $source->stride < $packed) {
             return null;
         }
 
-        return FbBuffer::over($format, $source->width, $source->height, $source->address, $source->owner);
+        return FbBuffer::over($format, $source->width, $source->height, $source->address, $source->owner, $source->stride === $packed ? 0 : $source->stride);
     }
 
     public function plane(int $value): string

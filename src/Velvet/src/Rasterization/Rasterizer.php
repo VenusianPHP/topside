@@ -2,15 +2,15 @@
 
 namespace VelvetGE\Rasterization;
 
-use Surface\Rendering\Stroker;
-use Surface\Contracts\Rendering\Framebuffers\Region;
-use Surface\Contracts\Rendering\Rasterization\Edges;
-use Surface\Contracts\Rendering\Rasterization\Scanner;
-use Surface\Contracts\Rendering\Rasterization\PixelScanner;
-use Surface\Contracts\Rendering\Rasterization\ShapeScanner;
-use Surface\Contracts\Rendering\Rasterization\FillRule;
-use Surface\Contracts\Rendering\Rasterization\RasterizeException;
-use Surface\Contracts\Rendering\Rasterization\Rasterizer as RasterizerContract;
+use Surface\Contracts\Rendering\deprecated\Framebuffers\Region;
+use Surface\Contracts\Rendering\deprecated\Rasterization\Edges;
+use Surface\Contracts\Rendering\deprecated\Rasterization\FillRule;
+use Surface\Contracts\Rendering\deprecated\Rasterization\PixelScanner;
+use Surface\Contracts\Rendering\deprecated\Rasterization\RasterizeException;
+use Surface\Contracts\Rendering\deprecated\Rasterization\Rasterizer as RasterizerContract;
+use Surface\Contracts\Rendering\deprecated\Rasterization\Scanner;
+use Surface\Contracts\Rendering\deprecated\Rasterization\ShapeScanner;
+use Surface\Rendering\deprecated\Stroker;
 use VelvetGE\Contracts\Framebuffers\CompositingFramebuffer;
 
 /**

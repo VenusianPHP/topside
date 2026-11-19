@@ -2,10 +2,10 @@
 
 namespace VelvetGE\Glyphs;
 
-use Surface\Contracts\Graphics\DrawingException;
-use Surface\Contracts\Rendering\Framebuffers\InstanceThatManagesAFramebuffer;
-use Surface\Contracts\Rendering\Framebuffers\Region;
-use Surface\Contracts\Rendering\Glyphs\GlyphPainter;
+use Surface\Contracts\Graphics\deprecated2\DrawingException;
+use Surface\Contracts\Rendering\deprecated\Framebuffers\InstanceThatManagesAFramebuffer;
+use Surface\Contracts\Rendering\deprecated\Framebuffers\Region;
+use Surface\Contracts\Rendering\deprecated\Glyphs\GlyphPainter;
 use Surface\Contracts\Typography\GlyphRun;
 use Surface\NutsAndBolts\Affine;
 use Surface\Typography\Faces\FontFaceDriver;

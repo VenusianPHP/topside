@@ -2,10 +2,10 @@
 
 namespace VelvetGE\Rasterization;
 
-use Surface\Contracts\Rendering\Framebuffers\Region;
-use Surface\Contracts\Rendering\Rasterization\Edges;
-use Surface\Contracts\Rendering\Rasterization\Scanner;
-use Surface\Rendering\Rasterization\RasterizationDriver;
+use Surface\Contracts\Rendering\deprecated\Framebuffers\Region;
+use Surface\Contracts\Rendering\deprecated\Rasterization\Edges;
+use Surface\Contracts\Rendering\deprecated\Rasterization\Scanner;
+use Surface\Rendering\deprecated\Rasterization\RasterizationDriver;
 
 /**
  * A rasterization driver of VelvetGE: it says how its scanner is made, and that is all. Strokes,

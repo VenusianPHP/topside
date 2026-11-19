@@ -2,9 +2,11 @@
 
 namespace Surface\Toolkits\Demo\Animations;
 
+use Surface\Contracts\Graphics\Canvas;
+use Surface\Contracts\Rendering\Enums\FillRule;
 use Surface\Contracts\Toolkits\ViewBuilder;
-use Surface\Contracts\Graphics\DrawingContext;
 use Surface\NutsAndBolts\Color;
+use Surface\NutsAndBolts\Path;
 
 /**
  * Blend2D's Rects demo: up to 20,000 squares of random colour and opacity, each drifting and
@@ -107,7 +109,7 @@ class Rects extends Animation
         }
     }
 
-    public function draw(DrawingContext $g): void
+    public function draw(Canvas $g): void
     {
         $g->clear(Color::rgba(0, 0, 0, 1.0));
 
@@ -121,15 +123,15 @@ class Rects extends Animation
             match ($this->shape) {
                 0 => $g->fillRect((int) $x, (int) $y, (int) $size, (int) $size, $color),
                 1 => $g->fillRect($x, $y, $size, $size, $color),
-                2 => $g->fill(self::rect($x, $y, $size, $size), $color),
-                3 => $g->roundRect($x, $y, $size, $size, [10, 10, 10, 10], $color),
-                4 => $g->fillPolygon([
-                    [$x + $size / 2, $y],
-                    [$x + $size, $y + $size / 3],
-                    [$x + $size - $size / 3, $y + $size],
-                    [$x + $size / 3, $y + $size],
-                    [$x, $y + $size / 3],
-                ], $color),
+                2 => $g->fillPath(self::rect($x, $y, $size, $size), FillRule::NON_ZERO, $color),
+                3 => $g->fillRoundRect($x, $y, $size, $size, 10, $color),
+                4 => $g->fillPath((new Path)
+                    ->moveTo($x + $size / 2, $y)
+                    ->lineTo($x + $size, $y + $size / 3)
+                    ->lineTo($x + $size - $size / 3, $y + $size)
+                    ->lineTo($x + $size / 3, $y + $size)
+                    ->lineTo($x, $y + $size / 3)
+                    ->close(), FillRule::NON_ZERO, $color),
             };
         }
     }

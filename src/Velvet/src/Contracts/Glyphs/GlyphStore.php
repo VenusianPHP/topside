@@ -2,8 +2,8 @@
 
 namespace VelvetGE\Contracts\Glyphs;
 
-use Surface\Contracts\Rendering\Framebuffers\InstanceThatManagesAFramebuffer;
-use Surface\Contracts\Rendering\Framebuffers\Region;
+use Surface\Contracts\Rendering\deprecated\Framebuffers\InstanceThatManagesAFramebuffer;
+use Surface\Contracts\Rendering\deprecated\Framebuffers\Region;
 
 /**
  * Where a glyph module keeps glyphs: what VelvetGE's GlyphCache asks of a module. VelvetGE decides

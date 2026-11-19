@@ -2,7 +2,7 @@
 
 namespace VelvetGE\Framebuffers\PHP\Packings;
 
-use Surface\Contracts\Rendering\Framebuffers\FormatSpec;
+use Surface\Contracts\Rendering\deprecated\Framebuffers\FormatSpec;
 
 /**
  * Two 12-bit pixels in three bytes: [R0 G0] [B0 R1] [G1 B1]; an odd row tail
