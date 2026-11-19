@@ -110,17 +110,21 @@ final class VelvetSurface implements DrawingSurface
 
                 continue;
             }
+            // each form is lowered from the one before; packed when the drawer reads it packed, and kept as lists
+            // only when the next form needs them
             $lowered = $command;
             foreach (self::FORMS as $form) {
-                $lowered = $this->recorder->lower($lowered, $form);
-                if ($lowered === null) {
+                $packing = $this->drawer->packing($form);
+                $offered = $this->recorder->lower($lowered, $form, $packing);
+                if ($offered === null) {
                     break;
                 }
-                if ($this->drawer->takes($lowered)) {
-                    $drawable[] = $lowered;
+                if ($this->drawer->takes($offered)) {
+                    $drawable[] = $offered;
 
                     break;
                 }
+                $lowered = $packing === null ? $offered : $this->recorder->lower($lowered, $form);
             }
         }
 

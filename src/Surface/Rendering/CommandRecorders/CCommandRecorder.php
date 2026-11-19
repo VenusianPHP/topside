@@ -161,9 +161,9 @@ final class CCommandRecorder implements Recorder
         $this->record('glyphs', [$runs, $x, $y, $ink, $rgba]);
     }
 
-    public function lower(array $command, string $form): ?array
+    public function lower(array $command, string $form, ?array $packing = null): ?array
     {
-        return $this->queue->lower($command, $form);
+        return $this->queue->lower($command, $form, $packing);
     }
 
     public function append(array $command, CommandReach $how, float $grow = 0.0, ?array $pieces = null, bool $restless = false, ?array $reads = null): void

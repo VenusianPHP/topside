@@ -978,9 +978,9 @@ final class PHPCommandRecorder implements Recorder
         return [(int) $n[0], (int) $n[1], (int) $n[2], (int) $n[3]];
     }
 
-    public function lower(array $command, string $form): ?array
+    public function lower(array $command, string $form, ?array $packing = null): ?array
     {
-        return Lowering::lower($command, $form);
+        return Lowering::lower($command, $form, $packing);
     }
 
     public function append(array $command, CommandReach $how, float $grow = 0.0, ?array $pieces = null, bool $restless = false, ?array $reads = null): void

@@ -7,9 +7,11 @@ use Voyager\Contracts\IOPools\Loop;
 use Voyager\Contracts\IOPools\LoopResources\Timer;
 
 /**
- * Draws a page's frames at most $rate a second, each one interval after the last one started, or at
- * once when the last one took longer than that. A frame that overran is followed by the next straight
- * away: the rate is the target, or what a frame's cost allows, whichever is lower.
+ * Draws a page's frames at most $rate a second. Each frame is due one interval after the last one was
+ * due, not after it started: a timer fires a little late, and counting from when it fired would add
+ * that lateness to every interval, so 120 a second would draw about 108. A frame that overran is
+ * followed by the next straight away, and the time it lost is not made up: the next is due one interval
+ * after that. The rate is the target, or what a frame's cost allows, whichever is lower.
  *
  * Not a repeating timer: a repeating timer keeps to a grid and skips the beats it is late for, so a
  * frame a little longer than its slot waits for the next slot, and 120 a second drops to 60, 40, 30
@@ -29,14 +31,16 @@ final class FrameClock
         $loop ??= app('event-loop');
         $token = new \stdClass;
         $interval = $rate > 0 ? 1 / $rate : 0.0;
-        $tick = function () use (&$tick, $name, $token, $interval, $frame, $loop): void {
-            $start = microtime(true);
+        $due = microtime(true);
+        $tick = function () use (&$tick, &$due, $name, $token, $interval, $frame, $loop): void {
             $frame();
             // stopped, or run again, while the frame drew: this run ends here
             if ((self::$running[$name][0] ?? null) !== $token) {
                 return;
             }
-            self::$running[$name][1] = $loop->at(max(0.0, $interval - (microtime(true) - $start)), $tick);
+            $now = microtime(true);
+            $due = max($due + $interval, $now);
+            self::$running[$name][1] = $loop->at($due - $now, $tick);
         };
         self::$running[$name] = [$token, $loop->at(0.0, $tick)];
     }

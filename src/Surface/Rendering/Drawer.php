@@ -22,6 +22,12 @@ abstract class Drawer implements DrawerContract
         $this->config = $this->backendConfig($config, $location);
     }
 
+    /** Lowered shapes as lists, unless the library's own call reads a packed struct array. */
+    public function packing(string $form): ?array
+    {
+        return null;
+    }
+
     /**
      * Whether a command's paint is a gradient as the recorder records one: ['linear', [x0, y0, x1, y1], stops, spread,
      * matrix] or ['radial', [cx, cy, r], stops, spread, matrix]; stops [[offset, 0xRRGGBBAA], ...], at least one, offsets

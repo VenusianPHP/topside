@@ -26,20 +26,27 @@ final class Lowering
     /** A band thinner than this is not cut again where its edges cross. */
     private const float THINNEST = 1e-9;
 
-    /** The command in $form; null when it has none. */
-    public static function lower(array $command, string $form): ?array
+    /**
+     * The command in $form; null when it has none. $packing gives a 'trapezoids' or 'triangles' command's items as
+     * packed strings, one for each [encoding, fields] pair (see Recorder::lower()); a packed command lowers no further.
+     *
+     * @param list<array{string, list<int>}>|null $packing
+     */
+    public static function lower(array $command, string $form, ?array $packing = null): ?array
     {
         if (! in_array($form, ['polygon', 'trapezoids', 'triangles'], true)) {
             throw new ValueError("lower(): Argument #2 (\$form) must be 'polygon', 'trapezoids' or 'triangles'");
         }
-        // trapezoids already lowered have one form further: each as its two triangles
-        if (($command[0] ?? null) === 'trapezoids') {
-            $traps = self::numbers($command[1] ?? null);
-            if ($form !== 'triangles' || $traps === null || ! array_key_exists(2, $command) || ! array_key_exists(3, $command)) {
+        $packing === null || self::checkPacking($packing, 6);
+        // lowered lists lower further: trapezoids to triangles. A packed form is the last.
+        $kind = $command[0] ?? null;
+        if ($kind === 'trapezoids' || $kind === 'triangles') {
+            if ($form !== 'triangles' || $kind !== 'trapezoids' || ! array_key_exists(2, $command) || ! array_key_exists(3, $command)
+                || ($items = self::numbers($command[1] ?? null)) === null) {
                 return null;
             }
 
-            return ['triangles', self::triangles($traps), $command[2], $command[3]];
+            return ['triangles', self::items(self::triangles($items), $packing), $command[2], $command[3]];
         }
         $polygon = self::polygon($command);
         if ($polygon === null || $form === 'polygon') {
@@ -47,10 +54,71 @@ final class Lowering
         }
         $traps = self::trapezoids($polygon[1], $polygon[2]);
         if ($form === 'trapezoids') {
-            return ['trapezoids', $traps, $polygon[3], $polygon[4]];
+            return ['trapezoids', self::items($traps, $packing), $polygon[3], $polygon[4]];
         }
 
-        return ['triangles', self::triangles($traps), $polygon[3], $polygon[4]];
+        return ['triangles', self::items(self::triangles($traps), $packing), $polygon[3], $polygon[4]];
+    }
+
+    /** A packing as Recorder::lower() takes it, for items of $size numbers; a ValueError on argument 3 if it is not one. */
+    private static function checkPacking(array $packing, int $size): void
+    {
+        $refuse = static fn (string $why) => throw new ValueError("lower(): Argument #3 (\$packing) $why");
+        if ($packing === [] || count($packing) > 8 || ! array_is_list($packing)) {
+            $refuse('must be a list of 1 to 8 [encoding, fields] pairs');
+        }
+        foreach ($packing as $entry) {
+            if (! is_array($entry) || count($entry) !== 2 || ! array_key_exists(0, $entry) || ! array_key_exists(1, $entry)) {
+                $refuse('must hold [encoding, fields] pairs');
+            }
+            [$encoding, $fields] = [$entry[0], $entry[1]];
+            if ($encoding !== 'f32' && $encoding !== 'fixed16') {
+                $refuse("must name each encoding 'f32' or 'fixed16'");
+            }
+            if (! is_array($fields) || $fields === [] || count($fields) > 64 || ! array_is_list($fields)) {
+                $refuse('must give each packing a list of 1 to 64 fields');
+            }
+            foreach ($fields as $field) {
+                if (! is_int($field) || $field < 0 || $field >= $size) {
+                    $refuse('must give fields as places 0 to '.($size - 1).' in an item');
+                }
+            }
+        }
+    }
+
+    /**
+     * Items: the list as it is, or with a packing, one string for each [encoding, fields] pair holding, for every item,
+     * its numbers at those places in that order, four bytes each, little-endian.
+     */
+    private static function items(array $items, ?array $packing): array
+    {
+        if ($packing === null) {
+            return $items;
+        }
+        $strings = [];
+        foreach ($packing as [$encoding, $fields]) {
+            $flat = [];
+            foreach ($items as $item) {
+                foreach ($fields as $field) {
+                    $flat[] = (float) $item[$field];
+                }
+            }
+            $strings[] = $encoding === 'f32' ? pack('g*', ...$flat) : pack('V*', ...array_map(self::fixed16(...), $flat));
+        }
+
+        return $strings;
+    }
+
+    /** A number as 16.16 fixed point: times 65536, rounded half away from zero, held to int32. */
+    private static function fixed16(float $v): int
+    {
+        $s = $v * 65536.0;
+        $t = $s < 0 ? ceil($s) : floor($s);
+        if (abs($s - $t) >= 0.5) {
+            $t += $s < 0 ? -1.0 : 1.0;
+        }
+
+        return (int) max(-2147483648.0, min(2147483647.0, $t));
     }
 
     /** ['path', contours, rule, paint, clip], or null for a command with no outline. */

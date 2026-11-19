@@ -23,6 +23,15 @@ interface Drawer
     public function takes(array $command): bool;
 
     /**
+     * How it takes a shape the recorder lowers to $form ('trapezoids' or 'triangles'): the packing Recorder::lower()
+     * writes its items in, laid out as its library's own struct array, so they reach the library without being read
+     * one by one on the way; null to take them as lists, or not at all.
+     *
+     * @return list<array{string, list<int>}>|null
+     */
+    public function packing(string $form): ?array;
+
+    /**
      * Draws the commands it takes into the memory, in order, and passes over the ones it does not.
      * It writes no pixel outside $clip.
      *

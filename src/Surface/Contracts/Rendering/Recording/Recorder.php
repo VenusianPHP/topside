@@ -134,9 +134,18 @@ interface Recorder
      * Each form can be lowered from the one before: a 'trapezoids' command lowers to 'triangles' and to nothing else.
      * null for a command with no outline ('clear', 'shadow', 'glyphs'). Reads nothing but the command.
      *
-     * @throws \ValueError for a form not named here
+     * $packing gives a 'trapezoids' or 'triangles' command's items as packed strings, laid out as a library's own struct
+     * array so a drawer hands them to its library as they are: a list of [encoding, fields] pairs, one string each.
+     * encoding is 'f32' (little-endian float32) or 'fixed16' (little-endian int32, each number times 65536 rounded half
+     * away from zero); fields are the places in an item (0 to 5) the struct's fields hold, in order, repeats allowed.
+     * The command's items are then the list of those strings. A 'polygon' is always lists; a packed command lowers no
+     * further.
+     *
+     * @param list<array{string, list<int>}>|null $packing
+     *
+     * @throws \ValueError for a form not named here, or a packing not as described
      */
-    public function lower(array $command, string $form): ?array;
+    public function lower(array $command, string $form, ?array $packing = null): ?array;
 
     /**
      * Where the last frame draws, merged so no two rects overlap.
