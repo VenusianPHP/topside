@@ -3,7 +3,7 @@
 namespace Surface\Toolkits\Navigation;
 
 use ReflectionException;
-use Surface\Contracts\Toolkits\Mail\Views\ButtonClicked;
+use Surface\Toolkits\Managers\MenuManager;
 use Surface\Toolkits\Navigation\ToolkitPageRoute as Route;
 
 class Navigator
@@ -77,33 +77,14 @@ class Navigator
         [$controller, $action] = Route::find($name);
         [$this->current, $this->currentArgs] = [$name, $args];
 
-        app($controller)->{$action}(...$args);
+        app(MenuManager::class)->navigating(
+            Route::named($name)->menuGiven(),
+            static fn () => app($controller)->{$action}(...$args),
+        );
     }
 
     public function current(): ?string
     {
         return $this->current;
-    }
-
-    /**
-     * Give a click to the current route's controller. The widget's name picks the
-     * handler: "deck.welcome.actions.continue" calls onContinue(). A controller
-     * without that handler ignores the click.
-     * @throws ReflectionException
-     */
-    public function clicked(ButtonClicked $clicked): void
-    {
-        if (is_null($this->current)) {
-            return;
-        }
-
-        [$controller] = Route::find($this->current);
-        $widget = substr(strrchr('.'.$clicked->path, '.'), 1);
-        $handler = 'on'.str_replace(['-', '_'], '', ucwords($widget, '-_'));
-
-        $instance = app($controller);
-        if (method_exists($instance, $handler)) {
-            $instance->{$handler}($clicked);
-        }
     }
 }

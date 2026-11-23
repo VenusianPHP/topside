@@ -1,0 +1,672 @@
+{
+  "name": "Sharp",
+  "scopeName": "text.html.sharp",
+  "fileTypes": [
+    "sharp.php"
+  ],
+  "patterns": [
+    {
+      "include": "#comment"
+    },
+    {
+      "match": "^\\s*(<\\?php|\\?>)\\s*$",
+      "captures": {
+        "1": {
+          "name": "punctuation.section.embedded.sharp"
+        }
+      }
+    },
+    {
+      "match": "^\\s*(//.*)$",
+      "captures": {
+        "1": {
+          "name": "comment.line.double-slash.sharp"
+        }
+      }
+    },
+    {
+      "include": "#script"
+    },
+    {
+      "match": "^\\s*(@endscript)\\s*$",
+      "captures": {
+        "1": {
+          "name": "keyword.control.section.sharp"
+        }
+      }
+    },
+    {
+      "include": "#template"
+    },
+    {
+      "match": "^\\s*(@(?:style|endstyle))\\s*$",
+      "captures": {
+        "1": {
+          "name": "invalid.illegal.not-supported.sharp"
+        }
+      }
+    }
+  ],
+  "repository": {
+    "script": {
+      "comment": "while, not end: whatever PHP is left open, @endscript still ends it",
+      "begin": "^\\s*(@script)\\s*$",
+      "while": "^(?!\\s*@endscript\\s*$)",
+      "beginCaptures": {
+        "1": {
+          "name": "keyword.control.section.sharp"
+        }
+      },
+      "contentName": "meta.embedded.block.sharp.php",
+      "patterns": [
+        {
+          "include": "source.php"
+        }
+      ]
+    },
+    "template": {
+      "begin": "^\\s*(@template)\\s*$",
+      "end": "^\\s*(@endtemplate)\\s*$",
+      "beginCaptures": {
+        "1": {
+          "name": "keyword.control.section.sharp"
+        }
+      },
+      "endCaptures": {
+        "1": {
+          "name": "keyword.control.section.sharp"
+        }
+      },
+      "patterns": [
+        {
+          "include": "#markup"
+        }
+      ]
+    },
+    "markup": {
+      "patterns": [
+        {
+          "include": "#comment"
+        },
+        {
+          "include": "#literal"
+        },
+        {
+          "include": "#echo"
+        },
+        {
+          "include": "#php"
+        },
+        {
+          "include": "#directive"
+        },
+        {
+          "include": "#tag"
+        },
+        {
+          "include": "#entity"
+        }
+      ]
+    },
+    "comment": {
+      "begin": "\\{\\{--",
+      "end": "--\\}\\}",
+      "name": "comment.block.sharp"
+    },
+    "literal": {
+      "match": "@\\{\\{|@@",
+      "name": "constant.character.escape.sharp"
+    },
+    "echo": {
+      "patterns": [
+        {
+          "match": "(\\{\\{)(?!--)((?:[^}'\\\"]|'(?:[^'\\\\]|\\\\.)*'|\\\"(?:[^\\\"\\\\]|\\\\.)*\\\"|\\}(?!\\}))*)(\\}\\})",
+          "captures": {
+            "1": {
+              "name": "punctuation.section.embedded.begin.sharp"
+            },
+            "2": {
+              "name": "meta.embedded.line.sharp.php",
+              "patterns": [
+                {
+                  "include": "source.php"
+                }
+              ]
+            },
+            "3": {
+              "name": "punctuation.section.embedded.end.sharp"
+            }
+          }
+        },
+        {
+          "begin": "(\\{\\{)(?!--)",
+          "end": "(\\}\\})",
+          "beginCaptures": {
+            "1": {
+              "name": "punctuation.section.embedded.begin.sharp"
+            }
+          },
+          "endCaptures": {
+            "1": {
+              "name": "punctuation.section.embedded.end.sharp"
+            }
+          },
+          "contentName": "meta.embedded.block.sharp.php",
+          "patterns": [
+            {
+              "include": "source.php"
+            }
+          ]
+        }
+      ]
+    },
+    "php": {
+      "patterns": [
+        {
+          "match": "(?<![\\w@])(@php)\\b(.*?)(@endphp)\\b",
+          "captures": {
+            "1": {
+              "name": "keyword.control.php.sharp"
+            },
+            "2": {
+              "name": "meta.embedded.line.sharp.php",
+              "patterns": [
+                {
+                  "include": "source.php"
+                }
+              ]
+            },
+            "3": {
+              "name": "keyword.control.php.sharp"
+            }
+          }
+        },
+        {
+          "begin": "(?<![\\w@])(@php)\\b",
+          "while": "^(?!\\s*@endphp\\b)",
+          "beginCaptures": {
+            "1": {
+              "name": "keyword.control.php.sharp"
+            }
+          },
+          "contentName": "meta.embedded.block.sharp.php",
+          "patterns": [
+            {
+              "include": "source.php"
+            }
+          ]
+        },
+        {
+          "match": "(@endphp)\\b",
+          "captures": {
+            "1": {
+              "name": "keyword.control.php.sharp"
+            }
+          }
+        }
+      ]
+    },
+    "directive": {
+      "patterns": [
+        {
+          "match": "(?<![\\w@])(@(?:if|elseif|foreach))\\b\\s*(\\((?:[^()'\\\"]|'[^']*'|\\\"[^\\\"]*\\\"|\\g<2>)*\\))",
+          "captures": {
+            "1": {
+              "name": "keyword.control.directive.sharp"
+            },
+            "2": {
+              "name": "meta.embedded.line.sharp.php",
+              "patterns": [
+                {
+                  "include": "source.php"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "begin": "(?<![\\w@])(@(?:if|elseif|foreach))\\b\\s*(\\()",
+          "end": "(\\))",
+          "beginCaptures": {
+            "1": {
+              "name": "keyword.control.directive.sharp"
+            },
+            "2": {
+              "name": "punctuation.section.arguments.begin.sharp"
+            }
+          },
+          "endCaptures": {
+            "1": {
+              "name": "punctuation.section.arguments.end.sharp"
+            }
+          },
+          "contentName": "meta.embedded.block.sharp.php",
+          "patterns": [
+            {
+              "include": "source.php"
+            }
+          ]
+        },
+        {
+          "match": "(?<![\\w@])(@(?:else|endif|endforeach))\\b",
+          "captures": {
+            "1": {
+              "name": "keyword.control.directive.sharp"
+            }
+          }
+        }
+      ]
+    },
+    "tag": {
+      "patterns": [
+        {
+          "match": "(</)(Column|Row|Spacer|Children|Label|Button|Checkbox|Toggle|Dropdown|Link|TextInput|ComboBox|Datepicker|Separator|ProgressBar|Spinner|Slider|ToggleButton|SegmentedControl|Image|ScrollView|TabView|Tab|SplitView|Grid|TextArea|ListView|CollectionView|Table|Tree)\\s*(>)",
+          "name": "meta.tag.sharp",
+          "captures": {
+            "1": {
+              "name": "punctuation.definition.tag.begin.sharp"
+            },
+            "2": {
+              "name": "entity.name.tag.builtin.sharp"
+            },
+            "3": {
+              "name": "punctuation.definition.tag.end.sharp"
+            }
+          }
+        },
+        {
+          "match": "(</)([A-Z][A-Za-z0-9]*)\\s*(>)",
+          "name": "meta.tag.sharp",
+          "captures": {
+            "1": {
+              "name": "punctuation.definition.tag.begin.sharp"
+            },
+            "2": {
+              "name": "entity.name.tag.component.sharp support.class.component.sharp"
+            },
+            "3": {
+              "name": "punctuation.definition.tag.end.sharp"
+            }
+          }
+        },
+        {
+          "begin": "(<)(Column|Row|Spacer|Children|Label|Button|Checkbox|Toggle|Dropdown|Link|TextInput|ComboBox|Datepicker|Separator|ProgressBar|Spinner|Slider|ToggleButton|SegmentedControl|Image|ScrollView|TabView|Tab|SplitView|Grid|TextArea|ListView|CollectionView|Table|Tree)(?![\\w-])",
+          "end": "(/?>)",
+          "beginCaptures": {
+            "1": {
+              "name": "punctuation.definition.tag.begin.sharp"
+            },
+            "2": {
+              "name": "entity.name.tag.builtin.sharp"
+            }
+          },
+          "endCaptures": {
+            "1": {
+              "name": "punctuation.definition.tag.end.sharp"
+            }
+          },
+          "name": "meta.tag.sharp",
+          "patterns": [
+            {
+              "include": "#comment"
+            },
+            {
+              "include": "#attributes"
+            }
+          ]
+        },
+        {
+          "begin": "(<)([A-Z][A-Za-z0-9]*)(?![\\w-])",
+          "end": "(/?>)",
+          "beginCaptures": {
+            "1": {
+              "name": "punctuation.definition.tag.begin.sharp"
+            },
+            "2": {
+              "name": "entity.name.tag.component.sharp support.class.component.sharp"
+            }
+          },
+          "endCaptures": {
+            "1": {
+              "name": "punctuation.definition.tag.end.sharp"
+            }
+          },
+          "name": "meta.tag.sharp",
+          "patterns": [
+            {
+              "include": "#comment"
+            },
+            {
+              "include": "#attributes"
+            }
+          ]
+        },
+        {
+          "match": "(</?)([a-z][\\w-]*)",
+          "captures": {
+            "1": {
+              "name": "punctuation.definition.tag.begin.sharp"
+            },
+            "2": {
+              "name": "invalid.illegal.tag-case.sharp"
+            }
+          }
+        }
+      ]
+    },
+    "attributes": {
+      "patterns": [
+        {
+          "match": "(@[A-Za-z][\\w-]*)\\s*(=)\\s*(\")\\s*([A-Za-z_]\\w*)\\s*(\")",
+          "captures": {
+            "1": {
+              "name": "entity.other.attribute-name.event.sharp"
+            },
+            "2": {
+              "name": "punctuation.separator.key-value.sharp"
+            },
+            "3": {
+              "name": "punctuation.definition.string.begin.sharp"
+            },
+            "4": {
+              "name": "entity.name.function.handler.sharp"
+            },
+            "5": {
+              "name": "punctuation.definition.string.end.sharp"
+            }
+          }
+        },
+        {
+          "match": "(@[A-Za-z][\\w-]*)\\s*(=)\\s*(')\\s*([A-Za-z_]\\w*)\\s*(')",
+          "captures": {
+            "1": {
+              "name": "entity.other.attribute-name.event.sharp"
+            },
+            "2": {
+              "name": "punctuation.separator.key-value.sharp"
+            },
+            "3": {
+              "name": "punctuation.definition.string.begin.sharp"
+            },
+            "4": {
+              "name": "entity.name.function.handler.sharp"
+            },
+            "5": {
+              "name": "punctuation.definition.string.end.sharp"
+            }
+          }
+        },
+        {
+          "match": "(:[A-Za-z][\\w-]*)\\s*(=)\\s*(\")([^\"]*)(\")",
+          "captures": {
+            "1": {
+              "name": "entity.other.attribute-name.bound.sharp"
+            },
+            "2": {
+              "name": "punctuation.separator.key-value.sharp"
+            },
+            "3": {
+              "name": "punctuation.definition.string.begin.sharp"
+            },
+            "4": {
+              "name": "meta.embedded.line.sharp.php",
+              "patterns": [
+                {
+                  "include": "source.php"
+                }
+              ]
+            },
+            "5": {
+              "name": "punctuation.definition.string.end.sharp"
+            }
+          }
+        },
+        {
+          "begin": "(:[A-Za-z][\\w-]*)\\s*(=)\\s*(\")",
+          "end": "(\")",
+          "beginCaptures": {
+            "1": {
+              "name": "entity.other.attribute-name.bound.sharp"
+            },
+            "2": {
+              "name": "punctuation.separator.key-value.sharp"
+            },
+            "3": {
+              "name": "punctuation.definition.string.begin.sharp"
+            }
+          },
+          "endCaptures": {
+            "1": {
+              "name": "punctuation.definition.string.end.sharp"
+            }
+          },
+          "contentName": "meta.embedded.block.sharp.php",
+          "patterns": [
+            {
+              "include": "source.php"
+            }
+          ]
+        },
+        {
+          "match": "(:[A-Za-z][\\w-]*)\\s*(=)\\s*(')([^']*)(')",
+          "captures": {
+            "1": {
+              "name": "entity.other.attribute-name.bound.sharp"
+            },
+            "2": {
+              "name": "punctuation.separator.key-value.sharp"
+            },
+            "3": {
+              "name": "punctuation.definition.string.begin.sharp"
+            },
+            "4": {
+              "name": "meta.embedded.line.sharp.php",
+              "patterns": [
+                {
+                  "include": "source.php"
+                }
+              ]
+            },
+            "5": {
+              "name": "punctuation.definition.string.end.sharp"
+            }
+          }
+        },
+        {
+          "begin": "(:[A-Za-z][\\w-]*)\\s*(=)\\s*(')",
+          "end": "(')",
+          "beginCaptures": {
+            "1": {
+              "name": "entity.other.attribute-name.bound.sharp"
+            },
+            "2": {
+              "name": "punctuation.separator.key-value.sharp"
+            },
+            "3": {
+              "name": "punctuation.definition.string.begin.sharp"
+            }
+          },
+          "endCaptures": {
+            "1": {
+              "name": "punctuation.definition.string.end.sharp"
+            }
+          },
+          "contentName": "meta.embedded.block.sharp.php",
+          "patterns": [
+            {
+              "include": "source.php"
+            }
+          ]
+        },
+        {
+          "match": "(@[A-Za-z][\\w-]*)\\s*(=)\\s*(\")([^\"]*)(\")",
+          "captures": {
+            "1": {
+              "name": "entity.other.attribute-name.event.sharp"
+            },
+            "2": {
+              "name": "punctuation.separator.key-value.sharp"
+            },
+            "3": {
+              "name": "punctuation.definition.string.begin.sharp"
+            },
+            "4": {
+              "name": "meta.embedded.line.sharp.php",
+              "patterns": [
+                {
+                  "include": "source.php"
+                }
+              ]
+            },
+            "5": {
+              "name": "punctuation.definition.string.end.sharp"
+            }
+          }
+        },
+        {
+          "begin": "(@[A-Za-z][\\w-]*)\\s*(=)\\s*(\")",
+          "end": "(\")",
+          "beginCaptures": {
+            "1": {
+              "name": "entity.other.attribute-name.event.sharp"
+            },
+            "2": {
+              "name": "punctuation.separator.key-value.sharp"
+            },
+            "3": {
+              "name": "punctuation.definition.string.begin.sharp"
+            }
+          },
+          "endCaptures": {
+            "1": {
+              "name": "punctuation.definition.string.end.sharp"
+            }
+          },
+          "contentName": "meta.embedded.block.sharp.php",
+          "patterns": [
+            {
+              "include": "source.php"
+            }
+          ]
+        },
+        {
+          "match": "(@[A-Za-z][\\w-]*)\\s*(=)\\s*(')([^']*)(')",
+          "captures": {
+            "1": {
+              "name": "entity.other.attribute-name.event.sharp"
+            },
+            "2": {
+              "name": "punctuation.separator.key-value.sharp"
+            },
+            "3": {
+              "name": "punctuation.definition.string.begin.sharp"
+            },
+            "4": {
+              "name": "meta.embedded.line.sharp.php",
+              "patterns": [
+                {
+                  "include": "source.php"
+                }
+              ]
+            },
+            "5": {
+              "name": "punctuation.definition.string.end.sharp"
+            }
+          }
+        },
+        {
+          "begin": "(@[A-Za-z][\\w-]*)\\s*(=)\\s*(')",
+          "end": "(')",
+          "beginCaptures": {
+            "1": {
+              "name": "entity.other.attribute-name.event.sharp"
+            },
+            "2": {
+              "name": "punctuation.separator.key-value.sharp"
+            },
+            "3": {
+              "name": "punctuation.definition.string.begin.sharp"
+            }
+          },
+          "endCaptures": {
+            "1": {
+              "name": "punctuation.definition.string.end.sharp"
+            }
+          },
+          "contentName": "meta.embedded.block.sharp.php",
+          "patterns": [
+            {
+              "include": "source.php"
+            }
+          ]
+        },
+        {
+          "begin": "([A-Za-z][\\w-]*)\\s*(=)\\s*(\")",
+          "end": "(\")",
+          "beginCaptures": {
+            "1": {
+              "name": "entity.other.attribute-name.sharp"
+            },
+            "2": {
+              "name": "punctuation.separator.key-value.sharp"
+            },
+            "3": {
+              "name": "punctuation.definition.string.begin.sharp"
+            }
+          },
+          "endCaptures": {
+            "1": {
+              "name": "punctuation.definition.string.end.sharp"
+            }
+          },
+          "contentName": "string.quoted.double.sharp",
+          "patterns": [
+            {
+              "include": "#echo"
+            },
+            {
+              "include": "#entity"
+            }
+          ]
+        },
+        {
+          "begin": "([A-Za-z][\\w-]*)\\s*(=)\\s*(')",
+          "end": "(')",
+          "beginCaptures": {
+            "1": {
+              "name": "entity.other.attribute-name.sharp"
+            },
+            "2": {
+              "name": "punctuation.separator.key-value.sharp"
+            },
+            "3": {
+              "name": "punctuation.definition.string.begin.sharp"
+            }
+          },
+          "endCaptures": {
+            "1": {
+              "name": "punctuation.definition.string.end.sharp"
+            }
+          },
+          "contentName": "string.quoted.single.sharp",
+          "patterns": [
+            {
+              "include": "#echo"
+            },
+            {
+              "include": "#entity"
+            }
+          ]
+        },
+        {
+          "match": "[A-Za-z][\\w-]*",
+          "name": "entity.other.attribute-name.sharp"
+        }
+      ]
+    },
+    "entity": {
+      "match": "&(?:[A-Za-z][A-Za-z0-9]*|#\\d+|#x[0-9A-Fa-f]+);",
+      "name": "constant.character.entity.sharp"
+    }
+  }
+}

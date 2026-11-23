@@ -2,38 +2,45 @@
 
 namespace Surface\Core\Providers;
 
-
-use Surface\HumanInput\HumanInputServiceProvider;
 use Surface\Toolkits\ToolkitsServiceProvider;
-use Surface\Graphics\GraphicsServiceProvider;
-use Surface\Rendering\RenderingServiceProvider;
 use Voyager\NutsAndBolts\AggregateServiceProvider;
 
 class TopsideServiceProvider extends AggregateServiceProvider
 {
     protected array $providers = [
         ToolkitsServiceProvider::class,
-        //TypographyServiceProvider::class,
-        RenderingServiceProvider::class,
-        GraphicsServiceProvider::class,
-        //ImagesServiceProvider::class,
-        HumanInputServiceProvider::class,
+        ComputerServiceProvider::class,
+    ];
+
+    protected array $configs = [
+        'toolkits' => 'toolkits',
+        'main.presentation' => 'presentation'
     ];
 
     public function register(): void
     {
-        foreach ($this->configs() as $key => $path) {
-            $this->mergeConfigFrom($path, $key);
-        }
+        $this->mergeConfigs();
 
         parent::register();
-        signal('topside-booted');
     }
 
     public function boot(): void
     {
+        $this->publishConfigs();
+    }
+
+    protected function mergeConfigs(): void
+    {
+        foreach ($this->configs() as $key => $path) {
+            $this->mergeConfigFrom($path, $key);
+        }
+    }
+
+    protected function publishConfigs(): void
+    {
         $published = [];
         foreach ($this->configs() as $key => $path) {
+
             $published[$path] = $this->app->configPath("{$key}.php");
         }
 
@@ -44,16 +51,6 @@ class TopsideServiceProvider extends AggregateServiceProvider
     {
         $dir = dirname(__DIR__, 4).'/config';
 
-        return [
-            //'av' => "{$dir}/av.php",
-            'graphics' => "{$dir}/graphics.php",
-            //'images' => "{$dir}/images.php",
-            //'human-input' => "{$dir}/human-input.php",
-            'rendering' => "{$dir}/rendering.php",
-            'toolkits' => "{$dir}/toolkits.php",
-            //'typography' => "{$dir}/typography.php",
-            'windows' => "{$dir}/windows.php",
-            'main.presentation' => "{$dir}/presentation.php",
-        ];
+        return array_map(fn($path) => "{$dir}/{$path}.php", $this->configs);
     }
 }

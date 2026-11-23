@@ -1,0 +1,128 @@
+<?php
+
+namespace Surface\Toolkits\Views\Elements;
+
+use Closure;
+use Surface\NutsAndBolts\Color;
+use Surface\Contracts\Toolkits\UI\TKTextInput;
+use Surface\Contracts\Toolkits\UI\TKPrimitive;
+use Surface\Contracts\Toolkits\Styling\FontSpec;
+use Surface\Contracts\Toolkits\UI\TKPrimitiveGroup;
+use Surface\Contracts\Toolkits\Styling\TextAlignment;
+use Surface\Contracts\Toolkits\Mail\Views\TextChanged;
+use Surface\Contracts\Toolkits\Mail\Views\TextSubmitted;
+
+/**
+ * One line the user types in. Give it the text it shows, and a handler that keeps it:
+ *
+ *     TextInput::make(value: $this->draft, placeholder: 'Your name')
+ *         ->onChange(fn (string $text) => $this->draft = $text)
+ *
+ * The value is written to the field when the state's value changes, so clearing the state
+ * clears the field.
+ */
+class TextInput extends Element
+{
+    final public function __construct(
+        protected readonly string $value = '',
+        protected readonly ?string $placeholder = null,
+        protected readonly bool $secret = false,
+    ) {}
+
+    public static function make(string $value = '', ?string $placeholder = null, bool $secret = false): static
+    {
+        return new static($value, $placeholder, $secret);
+    }
+
+    public function build(TKPrimitiveGroup $parent, string $name): TKPrimitive
+    {
+        return $parent->textInput($name, $this->value, $this->placeholder, $this->secret);
+    }
+
+    public function kind(): string
+    {
+        return 'textInput';
+    }
+
+    /**
+     * Run $handler as the user types, with the text and the TextChanged mail.
+     *
+     * @param Closure(string, TextChanged): mixed $handler
+     */
+    public function onChange(Closure $handler): static
+    {
+        // The text the field holds now, not the mail's: mail queues, and an older text given
+        // back to the field would undo what was typed since.
+        return $this->onLive('input', static fn (TextChanged $mail, TKTextInput $input) => $handler($input->value(), $mail));
+    }
+
+    /**
+     * Run $handler on Return, with the text and the TextSubmitted mail.
+     *
+     * @param Closure(string, TextSubmitted): mixed $handler
+     */
+    public function onSubmit(Closure $handler): static
+    {
+        return $this->on('submit', static fn (TextSubmitted $mail) => $handler($mail->value, $mail));
+    }
+
+    public function textAlign(TextAlignment $alignment): static
+    {
+        return $this->set('textAlign', $alignment);
+    }
+
+    public function font(FontSpec $font): static
+    {
+        return $this->set('font', $font);
+    }
+
+    public function color(?Color $color): static
+    {
+        return $this->set('color', $color);
+    }
+
+    protected function shape(): array
+    {
+        return ['font' => $this->has('font'), 'secret' => $this->secret];
+    }
+
+    protected function tracked(): array
+    {
+        return ['value', 'placeholder'];
+    }
+
+    protected function setters(): array
+    {
+        return parent::setters() + [
+            'value' => function (TKTextInput $p, string $v): void {
+                // Writing what it holds would move the cursor.
+                if ($p->value() !== $v) {
+                    $p->setValue($v);
+                }
+            },
+            'placeholder' => fn (TKTextInput $p, ?string $v) => $p->setPlaceholder($v),
+            'textAlign' => fn (TKTextInput $p, TextAlignment $v) => $p->setAlignment($v),
+            'font' => fn (TKTextInput $p, FontSpec $v) => $p->setFont($v),
+            'color' => fn (TKTextInput $p, ?Color $v) => $p->setTextColor($v),
+        ];
+    }
+
+    protected function defaults(): array
+    {
+        return parent::defaults() + ['textAlign' => TextAlignment::LEFT, 'color' => null];
+    }
+
+    protected function valueOf(string $prop): mixed
+    {
+        return match ($prop) {
+            'value' => $this->value,
+            'placeholder' => $this->placeholder,
+            default => parent::valueOf($prop),
+        };
+    }
+
+    protected function initial(string $prop): mixed
+    {
+        return in_array($prop, ['value', 'placeholder'], true) ? $this->valueOf($prop) : parent::initial($prop);
+    }
+}

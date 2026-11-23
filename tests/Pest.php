@@ -2,39 +2,76 @@
 
 declare(strict_types=1);
 
-use PHPUnit\Framework\MockObject\Stub;
-use Surface\Rendering\RenderingServiceProvider;
-use Voyager\Contracts\Core\FrameworkCore;
+use Surface\Core\Providers\TopsideServiceProvider;
+use Surface\Toolkits\ToolkitSession;
+use Venusian\Topside\Tests\Fakes\FakeDriver;
+use Venusian\Topside\Tests\Fakes\FakeProvider;
+use Voyager\Config\Repository;
+use Voyager\Core\RenderedInstance;
+
+/*
+| Every test gets a fresh framework core with topside registered and the fake toolkit installed
+| and selected. Nothing here touches a native toolkit.
+*/
+pest()->beforeEach(function (): void {
+    FakeDriver::$built = 0;
+    $this->app = topside();
+})->afterEach(function (): void {
+    disconnectAllSessions();
+})->in('Unit');
 
 /**
- * Rendering's provider registered on an application that reads its config from $items. The application is a
- * stand-in that keeps what the provider registers: this package does not install the framework's own.
+ * Sessions outlive their test while anything holds them, and a connected one counts for the
+ * one-toolkit-at-a-time rule on macOS: each test ends with none connected.
  */
-function renderingApp(FrameworkCore&Stub $app, array $items = []): FrameworkCore
+function disconnectAllSessions(): void
 {
-    $config = new class($items) {
-        public function __construct(private readonly array $items) {}
+    $live = (new ReflectionClass(ToolkitSession::class))->getStaticPropertyValue('live');
+    $connected = [];
+    foreach ($live ?? [] as $session => $_) {
+        $connected[] = $session;
+    }
 
-        public function get(string $key, mixed $default = null): mixed
-        {
-            return $this->items[$key] ?? $default;
-        }
-    };
-    $singletons = $aliases = $made = [];
+    // Not inside that loop: disconnect() takes the session out of the WeakMap, and a WeakMap
+    // that loses an entry while it is walked skips the next one.
+    foreach ($connected as $session) {
+        $session->disconnect();
+    }
+}
 
-    $app->method('registerSingleton')->willReturnCallback(function (string $abstract, callable $concrete) use (&$singletons): void {
-        $singletons[$abstract] = $concrete;
-    });
-    $app->method('alias')->willReturnCallback(function (string $abstract, string $alias) use (&$aliases): void {
-        $aliases[$alias] = $abstract;
-    });
-    $app->method('make')->willReturnCallback(function (string $abstract) use ($app, $config, &$singletons, &$aliases, &$made): mixed {
-        $abstract = $aliases[$abstract] ?? $abstract;
-
-        return $abstract === 'config' ? $config : $made[$abstract] ??= $singletons[$abstract]($app);
-    });
-
-    (new RenderingServiceProvider($app))->register();
+/**
+ * A booted framework core with topside's providers, plus $providers, over $config.
+ *
+ * @param list<class-string> $providers
+ */
+function topside(array $config = [], array $providers = [FakeProvider::class], ?string $base_path = null): RenderedInstance
+{
+    $app = new RenderedInstance($base_path ?? sys_get_temp_dir());
+    $app->registerInstance('config', new Repository(array_replace_recursive([
+        'app' => ['name' => 'topside-tests'],
+        'main' => ['title' => 'Topside Tests'],
+        'toolkits' => ['default' => 'fake'],
+    ], $config)));
+    $app->register(TopsideServiceProvider::class);
+    foreach ($providers as $provider) {
+        $app->register($provider);
+    }
+    $app->boot();
 
     return $app;
 }
+
+/**
+ * Short class names of $mail, in order.
+ *
+ * @param list<object> $mail
+ * @return list<string>
+ */
+function mailNames(array $mail): array
+{
+    return array_map(static fn (object $m): string => (new ReflectionClass($m))->getShortName(), $mail);
+}
+
+require_once __DIR__.'/Helpers/views.php';
+require_once __DIR__.'/Helpers/sharp.php';
+require_once __DIR__.'/Helpers/menus.php';

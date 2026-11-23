@@ -2,17 +2,17 @@
 
 namespace Surface\Toolkits;
 
+use RuntimeException;
 use ReflectionException;
-use Surface\Contracts\Toolkits\ToolkitBridge;
-use Surface\Toolkits\Managers\ContentTreeManager;
-use Surface\Toolkits\Managers\ToolkitBridgeManager;
-use Surface\Toolkits\Managers\ToolkitWindowManager;
-use Surface\Toolkits\Navigation\Navigator;
-use Surface\Toolkits\Support\Live;
-use Surface\Toolkits\Support\ViewActions;
+use Surface\Toolkits\Views\Sharp;
 use Voyager\Contracts\Core\FrameworkCore;
-use Voyager\Contracts\IOPools\Loop as LoopInterface;
 use Voyager\NutsAndBolts\ServiceProvider;
+use Surface\Toolkits\Managers\MenuManager;
+use Surface\Toolkits\Managers\ToolkitWindowManager;
+use Surface\Toolkits\Managers\ToolkitAdapterManager;
+use Voyager\Contracts\IOPools\Loop as LoopInterface;
+use Surface\Toolkits\Managers\PresentationTreeManager;
+use Surface\Contracts\Toolkits\ToolkitAdapterDriver;
 
 class ToolkitsServiceProvider extends ServiceProvider
 {
@@ -21,68 +21,102 @@ class ToolkitsServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        $this->app->registerSingleton('toolkit-bridge-manager', fn (FrameworkCore $app) => new ToolkitBridgeManager($app));
-        $this->app->alias('toolkit-bridge-manager', ToolkitBridgeManager::class);
-
-        $this->app->registerSingleton('toolkit-windows', fn (FrameworkCore $app) => new ToolkitWindowManager(
-            $app->get('toolkit-bridge-manager'),
-            config('windows.menus', []),
-            config('windows.default_menu'),
-        ));
-        $this->app->alias('toolkit-windows', ToolkitWindowManager::class);
-
-        // What a widget does when the user acts on it, and the built views' values that follow app state.
-        $this->app->registerSingleton(ViewActions::class, fn () => new ViewActions());
-        $this->app->registerSingleton(Live::class, fn () => new Live());
-
+        $this->registerSingletons();
+        $this->registerSharp();
         $this->provisionEventLoop();
     }
 
     /**
+     * Templates from resources/, components from App\Views, compiled to storage/framework/views.
+     */
+    protected function registerSharp(): void
+    {
+        $this->app->registerSingleton(Sharp::class, fn (FrameworkCore $app) => new Sharp(
+            $app->basePath('resources'),
+            $app->storagePath('framework/views'),
+            $this->componentNamespace($app),
+        ));
+    }
+
+    /**
+     * App\Views, or null for an instance that is not an application (no composer.json).
+     */
+    protected function componentNamespace(FrameworkCore $app): ?string
+    {
+        if (! is_file($app->basePath('composer.json'))) {
+            return null;
+        }
+
+        try {
+            return rtrim($app->getNamespace(), '\\').'\\Views';
+        } catch (RuntimeException) {
+            return null;
+        }
+    }
+
+    /**
      * @throws ReflectionException
      */
+    protected function registerSingletons(): void
+    {
+        $this->app->registerSingleton('toolkit-adapters', fn (FrameworkCore $app) => new ToolkitAdapterManager($app));
+        $this->app->alias('toolkit-adapters', ToolkitAdapterManager::class);
+
+        $this->app->registerSingleton('toolkit-windows', fn (FrameworkCore $app) => new ToolkitWindowManager(
+            app('toolkit-adapters'),
+        ));
+
+        $this->app->registerSingleton('toolkit-menus', fn (FrameworkCore $app) => new MenuManager(
+            config('toolkits.windows', []),
+            $app,
+        ));
+        $this->app->alias('toolkit-menus', MenuManager::class);
+    }
+
     protected function provisionEventLoop(): void
     {
         $this->callAfterResolving( 'event-loop', function (LoopInterface $loop): void {
-            if (! $this->app->isApplicationRunning()) {
-                return;
-            }
+            if ($this->app->isApplicationRunning()) {
 
-            foreach(Toolkits::bridges() as $bridge_driver)
-            {
-                $session = $bridge_driver instanceof ToolkitBridge ? $bridge_driver->session() : null;
-                if ($session?->connected()) {
-                    $session->joinLoop($loop);
-                }
+                $this->addToolkitsToLoop($loop);
+                $this->registerContentManager();
+                $this->registerNavigation();
+                $this->loadRoutes();
             }
-
-            $this->registerContentManager();
-            $this->registerNavigation();
-            $this->loadMainWindowRoutes();
         });
     }
 
     /**
-     * One ContentManager for the app's life. The manager caches each driver it
-     * creates, so the toolkit and silk tree drivers are singletons too.
      * @throws ReflectionException
      */
-    private function registerContentManager(): void
+    protected function addToolkitsToLoop(LoopInterface $loop): void
     {
-        $this->app->registerSingleton('content', fn (FrameworkCore $app) => new ContentTreeManager($app));
-        $this->app->alias('content', ContentTreeManager::class);
+        $toolkit_adapters = ToolkitAdapters::adapters();
+        foreach($toolkit_adapters as $toolkit_adapter)
+        {
+            $adapter = $toolkit_adapter instanceof ToolkitAdapterDriver ? $toolkit_adapter->session() : null;
+
+            if ($adapter?->connected()) {
+                $adapter->joinLoop($loop);
+            }
+        }
     }
 
     /**
      * @throws ReflectionException
      */
-    private function registerNavigation(): void
+    protected function registerContentManager(): void
     {
-        $this->app->registerSingleton('navigation', fn (FrameworkCore $app) => new Navigator());
-        $this->app->alias('navigation', Navigator::class);
+        $this->app->registerSingleton('content', fn (FrameworkCore $app) => new PresentationTreeManager($app));
+        $this->app->alias('content', PresentationTreeManager::class);
     }
 
-    private function loadMainWindowRoutes(): void
+    protected function registerNavigation(): void
+    {
+
+    }
+
+    protected function loadRoutes(): void
     {
         // The component's routes first, then the application's: a route of the same name replaces it.
         require_once __DIR__ . "/routes/navigation.php";

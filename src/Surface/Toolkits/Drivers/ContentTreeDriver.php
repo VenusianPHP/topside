@@ -2,7 +2,8 @@
 
 namespace Surface\Toolkits\Drivers;
 
-use Surface\Contracts\Toolkits\Composition;
+use Surface\Toolkits\Views\Component;
+use Surface\Contracts\Toolkits\Mail\PrimitiveMail;
 
 abstract class ContentTreeDriver
 {
@@ -11,8 +12,15 @@ abstract class ContentTreeDriver
      */
     abstract public function present(): void;
 
+    abstract public function boot(int $width, int $height): void;
+
     /**
-     * Show $view in the content area: build it the first time, show it again after that.
+     * Put a view on screen in place of the one there.
      */
-    abstract public function render(Composition $view, array $args): void;
+    abstract public function render(Component $view): void;
+
+    /**
+     * Mail a primitive posted: the on-screen view's handler for it runs.
+     */
+    abstract public function deliver(PrimitiveMail $mail): void;
 }

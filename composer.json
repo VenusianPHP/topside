@@ -42,12 +42,12 @@
     },
     "suggest": {},
     "require-dev": {
-        "pestphp/pest": "^4"
+        "pestphp/pest": "^4",
+        "venusian/framework": "*"
     },
     "autoload": {
         "psr-4": {
-            "Surface\\": "src/Surface/",
-            "VelvetGE\\": "src/Velvet/src/"
+            "Surface\\": "src/Surface/"
         }
     },
     "autoload-dev": {
@@ -61,8 +61,7 @@
         },
         "venusian": {
             "providers": [
-                "Surface\\Core\\Providers\\TopsideServiceProvider",
-                "VelvetGE\\Providers\\VelvetGEServiceProvider"
+                "Surface\\Core\\Providers\\TopsideServiceProvider"
             ]
         }
     },
@@ -72,6 +71,15 @@
             "pestphp/pest-plugin": true
         }
     },
+    "repositories": [
+        {
+            "type": "path",
+            "url": "../*",
+            "options": {
+                "symlink": true
+            }
+        }
+    ],
     "minimum-stability": "dev",
     "prefer-stable": true
 }

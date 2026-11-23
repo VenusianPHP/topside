@@ -1,0 +1,85 @@
+<?php
+
+namespace Surface\Toolkits\Views;
+
+use ReflectionClass;
+use ReflectionProperty;
+use Surface\Toolkits\Menus\MenuBar;
+use Surface\Toolkits\Views\Elements\Element;
+use Surface\Toolkits\Views\Elements\ComponentElement;
+
+/**
+ * A view: its state, what it does, and what it looks like.
+ *
+ *  - State is its public properties. View::render(MyView::class, ['count' => 3]) sets them
+ *    first, so they are its props too.
+ *  - What it does is its own methods, given to an element as a handler:
+ *    Button::make('Add')->onClick($this->add(...)).
+ *  - What it looks like is render(), which describes the primitives from the state.
+ *
+ * After a handler runs, render() runs again and only what changed is changed on screen, so a
+ * handler changes the state and nothing else. render() is called often: keep it to reading
+ * the state, with no work of its own.
+ *
+ * A component is built through the container, so its constructor may ask for services.
+ */
+abstract class Component
+{
+    abstract public function render(): Element;
+
+    /**
+     * The bar of the window while this is the view on screen: given the bar the window, route
+     * and controller came to, return the one to show. Called again after each handler, so
+     * read the state here as render() does. A component used inside another is not asked.
+     *
+     *     return $bar->item('file.save', fn (Item $save) => $save->enabled($this->dirty));
+     */
+    public function menu(MenuBar $bar): MenuBar
+    {
+        return $bar;
+    }
+
+    /**
+     * This component as an element of another view: Card::make(title: 'Hi')->with(...).
+     * The named arguments are set on its public properties each time the view renders.
+     */
+    public static function make(mixed ...$props): ComponentElement
+    {
+        return new ComponentElement(static::class, $props);
+    }
+
+    /**
+     * Set public properties from $props, by name.
+     *
+     * @param array<string, mixed> $props
+     * @throws ViewException For a name that is not a public property of this view.
+     */
+    public function assign(array $props): static
+    {
+        $settable = self::settable(static::class);
+
+        foreach ($props as $name => $value) {
+            if (! in_array($name, $settable, true)) {
+                $known = $settable === [] ? 'it has none' : 'it has '.implode(', ', $settable);
+                throw new ViewException(static::class." has no public property '{$name}' to set: {$known}.");
+            }
+
+            $this->{$name} = $value;
+        }
+
+        return $this;
+    }
+
+    /**
+     * @return list<string> the public, non-static properties of $class
+     */
+    private static function settable(string $class): array
+    {
+        $properties = (new ReflectionClass($class))->getProperties(ReflectionProperty::IS_PUBLIC);
+
+        return array_values(array_map(
+            static fn (ReflectionProperty $p): string => $p->getName(),
+            array_filter($properties, static fn (ReflectionProperty $p): bool => ! $p->isStatic()),
+        ));
+    }
+}

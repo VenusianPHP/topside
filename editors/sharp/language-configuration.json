@@ -1,0 +1,88 @@
+{
+  "comments": {
+    "blockComment": [
+      "{{--",
+      "--}}"
+    ]
+  },
+  "brackets": [
+    [
+      "{{--",
+      "--}}"
+    ],
+    [
+      "{{",
+      "}}"
+    ],
+    [
+      "{",
+      "}"
+    ],
+    [
+      "(",
+      ")"
+    ],
+    [
+      "[",
+      "]"
+    ]
+  ],
+  "autoClosingPairs": [
+    {
+      "open": "{",
+      "close": "}"
+    },
+    {
+      "open": "(",
+      "close": ")"
+    },
+    {
+      "open": "[",
+      "close": "]"
+    },
+    {
+      "open": "\"",
+      "close": "\""
+    },
+    {
+      "open": "'",
+      "close": "'"
+    }
+  ],
+  "surroundingPairs": [
+    [
+      "<",
+      ">"
+    ],
+    [
+      "{",
+      "}"
+    ],
+    [
+      "(",
+      ")"
+    ],
+    [
+      "[",
+      "]"
+    ],
+    [
+      "\"",
+      "\""
+    ],
+    [
+      "'",
+      "'"
+    ]
+  ],
+  "folding": {
+    "markers": {
+      "start": "^\\s*@(script|template|if|foreach|php)\\b",
+      "end": "^\\s*@end(script|template|if|foreach|php)\\b"
+    }
+  },
+  "indentationRules": {
+    "increaseIndentPattern": "^\\s*(<[A-Z][A-Za-z0-9]*(?:[^/>]|/(?!>))*>\\s*$|<[A-Z][A-Za-z0-9]*[^>]*$|@(script|template|if|elseif|else|foreach|php)\\b|.*[\\{\\[\\(]\\s*$)",
+    "decreaseIndentPattern": "^\\s*(</|/>|@(endscript|endtemplate|elseif|else|endif|endforeach|endphp)\\b|[\\}\\]\\)])"
+  }
+}

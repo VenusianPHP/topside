@@ -13,6 +13,8 @@ readonly class TabSelected extends PrimitiveEventOccurred implements PrimitiveMa
         string $path,
         string $uuid,
         public string $page,
+        public int $index = 0,
+        public string $title = '',
     ) {
         parent::__construct($window, $path, $uuid);
     }

@@ -2,28 +2,31 @@
 
 return [
     /*
-        |----------------------------------------------------------------------
-        | Presentation Mode
-        |----------------------------------------------------------------------
-        |
-        | The build your application opens:
-        |
-        | 'toolkit' - a toolkit-driven window, with canvases drawn by the
-        |             canvas driver below.
-        |
-        | Supported: "toolkit"
-        |
-        */
-    'mode' => env('PRESENTATION_MODE', 'toolkit'),
-    'toolkit' => [
-        'driver' => env(
-            'PRESENTATION_TOOLKIT_DRIVER',
-            env(
-                'TOOLKIT_BRIDGE_DEFAULT',
-                device_os_family() == 'mac' ? 'appkit' : 'gtk'
-            )
-        ),
-        // the graphics engine a canvas is drawn with: overrides GRAPHICS_ENGINE, as PRESENTATION_TOOLKIT_DRIVER does TOOLKIT_BRIDGE_DEFAULT
-        'canvas_driver' => env('PRESENTATION_CANVAS_DRIVER', env('GRAPHICS_ENGINE', 'velvet')),
-    ],
+    |----------------------------------------------------------------------
+    | Presentation Mode
+    |----------------------------------------------------------------------
+    |
+    | The build your application opens:
+    |
+    | 'toolkit' - a toolkit-driven window, with canvases drawn by the
+    |             canvas driver below.
+    |
+    | Other integrations might add other modes for example a toolkit
+    | powered by a staging window service like GLFW
+    |
+    | Supported: "toolkit"
+    |
+    */
+    'mode' => 'toolkit',
+
+    /*
+    |----------------------------------------------------------------------
+    | Starting Window Size
+    |----------------------------------------------------------------------
+    |
+    | The size the first window will open at:
+    |
+    |
+    */
+    'window_size' => [1024, 678],
 ];

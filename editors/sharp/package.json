@@ -1,0 +1,40 @@
+{
+  "name": "sharp",
+  "displayName": "Sharp (Venusian Topside)",
+  "description": "Syntax highlighting for Sharp views (*.sharp.php)",
+  "publisher": "venusianphp",
+  "version": "0.1.0",
+  "license": "MIT",
+  "engines": {
+    "vscode": "^1.75.0"
+  },
+  "categories": [
+    "Programming Languages"
+  ],
+  "contributes": {
+    "languages": [
+      {
+        "id": "sharp",
+        "aliases": [
+          "Sharp",
+          "sharp"
+        ],
+        "extensions": [
+          ".sharp.php"
+        ],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "sharp",
+        "scopeName": "text.html.sharp",
+        "path": "./syntaxes/sharp.tmLanguage.json",
+        "embeddedLanguages": {
+          "meta.embedded.block.sharp.php": "php",
+          "meta.embedded.line.sharp.php": "php"
+        }
+      }
+    ]
+  }
+}

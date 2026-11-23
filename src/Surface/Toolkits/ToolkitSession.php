@@ -2,15 +2,32 @@
 
 namespace Surface\Toolkits;
 
+use Surface\Toolkits\EventLoop\ToolkitPump;
 use WeakMap;
 use ReflectionClass;
+use RuntimeException;
 use ReflectionException;
+use Surface\Contracts\Toolkits\Toolkit;
+use Voyager\Contracts\Core\FrameworkCore;
+use Psr\Container\NotFoundExceptionInterface;
+use Psr\Container\ContainerExceptionInterface;
 use Voyager\Contracts\IOPools\Loop as LoopInterface;
-use Surface\Contracts\Toolkits\ToolkitRuntimeException;
-use Surface\Contracts\Toolkits\ToolkitSession as SessionContract;
+use Surface\Contracts\Toolkits\ToolkitSession as ToolkitSessionContract;
 
-abstract class ToolkitSession implements SessionContract
+abstract class ToolkitSession implements ToolkitSessionContract
 {
+    protected ?Toolkit $application = null;
+
+    /**
+     * @var list<object> posted before a loop was joined
+     */
+    protected array $outbox = [];
+
+    /**
+     * @var array<string, object> pending mail by key; the last post under a key wins
+     */
+    protected array $latest = [];
+
     /**
      * Flag indicating the bridge is connected
      * @var bool
@@ -29,66 +46,22 @@ abstract class ToolkitSession implements SessionContract
     protected ?LoopInterface $loop = null;
 
     /**
-     * @var list<object> posted before a loop was joined
+     * Open windows by name: each settles after every pump.
+     *
+     * @var array<string, ToolkitWindow>
      */
-    protected array $outbox = [];
-
-    /**
-     * @var array<string, object> pending mail by key; the last post under a key wins
-     */
-    protected array $latest = [];
+    protected array $windows = [];
 
     /**
      * @var WeakMap<ToolkitSession, true>|null every connected session in the process
      */
     private static ?WeakMap $live = null;
 
-    public function __construct() {}
+    public function __construct(
+        protected readonly FrameworkCore $app
+    ) {}
 
-    abstract protected function initializeEngine(): void;
-
-    abstract protected function connectToEngine(): void;
-
-    /**
-     * Withdraw the running engine from the OS: the inverse of connectToEngine().
-     */
-    abstract protected function disconnectEngine(): void;
-
-    /**
-     * Block at most $budget_ns in the toolkit's own wait, dispatching what arrives.
-     * @return int events dispatched
-     */
-    abstract public function pump(int $budget_ns): int;
-
-    /**
-     * Make $fd part of the toolkit's wait: readable ends the sleep.
-     */
-    abstract protected function wakeDescriptor(int $fd): void;
-
-    abstract protected function releaseWakeDescriptor(): void;
-
-    /**
-     * @throws ReflectionException
-     */
-    public function connect(): static
-    {
-        if (! $this->connected)
-        {
-            $this->gateAdditionalSessions();
-            $this->initialize();
-            $this->connectToEngine();
-            $this->connected = true;
-            self::live()[$this] = true;
-
-            // In an application run, a session joins the loop when it connects.
-            $app = app();
-            if ($app->isApplicationRunning() && $app->isResolved('event-loop')) {
-                $this->joinLoop($app->get('event-loop'));
-            }
-        }
-
-        return $this;
-    }
+    abstract protected function bootstrapToolkitLibrary(): void;
 
     public function connected(): bool
     {
@@ -96,7 +69,60 @@ abstract class ToolkitSession implements SessionContract
     }
 
     /**
+     * @throws ContainerExceptionInterface
+     * @throws NotFoundExceptionInterface
+     * @throws ReflectionException
+     */
+    public function connect(): static
+    {
+        if (! $this->connected)
+        {
+            $this->gateAdditionalSessions();
+            $this->startSession();
+            $this->connectToToolkitLibrary();
+
+            $this->connected = true;
+            self::live()[$this] = true;
+
+            $this->addSessionToEventLoop();
+        }
+
+        return $this;
+    }
+
+    /**
+     * Take the session down. The engine stays initialized: connect() brings it back.
+     */
+    public function disconnect(): void
+    {
+        if (! $this->connected) {
+            return;
+        }
+
+        $this->disconnectFromToolkitLibrary();
+        $this->connected = false;
+        unset(self::live()[$this]);
+    }
+
+    /**
+     * Deliver the pending latest mail, so a burst within one wait becomes one mail per key.
+     *
+     * @return void
+     */
+    public function flushLatest(): void
+    {
+        $latest = $this->latest;
+        $this->latest = [];
+        foreach ($latest as $mail) {
+            $this->post($mail);
+        }
+    }
+
+    /**
      * Hand mail from a native callback to the loop. Before joinLoop() it waits here.
+     *
+     * @param object $mail
+     * @return void
      */
     public function post(object $mail): void
     {
@@ -110,23 +136,53 @@ abstract class ToolkitSession implements SessionContract
     }
 
     /**
+     * Block at most $budget_ns in the toolkit's own wait, dispatching what arrives.
+     *
+     * @return int events dispatched
+     */
+    public function pump(int $budget_ns): int
+    {
+        $dispatched = $this->application->pump($budget_ns);
+
+        foreach ($this->windows as $window) {
+            $window->settle();
+            $window->settleFocus();
+        }
+
+        return $dispatched;
+    }
+
+    /**
+     * Settle $window after every pump from now on. ToolkitWindow does this once it is built.
+     */
+    public function watchWindow(ToolkitWindow $window): void
+    {
+        $this->windows[$window->name()] = $window;
+    }
+
+    /**
+     * Stop settling $window and drop a resize still pending for it: its target is gone.
+     */
+    public function unwatchWindow(ToolkitWindow $window): void
+    {
+        unset($this->windows[$window->name()]);
+        $this->forgetLatest(self::resizedKey($window->name()));
+    }
+
+    /**
+     * The latest-mail key a window's resizes collapse under.
+     */
+    public static function resizedKey(string $window): string
+    {
+        return "window.resized.{$window}";
+    }
+
+    /**
      * Hold mail under $key until flushLatest(), replacing whatever is pending there.
      */
     public function postLatest(string $key, object $mail): void
     {
         $this->latest[$key] = $mail;
-    }
-
-    /**
-     * Deliver the pending latest mail, so a burst within one wait becomes one mail per key.
-     */
-    public function flushLatest(): void
-    {
-        $latest = $this->latest;
-        $this->latest = [];
-        foreach ($latest as $mail) {
-            $this->post($mail);
-        }
     }
 
     /**
@@ -137,45 +193,41 @@ abstract class ToolkitSession implements SessionContract
         unset($this->latest[$key]);
     }
 
+
+    public function application(): Toolkit
+    {
+        return $this->application;
+    }
+
     /**
      * Put this toolkit's native wait in charge of the loop's sleep and fold the loop's
      * waiter into it, so every wake of the loop ends the toolkit's sleep too.
      *
-     * @throws ToolkitRuntimeException Unless connected, or when the loop's waiter has no descriptor.
+     * @throws RuntimeException Unless connected, or when the loop's waiter has no descriptor.
      */
     public function joinLoop(LoopInterface $loop): void
     {
         if (! $this->connected) {
-            throw new ToolkitRuntimeException('Connect the session before joining a loop.');
+            throw new RuntimeException('Connect the session before joining a loop.');
         }
 
-        if ($this->loop === $loop) {
-            return;
-        }
+        if ($this->loop !== $loop) {
+            $descriptor = $loop->descriptor();
 
-        $descriptor = $loop->descriptor();
-        if (is_null($descriptor)) {
-            throw new ToolkitRuntimeException('The loop waiter has no descriptor: install ext-kqueue (macOS) or ext-epoll (Linux) and set io-pools.pool_waiters.default accordingly.');
-        }
+            if (is_null($descriptor)) {
+                throw new RuntimeException('The loop waiter has no descriptor: install ext-kqueue (macOS) or ext-epoll (Linux) and set io-pools.pool_waiters.default accordingly.');
+            }
 
-        $this->wakeDescriptor($descriptor);
-        $this->loop = $loop;
-        $loop->resource($this->pumpName(), new ToolkitPump($this));
-        $loop->crown($this->pumpName());
+            $this->wakeDescriptor($descriptor);
+            $this->loop = $loop;
+            $loop->resource($this->pumpName(), new ToolkitPump($this));
+            $loop->crown($this->pumpName());
 
-        foreach ($this->outbox as $mail) {
-            $loop->post($mail);
-        }
-        $this->outbox = [];
-        $this->flushLatest();
-    }
-
-    public function leaveLoop(): void
-    {
-        if (! is_null($this->loop)) {
-            $this->loop->forget($this->pumpName());
-            $this->releaseWakeDescriptor();
-            $this->loop = null;
+            foreach ($this->outbox as $mail) {
+                $loop->post($mail);
+            }
+            $this->outbox = [];
+            $this->flushLatest();
         }
     }
 
@@ -187,36 +239,37 @@ abstract class ToolkitSession implements SessionContract
         return 'toolkit.pump.'.spl_object_id($this);
     }
 
-
-    /**
-     * Take the session down. The engine stays initialized: connect() brings it back.
-     */
-    public function disconnect(): void
-    {
-        if (! $this->connected) {
-            return;
-        }
-
-        $this->disconnectEngine();
-        $this->connected = false;
-        unset(self::live()[$this]);
-    }
-
     /**
      * Start the engine on first use, and never again for the life of the process.
      * @return void
      */
-    protected function initialize(): void
+    protected function startSession(): void
     {
         if (! $this->initialized) {
-            $this->initializeEngine();
+            $this->bootstrapToolkitLibrary();
             $this->initialized = true;
         }
     }
 
-    protected static function live(): WeakMap
+    /**
+     * Make $fd part of the toolkit's wait: readable ends the sleep.
+     */
+    protected function wakeDescriptor(int $fd): void
     {
-        return self::$live ??= new WeakMap();
+        $this->application->wakeDescriptor($fd);
+    }
+
+    /**
+     * @throws ContainerExceptionInterface
+     * @throws NotFoundExceptionInterface
+     */
+    protected function addSessionToEventLoop(): void
+    {
+        if ($this->app->isApplicationRunning() && $this->app->isResolved('event-loop')) {
+            $this->joinLoop(
+                $this->app->get('event-loop')
+            );
+        }
     }
 
     /**
@@ -228,24 +281,40 @@ abstract class ToolkitSession implements SessionContract
      * own display connection.
      *
      * @return void
-     * @throws ToolkitRuntimeException Another toolkit's session is connected on macOS.
+     * @throws RuntimeException Another toolkit's session is connected on macOS.
      * @throws ReflectionException
      */
-    private function gateAdditionalSessions(): void
+    protected function gateAdditionalSessions(): void
     {
         if(device_os_family() == 'mac')
         {
             foreach (self::live() as $session => $_)
             {
-                // @todo - this method seems unnecessary anymore.. consider removing
-                if($session->getClass() !== static::class && $session->connected())
+                if($session::class !== static::class && $session->connected())
                 {
-                $theirs = new ReflectionClass($session)->getShortName();
-                $ours = new ReflectionClass($this)->getShortName();
+                    $ours = new ReflectionClass($this)->getShortName();
+                    $theirs = new ReflectionClass($session)->getShortName();
 
-                throw new ToolkitRuntimeException("{$theirs} is connected. On macOS one toolkit session pumps the application's events: disconnect it before connecting {$ours}.");
+                    throw new RuntimeException(
+                        "{$theirs} is connected. On macOS one toolkit session pumps the application's events: disconnect it before connecting {$ours}."
+                    );
                 }
             }
         }
+    }
+
+    protected function connectToToolkitLibrary(): void
+    {
+        $this->application->connect();
+    }
+
+    protected function disconnectFromToolkitLibrary(): void
+    {
+        $this->application->disconnect();
+    }
+
+    protected static function live(): WeakMap
+    {
+        return self::$live ??= new WeakMap();
     }
 }
