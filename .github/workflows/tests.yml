@@ -1,0 +1,73 @@
+name: tests
+
+on:
+  push:
+    branches:
+      - '**'
+  pull_request:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  tests:
+    runs-on: ${{ matrix.os.runner }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - { name: macos, runner: macos-latest, waiter: kqueue }
+          - { name: linux arm64, runner: ubuntu-24.04-arm, waiter: epoll }
+          - { name: linux x86, runner: ubuntu-latest, waiter: epoll }
+        php: ['8.4', '8.5']
+        ts: [nts, zts]
+        # Security floor (composer.json "php": "~8.4.27||^8.5.12"): each line's lowest patched release.
+        include:
+          - php: '8.4'
+            min: '8.4.27'
+          - php: '8.5'
+            min: '8.5.12'
+
+    name: ${{ matrix.os.name }} ${{ matrix.php }} ${{ matrix.ts == 'zts' && 'ZTS' || 'NTS' }}
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          coverage: none
+          # PIE builds the platform's loop waiter below.
+          tools: pie
+        env:
+          phpts: ${{ matrix.ts == 'zts' && 'ts' || 'nts' }}
+          # the newest patch of the line, never a cached older build
+          update: true
+
+      - name: Refuse a PHP below the patched floor, or of the wrong thread safety
+        env:
+          PHP_FLOOR: ${{ matrix.min }}
+          PHP_ZTS: ${{ matrix.ts == 'zts' && '1' || '0' }}
+        run: |
+          php -r 'if (version_compare(PHP_VERSION, getenv("PHP_FLOOR"), "<")) { fwrite(STDERR, "PHP ".PHP_VERSION." is below the patched floor ".getenv("PHP_FLOOR").PHP_EOL); exit(1); }
+            if ((int) PHP_ZTS !== (int) getenv("PHP_ZTS")) { fwrite(STDERR, "PHP ".PHP_VERSION." is ".(PHP_ZTS ? "ZTS" : "NTS").", the cell asked for the other".PHP_EOL); exit(1); }
+            echo "PHP ", PHP_VERSION, PHP_ZTS ? " ZTS" : " NTS", " on ", php_uname("m"), PHP_EOL;'
+
+      # The menu loop test waits on the loop waiter's descriptor: epoll on Linux, kqueue on macOS.
+      - name: Build and enable ext-${{ matrix.os.waiter }}
+        # Homebrew's PHP is the runner user's to write; the Linux PHP is root's.
+        run: ${{ runner.os == 'Linux' && 'sudo ' || '' }}pie install --with-php-config="$(command -v php-config)" php-io-extensions/${{ matrix.os.waiter }}
+
+      # Without it the loop waiter falls back to select, which has no descriptor.
+      - name: Require ext-${{ matrix.os.waiter }}
+        env:
+          WAITER: ${{ matrix.os.waiter }}
+        run: php -r '$ext = getenv("WAITER"); if (! extension_loaded($ext)) { fwrite(STDERR, "ext-{$ext} is not loaded".PHP_EOL); exit(1); } echo "ext-{$ext} ", phpversion($ext), PHP_EOL;'
+
+      - name: Install Composer dependencies
+        run: composer update --prefer-stable --no-interaction --no-progress
+
+      - name: Execute tests
+        run: vendor/bin/pest
