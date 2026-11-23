@@ -9,7 +9,7 @@
         "framebuffer"
     ],
     "license": "MIT",
-    "version": "0.11.5",
+    "version": "0.11.3",
     "homepage": "https://venusian.projectsaturnstudios.com/ecosystem/venusian/topside/0.11.x",
     "support": {
         "issues": "https://github.com/VenusianPHP/topside/issues",
@@ -30,15 +30,9 @@
         "venusian-voyager/nuts-and-bolts": "^0.11.0"
     },
     "replace": {
-        "venusian-surface/av": "self.version",
         "venusian-surface/contracts": "self.version",
-        "venusian-surface/graphics": "self.version",
-        "venusian-surface/human-input": "self.version",
         "venusian-surface/nuts-and-bolts": "self.version",
-        "venusian-surface/rendering": "self.version",
-        "venusian-surface/toolkits": "self.version",
-        "venusian-surface/typography": "self.version",
-        "venusian-surface/velvetge": "self.version"
+        "venusian-surface/toolkits": "self.version"
     },
     "suggest": {},
     "require-dev": {
