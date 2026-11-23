@@ -57,8 +57,17 @@ jobs:
 
       # The menu loop test waits on the loop waiter's descriptor: epoll on Linux, kqueue on macOS.
       - name: Build and enable ext-${{ matrix.os.waiter }}
-        # Homebrew's PHP is the runner user's to write; the Linux PHP is root's.
-        run: ${{ runner.os == 'Linux' && 'sudo ' || '' }}pie install --with-php-config="$(command -v php-config)" php-io-extensions/${{ matrix.os.waiter }}
+        # Homebrew's ZTS php-config answers --php-binary with NONE, and PIE on macOS takes only
+        # --with-php-config: a wrapper answers that one question and hands the rest to the real one.
+        run: |
+          PHP_CONFIG="$(command -v php-config)"
+          if [ "$("$PHP_CONFIG" --php-binary)" = NONE ]; then
+            printf '#!/bin/sh\n[ "$1" = --php-binary ] && { echo "%s"; exit 0; }\nexec "%s" "$@"\n' "$(command -v php)" "$PHP_CONFIG" > "$RUNNER_TEMP/php-config"
+            chmod +x "$RUNNER_TEMP/php-config"
+            PHP_CONFIG="$RUNNER_TEMP/php-config"
+          fi
+          # Homebrew's PHP is the runner user's to write; the Linux PHP is root's.
+          ${{ runner.os == 'Linux' && 'sudo ' || '' }}pie install --with-php-config="$PHP_CONFIG" php-io-extensions/${{ matrix.os.waiter }}
 
       # Without it the loop waiter falls back to select, which has no descriptor.
       - name: Require ext-${{ matrix.os.waiter }}
