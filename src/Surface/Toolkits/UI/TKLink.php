@@ -2,6 +2,7 @@
 
 namespace Surface\Toolkits\UI;
 
+use Surface\NutsAndBolts\Color;
 use Surface\Toolkits\ToolkitException;
 use Surface\Contracts\Toolkits\UI\Placement;
 use Surface\Contracts\Toolkits\Styling\FontSpec;
@@ -94,6 +95,14 @@ abstract class TKLink extends TKPrimitive implements PrimitiveContract
         }
     }
 
+    public function setTextColor(?Color $color): static
+    {
+        $this->guardLive();
+        $this->applyTextColor($color);
+
+        return $this;
+    }
+
     abstract protected function applyText(string $text): void;
 
     abstract protected function applyUrl(string $url): void;
@@ -101,4 +110,9 @@ abstract class TKLink extends TKPrimitive implements PrimitiveContract
     abstract protected function applyAlignment(TextAlignment $alignment): void;
 
     abstract protected function applyFont(FontSpec $font): void;
+
+    /**
+     * Null restores the toolkit's own link colour. Nothing until the adapter can do it natively.
+     */
+    protected function applyTextColor(?Color $color): void {}
 }

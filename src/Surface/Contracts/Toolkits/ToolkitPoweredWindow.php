@@ -41,7 +41,7 @@ interface ToolkitPoweredWindow
      * @throws \RuntimeException When the window is closed, already has one, the name is
      *         refused, or the toolkit has no column.
      */
-    public function column(string $name, int $spacing = 0, int $padding = 0): \Surface\Contracts\Toolkits\UI\TKColumn;
+    public function column(string $name, int $spacing = 0, \Surface\Contracts\Toolkits\UI\Insets|int $padding = 0): \Surface\Contracts\Toolkits\UI\TKColumn;
 
     /**
      * The content container; null before column(), and once it is removed.

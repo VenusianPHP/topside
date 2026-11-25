@@ -19,4 +19,17 @@ interface TKColumn extends TKPrimitiveGroup
      * @return $this
      */
     public function setSpacing(int $spacing): static;
+
+    /**
+     * Space between the edge and the children.
+     * @return Insets
+     */
+    public function padding(): Insets;
+
+    /**
+     * @param Insets|int|string|list<int> $padding one to four values, as CSS takes them
+     * @return $this
+     * @throws RuntimeException When a side is negative.
+     */
+    public function setPadding(Insets|int|string|array $padding): static;
 }

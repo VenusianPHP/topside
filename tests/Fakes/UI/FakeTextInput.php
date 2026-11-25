@@ -44,4 +44,22 @@ class FakeTextInput extends TKTextInput
     {
         $this->record("applyAlignment", $alignment);
     }
+
+    protected function applyBorderless(bool $borderless): void
+    {
+        $this->record("applyBorderless", $borderless);
+    }
+
+    protected function applyReadOnly(bool $readOnly): void
+    {
+        $this->record("applyReadOnly", $readOnly);
+    }
+
+    protected function applyMaxLength(?int $length): void
+    {
+        $this->record("applyMaxLength", $length);
+        if (! is_null($length) && mb_strlen($this->value()) > $length) {
+            $this->cutTo(mb_substr($this->value(), 0, $length));    // as GTK, Qt and Raven do
+        }
+    }
 }

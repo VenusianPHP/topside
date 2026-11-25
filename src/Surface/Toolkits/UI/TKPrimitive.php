@@ -5,7 +5,11 @@ namespace Surface\Toolkits\UI;
 use Closure;
 use Surface\NutsAndBolts\Color;
 use Surface\Toolkits\ToolkitException;
+use InvalidArgumentException;
 use Surface\Contracts\Toolkits\UI\Align;
+use Surface\Contracts\Toolkits\UI\Cursor;
+use Surface\Contracts\Toolkits\UI\Corners;
+use Surface\Contracts\Toolkits\UI\Insets;
 use Surface\Contracts\Toolkits\UI\Placement;
 use Surface\Contracts\Toolkits\UI\TKTransition;
 use Surface\Contracts\Toolkits\Menus\ContextMenu;
@@ -22,6 +26,10 @@ use Surface\Contracts\Toolkits\UI\TKPrimitive as PrimitiveContract;
  * answers the same on every toolkit and at once after a setter.
  *
  * Left to the adapter from the contract: hasFocus() and size().
+ *
+ * The hooks with a body (margin, cursor, tooltip, border) do nothing until an adapter
+ * overrides them: a toolkit with no native way to show a setting leaves it unshown, and the
+ * getter still answers what was set.
  */
 abstract class TKPrimitive implements PrimitiveContract
 {
@@ -37,9 +45,21 @@ abstract class TKPrimitive implements PrimitiveContract
 
     private float $opacity = 1.0;
 
-    private float $corner_radius = 0.0;
+    private ?Corners $corners = null;
+
+    private bool $clip = false;
 
     private bool $watching_size = false;
+
+    private ?Insets $margin = null;
+
+    private ?Cursor $cursor = null;
+
+    private ?string $tooltip = null;
+
+    private int $border_width = 0;
+
+    private ?Color $border_color = null;
 
     /** The floor minSize() set; [0, 0] until set. */
     private array $minimum_size = [0, 0];
@@ -195,7 +215,7 @@ abstract class TKPrimitive implements PrimitiveContract
     /**
      * @throws ToolkitException When removed, or $seconds is negative.
      */
-    public function appear(?TKTransition $transition, float $seconds = 0.25): static
+    public function appear(?TKTransition $transition, float $seconds = TKTransition::DEFAULT_SECONDS): static
     {
         $this->guardLive();
         $this->guardSeconds($seconds);
@@ -209,7 +229,7 @@ abstract class TKPrimitive implements PrimitiveContract
     /**
      * @throws ToolkitException When removed, or $seconds is negative.
      */
-    public function disappear(?TKTransition $transition, float $seconds = 0.25): static
+    public function disappear(?TKTransition $transition, float $seconds = TKTransition::DEFAULT_SECONDS): static
     {
         $this->guardLive();
         $this->guardSeconds($seconds);
@@ -321,25 +341,50 @@ abstract class TKPrimitive implements PrimitiveContract
     }
 
     /**
-     * @throws ToolkitException When removed, or the radius is negative.
+     * @throws ToolkitException When removed, or a radius is negative or cannot be read.
      */
-    public function setCornerRadius(float $radius): static
+    public function setCornerRadius(Corners|float|int|string|array $radius): static
     {
         $this->guardLive();
 
-        if ($radius < 0.0) {
-            throw new ToolkitException("A corner radius is 0.0 or more, got {$radius} for '{$this->path()}'.");
+        try {
+            $corners = Corners::of($radius);
+        } catch (InvalidArgumentException $e) {
+            throw new ToolkitException("Corner radius for '{$this->path()}': {$e->getMessage()}", previous: $e);
         }
 
-        $this->corner_radius = $radius;
-        $this->applyCornerRadius($radius);
+        $this->corners = $corners;
+        $this->applyCorners($corners);
 
         return $this;
     }
 
     public function cornerRadius(): float
     {
-        return $this->corner_radius;
+        return $this->corners()->largest();
+    }
+
+    public function corners(): Corners
+    {
+        return $this->corners ?? Corners::none();
+    }
+
+    /**
+     * @throws ToolkitException When removed.
+     */
+    public function setClip(bool $clip = true): static
+    {
+        $this->guardLive();
+
+        $this->clip = $clip;
+        $this->applyClip($clip);
+
+        return $this;
+    }
+
+    public function clips(): bool
+    {
+        return $this->clip;
     }
 
     /**
@@ -387,6 +432,86 @@ abstract class TKPrimitive implements PrimitiveContract
         $this->applyMinSize($width, $height);
 
         return $this;
+    }
+
+    /**
+     * As fill(): the container first (on some toolkits the space round a child is the
+     * container's to keep), then the primitive.
+     *
+     * @throws ToolkitException When removed, or a side is negative or unreadable.
+     */
+    public function setMargin(Insets|int|string|array $margin): static
+    {
+        $this->guardLive();
+
+        $this->margin = $this->insets($margin, 'margin');
+        $this->parent?->childLayoutChanged($this);
+        $this->applyMargin($this->margin);
+
+        return $this;
+    }
+
+    public function margin(): Insets
+    {
+        return $this->margin ?? Insets::none();
+    }
+
+    public function setCursor(?Cursor $cursor): static
+    {
+        $this->guardLive();
+
+        $this->cursor = $cursor;
+        $this->applyCursor($this->cursorShown());
+
+        return $this;
+    }
+
+    public function cursor(): ?Cursor
+    {
+        return $this->cursor;
+    }
+
+    public function setTooltip(?string $tooltip): static
+    {
+        $this->guardLive();
+
+        $this->tooltip = $tooltip === '' ? null : $tooltip;
+        $this->applyTooltip($this->tooltip);
+
+        return $this;
+    }
+
+    public function tooltip(): ?string
+    {
+        return $this->tooltip;
+    }
+
+    /**
+     * @throws ToolkitException When removed, or the width is negative.
+     */
+    public function setBorder(int $width, ?Color $color = null): static
+    {
+        $this->guardLive();
+
+        if ($width < 0) {
+            throw new ToolkitException("A border is 0 or more wide, got {$width} for '{$this->path()}'.");
+        }
+
+        $this->border_width = $width;
+        $this->border_color = $color;
+        $this->applyBorder($width, $color);
+
+        return $this;
+    }
+
+    public function borderWidth(): int
+    {
+        return $this->border_width;
+    }
+
+    public function borderColor(): ?Color
+    {
+        return $this->border_color;
     }
 
     public function moveBefore(PrimitiveContract $sibling): static
@@ -485,6 +610,29 @@ abstract class TKPrimitive implements PrimitiveContract
         }
 
         return true;
+    }
+
+    /**
+     * The pointer shape to show: the one set, or the one this kind of primitive shows when none
+     * is (a link-style button's pointing hand). Null is the toolkit's own.
+     */
+    protected function cursorShown(): ?Cursor
+    {
+        return $this->cursor;
+    }
+
+    /**
+     * Read one to four values as CSS does.
+     *
+     * @throws ToolkitException When a side is negative or the value unreadable.
+     */
+    protected function insets(Insets|int|string|array $value, string $what): Insets
+    {
+        try {
+            return Insets::of($value);
+        } catch (InvalidArgumentException $e) {
+            throw new ToolkitException("A {$what} for '{$this->path()}': {$e->getMessage()}", previous: $e);
+        }
     }
 
     /**
@@ -614,4 +762,41 @@ abstract class TKPrimitive implements PrimitiveContract
     abstract protected function applyAlign(Align $horizontal, Align $vertical): void;
 
     abstract protected function applyMinSize(int $width, int $height): void;
+
+    /**
+     * Space outside the native. Nothing until the adapter can keep it natively; a toolkit
+     * whose containers keep the space round each child does it in childLayoutChanged(),
+     * reading margin(), and may leave this empty.
+     */
+    protected function applyMargin(Insets $margin): void {}
+
+    /**
+     * Null is the toolkit's own pointer.
+     */
+    protected function applyCursor(?Cursor $cursor): void {}
+
+    /**
+     * Null shows none.
+     */
+    protected function applyTooltip(?string $tooltip): void {}
+
+    /**
+     * Width 0 takes the line away; a null colour is the toolkit's own line colour.
+     */
+    protected function applyBorder(int $width, ?Color $color): void {}
+
+    /**
+     * Each corner its own radius. A toolkit that rounds corners apart overrides this; the
+     * start gives applyCornerRadius() the one radius when they are all the same, and square
+     * corners when they differ, since rounding every corner would be wrong.
+     */
+    protected function applyCorners(Corners $corners): void
+    {
+        $this->applyCornerRadius($corners->isUniform() ? $corners->topLeft : 0.0);
+    }
+
+    /**
+     * True cuts what is inside at the edge and its corner radius; false shows it whole.
+     */
+    protected function applyClip(bool $clip): void {}
 }

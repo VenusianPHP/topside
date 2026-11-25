@@ -5,6 +5,7 @@ namespace Surface\Toolkits\Views;
 use ReflectionClass;
 use ReflectionProperty;
 use Surface\Toolkits\Menus\MenuBar;
+use Surface\Toolkits\Navigation\Navigator;
 use Surface\Toolkits\Views\Elements\Element;
 use Surface\Toolkits\Views\Elements\ComponentElement;
 
@@ -25,7 +26,36 @@ use Surface\Toolkits\Views\Elements\ComponentElement;
  */
 abstract class Component
 {
+    /** The navigation of the window this is mounted in; set when it is mounted. */
+    private ?Navigator $navigator = null;
+
     abstract public function render(): Element;
+
+    /**
+     * The navigation of the window this component is on screen in: the same one for the page
+     * and every component inside it, however deep, with nothing passed down.
+     *
+     *     public function lit(string $route): bool
+     *     {
+     *         return $this->navigator()->current() === $route;
+     *     }
+     *
+     * @throws ViewException When the component is not mounted in a window.
+     */
+    public function navigator(): Navigator
+    {
+        return $this->navigator ?? throw new ViewException(static::class.' is not mounted in a window, so it has no navigator.');
+    }
+
+    /**
+     * @internal The window's navigation, given when the component is mounted.
+     */
+    public function mountedWith(?Navigator $navigator): static
+    {
+        $this->navigator = $navigator;
+
+        return $this;
+    }
 
     /**
      * The bar of the window while this is the view on screen: given the bar the window, route

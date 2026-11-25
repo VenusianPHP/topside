@@ -39,6 +39,7 @@ use Surface\Toolkits\Views\Elements\TabView;
 use Surface\Toolkits\Views\Elements\Tab;
 use Surface\Toolkits\Views\Elements\SplitView;
 use Surface\Toolkits\Views\Elements\Grid;
+use Surface\Toolkits\Views\Elements\Overlay;
 
 /**
  * What a tag means:
@@ -55,6 +56,7 @@ final class TagResolver
     public const array ELEMENTS = [
         'Column' => Column::class,
         'Row' => Row::class,
+        'Overlay' => Overlay::class,
         'Spacer' => Spacer::class,
         'Children' => Children::class,
         'Label' => Label::class,

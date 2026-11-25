@@ -24,6 +24,11 @@ class FakeGrid extends TKGrid
         $this->record('applySpacing', $spacing);
     }
 
+    protected function applyPadding(\Surface\Contracts\Toolkits\UI\Insets $padding): void
+    {
+        $this->record('applyPadding', $padding);
+    }
+
     protected function applyCells(): void
     {
         $this->record('applyCells');

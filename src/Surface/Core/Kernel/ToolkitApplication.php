@@ -3,7 +3,6 @@
 namespace Surface\Core\Kernel;
 
 use ReflectionException;
-use Surface\Toolkits\Navigation\Navigator;
 use Surface\Toolkits\Presentation;
 use Voyager\Core\ApplicationKernel;
 use Surface\Core\Actions\Bootstrap\LoadSignals;
@@ -41,7 +40,7 @@ class ToolkitApplication extends ApplicationKernel
     protected function activate(): void
     {
         $this->app->make(ApplicationShell::class)->open();
-        $this->app->make(Navigator::class)->go('/');
+        Presentation::driver()->navigator()->go('/');
         Presentation::driver()->present();
     }
 

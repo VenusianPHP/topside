@@ -2,6 +2,7 @@
 
 namespace Surface\Toolkits\Views\Elements;
 
+use Surface\Contracts\Toolkits\UI\Insets;
 use Surface\Toolkits\Views\Mounted;
 use Surface\Toolkits\Views\ViewException;
 use Surface\Contracts\Toolkits\UI\TKGrid;
@@ -23,17 +24,23 @@ class Grid extends Container
     /**
      * @throws ViewException When there is not a column.
      */
+    protected readonly Insets $padding;
+
     final public function __construct(
         protected readonly int $columns = 2,
         protected readonly int $spacing = 0,
-        protected readonly int $padding = 0,
+        Insets|int|string|array $padding = 0,
     ) {
         if ($columns < 1) {
             throw new ViewException("A Grid has 1 column or more, got {$columns}.");
         }
+        $this->padding = self::insetsOf($padding, 'padding');
     }
 
-    public static function make(int $columns = 2, int $spacing = 0, int $padding = 0): static
+    /**
+     * @param Insets|int|string|list<int> $padding round the cells, as CSS writes it
+     */
+    public static function make(int $columns = 2, int $spacing = 0, Insets|int|string|array $padding = 0): static
     {
         return new static($columns, $spacing, $padding);
     }
@@ -82,20 +89,16 @@ class Grid extends Container
         $primitive->arrangeCells($cells);
     }
 
-    protected function shape(): array
-    {
-        return ['padding' => $this->padding];
-    }
-
     protected function made(): array
     {
-        return ['spacing' => $this->spacing];
+        return ['spacing' => $this->spacing, 'padding' => $this->padding];
     }
 
     protected function setters(): array
     {
         return parent::setters() + [
             'spacing' => fn (TKGrid $p, int $v) => $p->setSpacing($v),
+            'padding' => fn (TKGrid $p, Insets $v) => $p->setPadding($v),
         ];
     }
 }

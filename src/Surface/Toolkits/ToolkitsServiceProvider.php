@@ -5,6 +5,7 @@ namespace Surface\Toolkits;
 use RuntimeException;
 use ReflectionException;
 use Surface\Toolkits\Views\Sharp;
+use Surface\Toolkits\Navigation\Navigator;
 use Voyager\Contracts\Core\FrameworkCore;
 use Voyager\NutsAndBolts\ServiceProvider;
 use Surface\Toolkits\Managers\MenuManager;
@@ -111,9 +112,14 @@ class ToolkitsServiceProvider extends ServiceProvider
         $this->app->alias('content', PresentationTreeManager::class);
     }
 
+    /**
+     * A navigator belongs to the window that shows routes, not to the application: asking
+     * the container for one gives that window's, so a controller or service reaches the same
+     * history the window's views do. A component asks its own window: $this->navigator().
+     */
     protected function registerNavigation(): void
     {
-
+        $this->app->bind(Navigator::class, static fn () => Presentation::driver()->navigator());
     }
 
     protected function loadRoutes(): void

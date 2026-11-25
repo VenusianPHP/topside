@@ -5,9 +5,12 @@ namespace Surface\Toolkits\UI;
 use Closure;
 use DateTimeImmutable;
 use Surface\Toolkits\ToolkitException;
+use Surface\Contracts\Toolkits\Mail\Views\GroupClicked;
+use Surface\Contracts\Toolkits\UI\Insets;
 use Surface\Contracts\Toolkits\UI\Placement;
 use Surface\Contracts\Toolkits\UI\TKRow as RowContract;
 use Surface\Contracts\Toolkits\UI\TKFixed as FixedContract;
+use Surface\Contracts\Toolkits\UI\TKOverlay as OverlayContract;
 use Surface\Contracts\Toolkits\UI\TKLabel as LabelContract;
 use Surface\Contracts\Toolkits\UI\TKButton as ButtonContract;
 use Surface\Contracts\Toolkits\UI\TKColumn as ColumnContract;
@@ -62,6 +65,8 @@ abstract class TKPrimitiveGroup extends TKPrimitive implements PrimitiveContract
      */
     private array $expanding = [false, false];
 
+    private bool $clickable = false;
+
     public function label(string $name, string $text): LabelContract
     {
         return $this->create(LabelContract::class, $name, $text);
@@ -95,9 +100,9 @@ abstract class TKPrimitiveGroup extends TKPrimitive implements PrimitiveContract
         return $this->create(LinkContract::class, $name, $text, $url);
     }
 
-    public function textInput(string $name, string $value = '', ?string $placeholder = null, bool $secret = false): TextInputContract
+    public function textInput(string $name, string $value = '', ?string $placeholder = null, bool $secret = false, bool $search = false): TextInputContract
     {
-        return $this->create(TextInputContract::class, $name, $value, $placeholder, $secret);
+        return $this->create(TextInputContract::class, $name, $value, $placeholder, $secret, $search);
     }
 
     /**
@@ -151,12 +156,12 @@ abstract class TKPrimitiveGroup extends TKPrimitive implements PrimitiveContract
         return $this->create(ImageContract::class, $name, $file);
     }
 
-    public function column(string $name, int $spacing = 0, int $padding = 0): ColumnContract
+    public function column(string $name, int $spacing = 0, Insets|int $padding = 0): ColumnContract
     {
         return $this->create(ColumnContract::class, $name, $spacing, $padding);
     }
 
-    public function row(string $name, int $spacing = 0, int $padding = 0): RowContract
+    public function row(string $name, int $spacing = 0, Insets|int $padding = 0): RowContract
     {
         return $this->create(RowContract::class, $name, $spacing, $padding);
     }
@@ -200,7 +205,7 @@ abstract class TKPrimitiveGroup extends TKPrimitive implements PrimitiveContract
         return $this->create(TreeContract::class, $name, $columns, $nodes);
     }
 
-    public function grid(string $name, int $spacing = 0, int $padding = 0): GridContract
+    public function grid(string $name, int $spacing = 0, Insets|int $padding = 0): GridContract
     {
         return $this->create(GridContract::class, $name, $spacing, $padding);
     }
@@ -223,6 +228,11 @@ abstract class TKPrimitiveGroup extends TKPrimitive implements PrimitiveContract
     public function fixed(string $name): FixedContract
     {
         return $this->create(FixedContract::class, $name);
+    }
+
+    public function overlay(string $name, Insets|int $padding = 0): OverlayContract
+    {
+        return $this->create(OverlayContract::class, $name, $padding);
     }
 
     /**
@@ -391,6 +401,46 @@ abstract class TKPrimitiveGroup extends TKPrimitive implements PrimitiveContract
     {
         return $this->window()->primitiveFor($contract);
     }
+
+    /**
+     * @throws ToolkitException When removed.
+     */
+    public function setClickable(bool $on = true): static
+    {
+        $this->guardLive();
+
+        if ($on !== $this->clickable) {
+            $this->clickable = $on;
+            $this->applyClickable($on);
+        }
+
+        return $this;
+    }
+
+    public function isClickable(): bool
+    {
+        return $this->clickable;
+    }
+
+    /**
+     * The toolkit saw a primary press and its release on the group or on passive content in
+     * it, at $x, $y from the group's top-left: post GroupClicked. Nothing while it is not
+     * clickable, while it or a group above it is disabled, or once it is going.
+     */
+    protected function groupClicked(float $x, float $y): void
+    {
+        if ($this->isRemoved() || ! $this->clickable || ! $this->takesInput()) {
+            return;
+        }
+
+        $this->window()->post(new GroupClicked($this->window()->name(), $this->path(), $this->uuid(), $x, $y));
+    }
+
+    /**
+     * Listen for primary clicks on the native, or stop. A toolkit with no way to hear a click
+     * on a plain container leaves this empty, and the group posts nothing.
+     */
+    protected function applyClickable(bool $on): void {}
 
     /**
      * Put $child's native inside this one, at the end, where $child->placement() says.

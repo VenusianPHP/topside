@@ -21,7 +21,7 @@ interface TKTabView extends TKPrimitiveGroup
      * @return TKColumn the page's content
      * @throws RuntimeException When the index is outside 0..count.
      */
-    public function addPage(string $name, string $title, ?int $index = null, int $spacing = 0, int $padding = 0): TKColumn;
+    public function addPage(string $name, string $title, ?int $index = null, int $spacing = 0, Insets|int $padding = 0): TKColumn;
 
     /**
      * @return list<string> page names, in order

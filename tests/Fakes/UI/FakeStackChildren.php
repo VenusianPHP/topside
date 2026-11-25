@@ -26,8 +26,18 @@ trait FakeStackChildren
         $this->record('reorderNative', $child->name(), $index);
     }
 
+    protected function childLayoutChanged(TKPrimitive $child): void
+    {
+        $this->record('childLayoutChanged', $child->name());
+    }
+
     protected function applySpacing(int $spacing): void
     {
         $this->record('applySpacing', $spacing);
+    }
+
+    protected function applyPadding(\Surface\Contracts\Toolkits\UI\Insets $padding): void
+    {
+        $this->record('applyPadding', $padding);
     }
 }

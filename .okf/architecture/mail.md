@@ -5,7 +5,7 @@ description: The signals toolkit windows and primitives post, their names, and w
 resource: src/Surface/Contracts/Toolkits/Mail/
 tags: [topside, toolkits, mail, signals]
 status: draft
-generated: { by: claude-opus/5.5, at: 2026-11-22T19:07:34Z }
+generated: { by: claude-opus/5.5, at: 2026-11-25T15:20:00Z }
 sources:
   - id: mail
     resource: src/Surface/Contracts/Toolkits/Mail/
@@ -45,6 +45,7 @@ A window or primitive posts through the session (`ToolkitWindow::post()`); the s
 | Class | `name()` | Posted by |
 |---|---|---|
 | `ButtonClicked` | `view.clicked.{window}.{path}` | `TKButton::clicked()`, which each adapter calls from its native click; nothing once removed or while disabled |
+| `GroupClicked` | `view.group-clicked.{window}.{path}` | `TKPrimitiveGroup::groupClicked(x, y)`, which an adapter calls from its native click on a clickable group; nothing unless clickable, while disabled, or once removed |
 | `FocusGained` | `view.focus-gained.{window}.{path}` | `ToolkitWindow::settleFocus()` after a pump, when the window's focus moved to this primitive (any move, `focus()` from code included) |
 | `Toggled` | `view.toggled.{window}.{path}` | `toggled()` of `TKCheckbox`, `TKToggle` and `TKToggleButton`, which each adapter calls from its native signal; carries `on`. Nothing for a change made from code, once removed, or while disabled |
 | `SelectionChanged` | `view.selection-changed.{window}.{path}` | `TKDropdown::chosen()`, `TKSegmentedControl::chosen()`, a `TKComboBox` choice (-1 for a completion); carries `index` and `option`. Nothing for a selection made from code, once removed, or while disabled |
@@ -60,7 +61,7 @@ A window or primitive posts through the session (`ToolkitWindow::post()`); the s
 | `ViewScrolled` | `view.scrolled.{window}.{path}` | a watched text area or item view, the latest per pump; carries `position` |
 | `FocusLost` | `view.focus-lost.{window}.{path}` | `ToolkitWindow::settleFocus()`, for the primitive the focus moved off; not for a removed one |
 
-Also declared, posted by nothing yet (their primitives are not built): `GroupClicked`, `RightClicked`, `ScrollChanged`, `ViewResized`.
+Also declared, posted by nothing yet (their primitives are not built): `RightClicked`, `ScrollChanged`, `ViewResized`.
 
 [^mail]: Toolkit mail contracts
 [^signals]: LoadSignals

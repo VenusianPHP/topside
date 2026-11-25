@@ -3,27 +3,37 @@
 namespace Surface\Toolkits\Views\Elements;
 
 use Surface\Toolkits\Views\Justify;
+use Surface\Toolkits\Views\ViewException;
+use Surface\Contracts\Toolkits\UI\Insets;
 use Surface\Contracts\Toolkits\UI\TKColumn as ColumnContract;
 use Surface\Contracts\Toolkits\UI\TKRow as RowContract;
 
 /**
- * What a column and a row share: children one after another, a gap between them, a margin
- * around them all, and where along the axis they gather.
+ * What a column and a row share: children one after another, a gap between them, padding
+ * round them all (each side its own), and where along the axis they gather.
  */
 abstract class Stack extends Container
 {
     protected Justify $justify = Justify::START;
 
+    protected readonly Insets $padding;
+
+    /**
+     * @throws ViewException When the padding has a negative side or cannot be read.
+     */
     final public function __construct(
         protected readonly int $spacing = 0,
-        protected readonly int $padding = 0,
-    ) {}
+        Insets|int|string|array $padding = 0,
+    ) {
+        $this->padding = self::insetsOf($padding, 'padding');
+    }
 
     /**
      * @param int $spacing points between one child and the next
-     * @param int $padding points between the edge and the children, on every side
+     * @param Insets|int|string|list<int> $padding points between the edge and the children, as
+     *        CSS writes it: 16, '40 16', '40 16 8' or '40 16 8 0'
      */
-    public static function make(int $spacing = 0, int $padding = 0): static
+    public static function make(int $spacing = 0, Insets|int|string|array $padding = 0): static
     {
         return new static($spacing, $padding);
     }
@@ -52,36 +62,34 @@ abstract class Stack extends Container
         return [...$before, ...$this->children, ...$after];
     }
 
-    /**
-     * A container takes its padding only when it is built.
-     */
-    protected function shape(): array
-    {
-        return ['padding' => $this->padding];
-    }
-
     protected function setters(): array
     {
         return parent::setters() + [
             'spacing' => fn (ColumnContract|RowContract $p, int $v) => $p->setSpacing($v),
+            'padding' => fn (ColumnContract|RowContract $p, Insets $v) => $p->setPadding($v),
         ];
     }
 
     /**
-     * The constructor's spacing is a property like any other, so a change becomes setSpacing().
+     * The constructor's spacing and padding are properties like any other, so a change becomes
+     * setSpacing() or setPadding(), not a new primitive.
      */
     protected function valueOf(string $prop): mixed
     {
-        return $prop === 'spacing' ? $this->spacing : parent::valueOf($prop);
+        return match ($prop) {
+            'spacing' => $this->spacing,
+            'padding' => $this->padding,
+            default => parent::valueOf($prop),
+        };
     }
 
     protected function initial(string $prop): mixed
     {
-        return $prop === 'spacing' ? $this->spacing : parent::initial($prop);
+        return in_array($prop, ['spacing', 'padding'], true) ? $this->valueOf($prop) : parent::initial($prop);
     }
 
     protected function tracked(): array
     {
-        return ['spacing'];
+        return ['spacing', 'padding'];
     }
 }

@@ -4,6 +4,7 @@ namespace Surface\Toolkits\Views\Elements;
 
 use Closure;
 use Surface\NutsAndBolts\Color;
+use Surface\Toolkits\Views\ViewException;
 use Surface\Contracts\Toolkits\UI\TKTextInput;
 use Surface\Contracts\Toolkits\UI\TKPrimitive;
 use Surface\Contracts\Toolkits\Styling\FontSpec;
@@ -19,7 +20,7 @@ use Surface\Contracts\Toolkits\Mail\Views\TextSubmitted;
  *         ->onChange(fn (string $text) => $this->draft = $text)
  *
  * The value is written to the field when the state's value changes, so clearing the state
- * clears the field.
+ * clears the field. search builds the toolkit's search field; it cannot also be secret.
  */
 class TextInput extends Element
 {
@@ -27,16 +28,21 @@ class TextInput extends Element
         protected readonly string $value = '',
         protected readonly ?string $placeholder = null,
         protected readonly bool $secret = false,
-    ) {}
+        protected readonly bool $search = false,
+    ) {
+        if ($secret && $search) {
+            throw new ViewException('A TextInput is secret or search, not both.');
+        }
+    }
 
-    public static function make(string $value = '', ?string $placeholder = null, bool $secret = false): static
+    public static function make(string $value = '', ?string $placeholder = null, bool $secret = false, bool $search = false): static
     {
-        return new static($value, $placeholder, $secret);
+        return new static($value, $placeholder, $secret, $search);
     }
 
     public function build(TKPrimitiveGroup $parent, string $name): TKPrimitive
     {
-        return $parent->textInput($name, $this->value, $this->placeholder, $this->secret);
+        return $parent->textInput($name, $this->value, $this->placeholder, $this->secret, $this->search);
     }
 
     public function kind(): string
@@ -66,6 +72,30 @@ class TextInput extends Element
         return $this->on('submit', static fn (TextSubmitted $mail) => $handler($mail->value, $mail));
     }
 
+    /**
+     * No frame and no field background of the toolkit's own.
+     */
+    public function borderless(bool $borderless = true): static
+    {
+        return $this->set('borderless', $borderless);
+    }
+
+    /**
+     * The text can be selected and copied, not changed.
+     */
+    public function readOnly(bool $readOnly = true): static
+    {
+        return $this->set('readOnly', $readOnly);
+    }
+
+    /**
+     * The most characters the user can type; null is no limit.
+     */
+    public function maxLength(?int $length): static
+    {
+        return $this->set('maxLength', $length);
+    }
+
     public function textAlign(TextAlignment $alignment): static
     {
         return $this->set('textAlign', $alignment);
@@ -83,7 +113,7 @@ class TextInput extends Element
 
     protected function shape(): array
     {
-        return ['font' => $this->has('font'), 'secret' => $this->secret];
+        return ['font' => $this->has('font'), 'secret' => $this->secret, 'search' => $this->search];
     }
 
     protected function tracked(): array
@@ -104,12 +134,21 @@ class TextInput extends Element
             'textAlign' => fn (TKTextInput $p, TextAlignment $v) => $p->setAlignment($v),
             'font' => fn (TKTextInput $p, FontSpec $v) => $p->setFont($v),
             'color' => fn (TKTextInput $p, ?Color $v) => $p->setTextColor($v),
+            'borderless' => fn (TKTextInput $p, bool $v) => $p->setBorderless($v),
+            'readOnly' => fn (TKTextInput $p, bool $v) => $p->setReadOnly($v),
+            'maxLength' => fn (TKTextInput $p, ?int $v) => $p->setMaxLength($v),
         ];
     }
 
     protected function defaults(): array
     {
-        return parent::defaults() + ['textAlign' => TextAlignment::LEFT, 'color' => null];
+        return parent::defaults() + [
+            'textAlign' => TextAlignment::LEFT,
+            'color' => null,
+            'borderless' => false,
+            'readOnly' => false,
+            'maxLength' => null,
+        ];
     }
 
     protected function valueOf(string $prop): mixed

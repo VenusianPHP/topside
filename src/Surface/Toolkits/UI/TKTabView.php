@@ -3,6 +3,7 @@
 namespace Surface\Toolkits\UI;
 
 use Surface\Toolkits\ToolkitException;
+use Surface\Contracts\Toolkits\UI\Insets;
 use Surface\Toolkits\UI\Concerns\IgnoresItsOwnWrites;
 use Surface\Contracts\Toolkits\Mail\Views\TabSelected;
 use Surface\Contracts\Toolkits\UI\TKColumn as ColumnContract;
@@ -32,7 +33,7 @@ abstract class TKTabView extends TKGroup implements PrimitiveContract
     /**
      * @throws ToolkitException When removed, the name is refused, or the index is out of range.
      */
-    public function addPage(string $name, string $title, ?int $index = null, int $spacing = 0, int $padding = 0): ColumnContract
+    public function addPage(string $name, string $title, ?int $index = null, int $spacing = 0, Insets|int $padding = 0): ColumnContract
     {
         $this->admit($name);
         $count = count($this->children);

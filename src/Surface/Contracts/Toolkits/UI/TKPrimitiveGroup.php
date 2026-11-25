@@ -79,9 +79,11 @@ interface TKPrimitiveGroup extends TKPrimitive
      * @param string $value
      * @param string|null $placeholder
      * @param bool $secret masked entry
+     * @param bool $search the toolkit's search field
      * @return TKTextInput
+     * @throws RuntimeException When both secret and search.
      */
-    public function textInput(string $name, string $value = '', ?string $placeholder = null, bool $secret = false): TKTextInput;
+    public function textInput(string $name, string $value = '', ?string $placeholder = null, bool $secret = false, bool $search = false): TKTextInput;
 
     /**
      * @param string $name
@@ -216,32 +218,40 @@ interface TKPrimitiveGroup extends TKPrimitive
     /**
      * @param string $name
      * @param int $spacing between children
-     * @param int $padding around the children
+     * @param Insets|int $padding around the children
      * @return TKColumn
      */
-    public function column(string $name, int $spacing = 0, int $padding = 0): TKColumn;
+    public function column(string $name, int $spacing = 0, Insets|int $padding = 0): TKColumn;
 
     /**
      * @param string $name
      * @param int $spacing between children
-     * @param int $padding around the children
+     * @param Insets|int $padding around the children
      * @return TKRow
      */
-    public function row(string $name, int $spacing = 0, int $padding = 0): TKRow;
+    public function row(string $name, int $spacing = 0, Insets|int $padding = 0): TKRow;
 
     /**
      * @param string $name
      * @param int $spacing between cells
-     * @param int $padding around the cells
+     * @param Insets|int $padding around the cells
      * @return TKGrid
      */
-    public function grid(string $name, int $spacing = 0, int $padding = 0): TKGrid;
+    public function grid(string $name, int $spacing = 0, Insets|int $padding = 0): TKGrid;
 
     /**
      * @param string $name
      * @return TKFixed
      */
     public function fixed(string $name): TKFixed;
+
+    /**
+     * Children on top of each other, the first at the back.
+     * @param string $name
+     * @param Insets|int $padding
+     * @return TKOverlay
+     */
+    public function overlay(string $name, Insets|int $padding = 0): TKOverlay;
 
     /**
      * @param string $name
@@ -284,19 +294,19 @@ interface TKPrimitiveGroup extends TKPrimitive
     //  */
     // public function takePlacement(): Placement;
 
-    // /**
-    //  * Whether a primary click on this group posts GroupClicked: a press and its release on the group
-    //  * itself or on passive content inside it (a label, image, separator, spinner, progress bar or inner
-    //  * group that is not clickable itself). A control inside keeps its own mail and posts no GroupClicked.
-    //  * Nothing while the group or one of its groups is disabled. Posts nothing.
-    //  *
-    //  * @param bool $on
-    //  * @return $this
-    //  */
-    // public function setClickable(bool $on = true): static;
+    /**
+     * Whether a primary click on this group posts GroupClicked: a press and its release on the group
+     * itself or on passive content inside it (a label, image, separator, spinner, progress bar or inner
+     * group that is not clickable itself). A control inside keeps its own mail and posts no GroupClicked.
+     * Nothing while the group or one of its groups is disabled. Posts nothing.
+     *
+     * @param bool $on
+     * @return $this
+     */
+    public function setClickable(bool $on = true): static;
 
-    // /**
-    //  * @return bool
-    //  */
-    // public function isClickable(): bool;
+    /**
+     * @return bool
+     */
+    public function isClickable(): bool;
 }

@@ -5,7 +5,7 @@ description: Markup views - resources/**/*.sharp.php compiled to Component class
 resource: src/Surface/Toolkits/Views/Sharp/
 tags: [topside, toolkits, views, sharp, templates]
 status: draft
-generated: { by: claude-opus/5.5, at: 2026-11-22T19:07:34Z }
+generated: { by: claude-opus/5.5, at: 2026-11-25T15:20:00Z }
 sources:
   - id: sharp
     resource: src/Surface/Toolkits/Views/Sharp.php
@@ -27,9 +27,9 @@ sources:
 
 # Markup
 
-* `name="text"` is cast to the type the element takes; `:name="expr"` is PHP; a name alone is true. Several arguments are spaced: `minSize="340 0"`, `align="start center"`. `font="15 bold italic"`, `background="#33669980"`.
+* `name="text"` is cast to the type the element takes; `:name="expr"` is PHP; a name alone is true. Several arguments are spaced: `minSize="340 0"`, `align="start center"`. `font="15 bold italic"`, `background="#33669980"`. `padding` and `margin` are one to four values in CSS order: `padding="40 16"`, `margin="12 0 8"`, checked when compiled. `cursor="pointer"`, `border="1 #33333380"`, `style="link"`, `role="default"`. `cornerRadius` is one to four radii in CSS `border-radius` order (`cornerRadius="0 0 14 14"`), checked when compiled; `clip` alone cuts the content at the edge. `<Overlay>` holds its children on top of each other, the first at the back. `appear="move-right"` and `disappear="move-right 0.4"` take a transition and, optionally, seconds; a primitive built hidden takes no transition, and one already there plays it each time `visible` changes.
 * A text tag's content is its text; `{{ expr }}` works there and in text attributes. `@{{` and `@@` are literal.
-* `@click="save"`, `@click="remove($id)"`, `@change="fn ($v) => $this->name = $v"`. Template variables are copies of the public properties: assigning one in a handler is a compile error.
+* `@click` works on `<Button>` and on every container (`<Column>`, `<Row>`, `<Grid>`, `<Overlay>` and the rest), which then listens for clicks (`setClickable()`); a label or image alone has none. `@click="save"`, `@click="remove($id)"`, `@change="fn ($v) => $this->name = $v"`. Template variables are copies of the public properties: assigning one in a handler is a compile error.
 * `@if/@elseif/@else/@endif`, `@foreach/@endforeach` (each element in it has a key), `@php/@endphp`, `{{-- --}}`, `<Children/>`.
 * The vocabulary is read off the element classes: make() arguments, fluent setters, on*() methods. A new element is one line in `TagResolver::ELEMENTS`, and one in `Compiler::CONTENT` if it has text content.[^compiler]
 

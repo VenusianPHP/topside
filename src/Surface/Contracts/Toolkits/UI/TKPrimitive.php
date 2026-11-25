@@ -103,7 +103,7 @@ interface TKPrimitive
      * @return $this
      * @throws RuntimeException When removed, or $seconds is negative.
      */
-    public function appear(?TKTransition $transition, float $seconds = 0.25): static;
+    public function appear(?TKTransition $transition, float $seconds = TKTransition::DEFAULT_SECONDS): static;
 
     /**
      * Play $transition backwards each time setVisible(false) hides the view, then hide it; null hides it at once.
@@ -112,7 +112,7 @@ interface TKPrimitive
      * @return $this
      * @throws RuntimeException When removed, or $seconds is negative.
      */
-    public function disappear(?TKTransition $transition, float $seconds = 0.25): static;
+    public function disappear(?TKTransition $transition, float $seconds = TKTransition::DEFAULT_SECONDS): static;
 
     /**
      * Native sensitivity; containers cascade to their subtree.
@@ -199,19 +199,42 @@ interface TKPrimitive
     public function setBackground(?Color $color): static;
 
     /**
-     * Round the corners of the view's background (setBackground); its content is not clipped.
-     * 0.0 (the start) is square, except on a button: there it is the toolkit's own button
-     * rounding. Posts nothing.
-     * @param float $radius in points
+     * Round the corners of the view's background (setBackground); its content is not clipped
+     * unless setClip() says so. One radius for every corner, or one to four as CSS writes
+     * them ('0 0 14 14' is square on top). 0 (the start) is square, except on a button: there
+     * it is the toolkit's own button rounding. A toolkit that cannot round corners apart rounds
+     * none of them when they differ. Posts nothing.
+     * @param Corners|float|int|string|list<int|float> $radius in points
      * @return $this
-     * @throws RuntimeException When the radius is negative.
+     * @throws RuntimeException When a radius is negative or cannot be read.
      */
-    public function setCornerRadius(float $radius): static;
+    public function setCornerRadius(Corners|float|int|string|array $radius): static;
 
     /**
+     * The largest of the corner radii: the one radius when they are all the same.
      * @return float
      */
     public function cornerRadius(): float;
+
+    /**
+     * The radius of each corner.
+     * @return Corners
+     */
+    public function corners(): Corners;
+
+    /**
+     * Cut what is inside the view at its edge, following its corner radius: an image that
+     * fills a rounded container takes its rounded corners. Off at the start. A toolkit that
+     * can clip only to the rectangle clips to the rectangle; one that cannot clip leaves it.
+     * @param bool $clip
+     * @return $this
+     */
+    public function setClip(bool $clip = true): static;
+
+    /**
+     * @return bool
+     */
+    public function clips(): bool;
 
     /**
      * Expand into spare space along each axis.
@@ -237,6 +260,63 @@ interface TKPrimitive
      * @throws RuntimeException When either is negative.
      */
     public function minSize(int $width, int $height): static;
+
+    /**
+     * Space kept outside the view, between it and what is around it; its background does not
+     * reach into it. A toolkit that cannot keep space around one view keeps none.
+     * @param Insets|int|string|list<int> $margin one to four values, as CSS takes them
+     * @return $this
+     * @throws RuntimeException When a side is negative.
+     */
+    public function setMargin(Insets|int|string|array $margin): static;
+
+    /**
+     * @return Insets
+     */
+    public function margin(): Insets;
+
+    /**
+     * The pointer's shape over the view; null restores the toolkit's own.
+     * @param Cursor|null $cursor
+     * @return $this
+     */
+    public function setCursor(?Cursor $cursor): static;
+
+    /**
+     * @return Cursor|null
+     */
+    public function cursor(): ?Cursor;
+
+    /**
+     * Text shown when the pointer rests on the view; null or '' shows none.
+     * @param string|null $tooltip
+     * @return $this
+     */
+    public function setTooltip(?string $tooltip): static;
+
+    /**
+     * @return string|null
+     */
+    public function tooltip(): ?string;
+
+    /**
+     * A line round the view's edge, inside its background and its corner radius. 0 draws none.
+     * @param int $width in points
+     * @param Color|null $color null is the toolkit's own line colour
+     * @return $this
+     * @throws RuntimeException When the width is negative.
+     */
+    public function setBorder(int $width, ?Color $color = null): static;
+
+    /**
+     * @return int
+     */
+    public function borderWidth(): int;
+
+    /**
+     * @return Color|null
+     */
+    public function borderColor(): ?Color;
 
     /**
      * Move this primitive just before $sibling inside their column or row.

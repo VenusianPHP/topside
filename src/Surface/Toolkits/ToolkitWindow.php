@@ -101,7 +101,7 @@ abstract class ToolkitWindow implements ToolkitPoweredWindow
      * @throws ToolkitException When the window is closed, already has a content container,
      *         or the toolkit has no column. The name is checked by the column itself.
      */
-    public function column(string $name, int $spacing = 0, int $padding = 0): ColumnContract
+    public function column(string $name, int $spacing = 0, \Surface\Contracts\Toolkits\UI\Insets|int $padding = 0): ColumnContract
     {
         if (! $this->isOpen()) {
             throw new ToolkitException("Window '{$this->name}' is closed.");

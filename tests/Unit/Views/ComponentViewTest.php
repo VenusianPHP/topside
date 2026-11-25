@@ -8,6 +8,7 @@ use Surface\Toolkits\Views\Justify;
 use Surface\Toolkits\Views\ViewException;
 use Surface\Toolkits\Views\Elements\Label;
 use Surface\Toolkits\Views\Elements\Column;
+use Surface\Contracts\Toolkits\UI\Insets;
 use Surface\Toolkits\Views\Elements\Button;
 use Surface\Toolkits\Views\Elements\Row;
 use Surface\Toolkits\Demo\Views\DemoHomeView;
@@ -179,10 +180,10 @@ describe('changing what is on screen', function (): void {
         $view->state['hidden'] = false;
         rerender();
 
-        expect($label->calls)->toBe([['applyVisible', [true]]]);
+        expect($label->calls)->toBe([['applyVisible', [true, null, 0.0]]]);
     });
 
-    it('changes spacing with a setter and builds a container again for new padding', function (): void {
+    it('changes spacing and padding with setters, on the same container', function (): void {
         $view = scripted(fn (ScriptedView $v) => Column::make(spacing: $v->state['spacing'] ?? 4, padding: $v->state['padding'] ?? 0)->with(Label::make('a')));
         $column = at('column1');
 
@@ -191,10 +192,16 @@ describe('changing what is on screen', function (): void {
         expect(at('column1'))->toBe($column)
             ->and($column->calls)->toContain(['applySpacing', [8]]);
 
-        $view->state['padding'] = 10;
+        $view->state['padding'] = '40 16';
         rerender();
-        expect($column->isRemoved())->toBeTrue()
-            ->and(screen()->children()[0]->name())->toBe('column2');
+        expect(at('column1'))->toBe($column)
+            ->and($column->isRemoved())->toBeFalse()
+            ->and(array_values(array_filter($column->calls, fn (array $call) => $call[0] === 'applyPadding')))->toEqual([['applyPadding', [new Insets(40, 16, 40, 16)]]])
+            ->and($column->padding())->toEqual(new Insets(40, 16, 40, 16));
+
+        $calls = count($column->calls);
+        rerender();
+        expect(count($column->calls))->toBe($calls);
     });
 
     it('moves keyed children instead of building them again', function (): void {

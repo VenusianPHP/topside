@@ -5,6 +5,7 @@ namespace Surface\Contracts\Toolkits\UI;
 use Surface\Contracts\Toolkits\UI\TKPrimitive;
 use Surface\Contracts\Toolkits\Styling\FontSpec;
 use Surface\Contracts\Toolkits\Styling\TextAlignment;
+use Surface\NutsAndBolts\Color;
 
 /**
  * Text that opens a URL when clicked: the toolkit opens it (the browser for http and https).
@@ -45,4 +46,10 @@ interface TKLink extends TKPrimitive
      * @return $this
      */
     public function setFont(FontSpec $font): static;
+
+    /**
+     * @param Color|null $color null restores the toolkit's own link colour
+     * @return $this
+     */
+    public function setTextColor(?Color $color): static;
 }

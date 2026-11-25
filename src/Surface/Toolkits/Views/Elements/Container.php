@@ -2,6 +2,10 @@
 
 namespace Surface\Toolkits\Views\Elements;
 
+use Closure;
+use Surface\Contracts\Toolkits\UI\TKPrimitive;
+use Surface\Contracts\Toolkits\UI\TKPrimitiveGroup;
+
 /**
  * An element that holds others, in order.
  */
@@ -32,5 +36,29 @@ abstract class Container extends Element
     public function children(): array
     {
         return $this->children;
+    }
+
+    /**
+     * Run $handler when the user clicks the container: a primary press and its release on it
+     * or on passive content inside it (a label, an image). A control inside keeps its own
+     * click. It is given the GroupClicked mail; a method that takes nothing ignores it.
+     */
+    public function onClick(Closure $handler): static
+    {
+        $this->set('clickable', true);
+
+        return $this->on('click', $handler);
+    }
+
+    protected function setters(): array
+    {
+        return parent::setters() + [
+            'clickable' => fn (TKPrimitive $p, bool $v) => $p instanceof TKPrimitiveGroup && $p->setClickable($v),
+        ];
+    }
+
+    protected function defaults(): array
+    {
+        return parent::defaults() + ['clickable' => false];
     }
 }

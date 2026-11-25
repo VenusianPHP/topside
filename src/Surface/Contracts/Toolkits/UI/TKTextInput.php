@@ -55,4 +55,47 @@ interface TKTextInput extends TKPrimitive
 
     /** The text's place inside the view; left until set. */
     public function setAlignment(TextAlignment $alignment): static;
+
+    /**
+     * Built as the toolkit's search field (its search glyph, its clear button) where it has one.
+     * @return bool
+     */
+    public function isSearch(): bool;
+
+    /**
+     * No frame and no field background of its own. False until set.
+     * @param bool $borderless
+     * @return $this
+     */
+    public function setBorderless(bool $borderless = true): static;
+
+    /**
+     * @return bool
+     */
+    public function isBorderless(): bool;
+
+    /**
+     * The text can be selected and copied, not changed. False until set.
+     * @param bool $readOnly
+     * @return $this
+     */
+    public function setReadOnly(bool $readOnly = true): static;
+
+    /**
+     * @return bool
+     */
+    public function isReadOnly(): bool;
+
+    /**
+     * The most characters the user can type; null is no limit.
+     * @param int|null $length
+     * @return $this
+     * @throws \RuntimeException When the length is below 1.
+     */
+    public function setMaxLength(?int $length): static;
+
+    /**
+     * @return int|null
+     */
+    public function maxLength(): ?int;
 }

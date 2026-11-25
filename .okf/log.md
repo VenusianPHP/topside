@@ -1,5 +1,19 @@
 # Log
 
+## 2026-11-25
+
+* **Update**: [Primitives](/architecture/primitives.md): a move follows one curve on every toolkit, `TKTransition::curve()`: easeOutQuint appearing, easeInQuint disappearing.
+* **Update**: [Primitives](/architecture/primitives.md): a transition given no time runs 0.3 seconds (`TKTransition::DEFAULT_SECONDS`).
+* **Update**: [Primitives](/architecture/primitives.md), [Sharp](/architecture/sharp.md), [Mail](/architecture/mail.md), [Views](/architecture/views.md): a group can be clickable (`setClickable()`, `applyClickable()`, `GroupClicked`), so `@click` works on every container. `TKTransition` gains `MOVE_RIGHT`, `MOVE_LEFT`, `MOVE_TOP`, `MOVE_BOTTOM`, travelling the primitive's own size with no fade, and `DEFAULT_SECONDS`; `appear` and `disappear` are Sharp attributes, and a primitive built hidden plays nothing. 653 tests on NTS and ZTS.
+* **Fix**: [Primitives](/architecture/primitives.md): an overlay took spare room in its column whenever a child filled, so a picture covering a 320-point card made the card grow. A child that fills both ways no longer counts toward `expands()`. 636 tests on NTS and ZTS.
+* **Update**: [Primitives](/architecture/primitives.md), [Sharp](/architecture/sharp.md): `TKOverlay` and `<Overlay>`, children on top of each other, sized by every child but one that fills both ways; `Corners`, a radius for each corner, through `setCornerRadius()` and `applyCorners()`; `setClip()` and `applyClip()`. 635 tests on NTS and ZTS.
+* **Fix**: [Views](/architecture/views.md): a navigator belongs to the window that shows routes. The presentation driver owns it, every component mounted there reaches it with `$this->navigator()`, and the container's `Navigator` is that one. Nothing bound `Navigator` before, so `current()` was always null and history never lasted. 603 tests on NTS and ZTS.
+
+## 2026-11-24
+
+* **Update**: [Primitives](/architecture/primitives.md), [Views](/architecture/views.md), [Sharp](/architecture/sharp.md): padding is `Insets`, one to four values in CSS order, and changes live (`setPadding()`, `applyPadding()`) on columns, rows, grids and tab pages instead of building the container again. Every primitive takes a margin, cursor, tooltip and border; a button its style (default, borderless, link), font, colour, alignment, icon file or symbol, and role; a text input search (fixed), borderless, read-only and maximum length; a link its colour. Their hooks are optional: a toolkit with no native way to show one leaves it unshown. 597 tests on NTS and ZTS.
+* **Update**: [Primitives](/architecture/primitives.md): `TKTextInput::cutTo()` for a field a maximum length shortened, and `Insets` padding on a window's content column. 598 tests on NTS and ZTS.
+
 ## 2026-11-22
 
 * **Update**: [Menu runtime](/architecture/menu-runtime.md): Raven has a bar too, on Raven's own API: all four adapters have one. No topside code changed.

@@ -8,6 +8,7 @@ use Surface\Toolkits\ToolkitException;
 use Surface\Toolkits\Views\Component;
 use Surface\Toolkits\Managers\MenuManager;
 use Surface\Toolkits\Views\MountedView;
+use Surface\Toolkits\Navigation\Navigator;
 use Surface\Contracts\Toolkits\UI\TKColumn;
 use Voyager\Contracts\Vessel\TheServiceContainer;
 use Surface\Contracts\Toolkits\ToolkitPoweredWindow;
@@ -24,6 +25,9 @@ class PresentationTreeDriver extends ContentTreeDriver
 
     /** The view on screen; one at a time. */
     protected ?MountedView $view = null;
+
+    /** This window's navigation: its routes, its history; every view mounted here gets it. */
+    protected ?Navigator $navigator = null;
 
     public function __construct(
         protected TheServiceContainer $app
@@ -65,7 +69,7 @@ class PresentationTreeDriver extends ContentTreeDriver
         }
 
         $this->view?->unmount();
-        $mounted = $this->view = new MountedView($view, $this->root);
+        $mounted = $this->view = new MountedView($view, $this->root, $this->navigator());
         $mounted->render();
 
         app(MenuManager::class)->showsView($this->window->name(), $view, function () use ($mounted): void {
@@ -111,6 +115,15 @@ class PresentationTreeDriver extends ContentTreeDriver
 
         $view->render();
         app(MenuManager::class)->refresh($this->window->name());
+    }
+
+    /**
+     * The navigation of the window this presentation shows routes in. It lives as long as the
+     * presentation, so its current route and history last across views.
+     */
+    public function navigator(): Navigator
+    {
+        return $this->navigator ??= new Navigator();
     }
 
     public function view(): ?MountedView

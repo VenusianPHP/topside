@@ -27,4 +27,9 @@ class FakeLink extends TKLink
     {
         $this->record("applyAlignment", $alignment);
     }
+
+    protected function applyTextColor(?\Surface\NutsAndBolts\Color $color): void
+    {
+        $this->record("applyTextColor", $color);
+    }
 }

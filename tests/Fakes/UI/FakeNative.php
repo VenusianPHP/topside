@@ -4,6 +4,8 @@ namespace Venusian\Topside\Tests\Fakes\UI;
 
 use Surface\NutsAndBolts\Color;
 use Surface\Contracts\Toolkits\UI\Align;
+use Surface\Contracts\Toolkits\UI\Cursor;
+use Surface\Contracts\Toolkits\UI\Insets;
 use Surface\Contracts\Toolkits\UI\TKTransition;
 
 /**
@@ -65,7 +67,7 @@ trait FakeNative
 
     protected function applyVisible(bool $visible, ?TKTransition $transition, float $seconds): void
     {
-        $this->record('applyVisible', $visible);
+        $this->record('applyVisible', $visible, $transition, $seconds);
     }
 
     protected function applyEnabled(bool $enabled): void
@@ -106,5 +108,44 @@ trait FakeNative
     protected function applyMinSize(int $width, int $height): void
     {
         $this->record('applyMinSize', $width, $height);
+    }
+
+    protected function applyMargin(Insets $margin): void
+    {
+        $this->record('applyMargin', $margin);
+    }
+
+    protected function applyCursor(?Cursor $cursor): void
+    {
+        $this->record('applyCursor', $cursor);
+    }
+
+    protected function applyTooltip(?string $tooltip): void
+    {
+        $this->record('applyTooltip', $tooltip);
+    }
+
+    /**
+     * The user clicks the native group at $x, $y: the toolkit's click handling calls
+     * groupClicked(). Only a group has it.
+     */
+    public function clickAt(float $x = 0.0, float $y = 0.0): void
+    {
+        $this->groupClicked($x, $y);
+    }
+
+    protected function applyClickable(bool $on): void
+    {
+        $this->record('applyClickable', $on);
+    }
+
+    protected function applyClip(bool $clip): void
+    {
+        $this->record('applyClip', $clip);
+    }
+
+    protected function applyBorder(int $width, ?Color $color): void
+    {
+        $this->record('applyBorder', $width, $color);
     }
 }

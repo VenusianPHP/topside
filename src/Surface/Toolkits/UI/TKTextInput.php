@@ -3,6 +3,7 @@
 namespace Surface\Toolkits\UI;
 
 use Surface\NutsAndBolts\Color;
+use Surface\Toolkits\ToolkitException;
 use Surface\Contracts\Toolkits\UI\Placement;
 use Surface\Contracts\Toolkits\Styling\FontSpec;
 use Surface\Contracts\Toolkits\ToolkitPoweredWindow;
@@ -24,6 +25,12 @@ abstract class TKTextInput extends TKPrimitive implements PrimitiveContract
 
     protected TextAlignment $alignment = TextAlignment::LEFT;
 
+    private bool $borderless = false;
+
+    private bool $read_only = false;
+
+    private ?int $max_length = null;
+
     public function __construct(
         string $name,
         ToolkitPoweredWindow $window,
@@ -32,7 +39,12 @@ abstract class TKTextInput extends TKPrimitive implements PrimitiveContract
         private string $value = '',
         private ?string $placeholder = null,
         private readonly bool $secret = false,
+        private readonly bool $search = false,
     ) {
+        if ($secret && $search) {
+            throw new ToolkitException("'{$name}' is a secret field or a search field, not both.");
+        }
+
         parent::__construct($name, $window, $parent, $placement);
     }
 
@@ -69,6 +81,63 @@ abstract class TKTextInput extends TKPrimitive implements PrimitiveContract
     public function isSecret(): bool
     {
         return $this->secret;
+    }
+
+    public function isSearch(): bool
+    {
+        return $this->search;
+    }
+
+    public function setBorderless(bool $borderless = true): static
+    {
+        $this->guardLive();
+
+        $this->borderless = $borderless;
+        $this->applyBorderless($borderless);
+
+        return $this;
+    }
+
+    public function isBorderless(): bool
+    {
+        return $this->borderless;
+    }
+
+    public function setReadOnly(bool $readOnly = true): static
+    {
+        $this->guardLive();
+
+        $this->read_only = $readOnly;
+        $this->applyReadOnly($readOnly);
+
+        return $this;
+    }
+
+    public function isReadOnly(): bool
+    {
+        return $this->read_only;
+    }
+
+    /**
+     * @throws ToolkitException When removed, or the length is below 1.
+     */
+    public function setMaxLength(?int $length): static
+    {
+        $this->guardLive();
+
+        if (! is_null($length) && $length < 1) {
+            throw new ToolkitException("A maximum length is 1 or more, or null for none, got {$length} for '{$this->path()}'.");
+        }
+
+        $this->max_length = $length;
+        $this->applyMaxLength($length);
+
+        return $this;
+    }
+
+    public function maxLength(): ?int
+    {
+        return $this->max_length;
     }
 
     public function setFont(FontSpec $font): static
@@ -112,6 +181,16 @@ abstract class TKTextInput extends TKPrimitive implements PrimitiveContract
     }
 
     /**
+     * The toolkit shortened the field's text itself while code set something: a maximum length
+     * cut a longer value. Take what the field holds as the value, posting nothing, so value()
+     * answers what is on screen. An adapter calls it from applyValue() or applyMaxLength().
+     */
+    protected function cutTo(string $value): void
+    {
+        $this->value = $value;
+    }
+
+    /**
      * The user pressed Return on $value.
      */
     protected function submitted(string $value): void
@@ -136,4 +215,17 @@ abstract class TKTextInput extends TKPrimitive implements PrimitiveContract
     abstract protected function applyTextColor(?Color $color): void;
 
     abstract protected function applyAlignment(TextAlignment $alignment): void;
+
+    /**
+     * No frame and no field background of the toolkit's own; false restores them. Nothing until
+     * the adapter can do it natively.
+     */
+    protected function applyBorderless(bool $borderless): void {}
+
+    protected function applyReadOnly(bool $readOnly): void {}
+
+    /**
+     * Null is no limit.
+     */
+    protected function applyMaxLength(?int $length): void {}
 }

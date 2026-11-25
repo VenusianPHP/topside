@@ -2,6 +2,7 @@
 
 namespace Surface\Toolkits\Views\Elements;
 
+use Surface\Contracts\Toolkits\UI\Insets;
 use Surface\Toolkits\Views\ViewException;
 use Surface\Contracts\Toolkits\UI\TKColumn;
 use Surface\Contracts\Toolkits\UI\TKTabView;
@@ -13,13 +14,20 @@ use Surface\Contracts\Toolkits\UI\TKPrimitiveGroup;
  */
 class Tab extends Container
 {
+    protected readonly Insets $padding;
+
     final public function __construct(
         protected readonly string $title,
         protected readonly int $spacing = 0,
-        protected readonly int $padding = 0,
-    ) {}
+        Insets|int|string|array $padding = 0,
+    ) {
+        $this->padding = self::insetsOf($padding, 'padding');
+    }
 
-    public static function make(string $title, int $spacing = 0, int $padding = 0): static
+    /**
+     * @param Insets|int|string|list<int> $padding round the page's children, as CSS writes it
+     */
+    public static function make(string $title, int $spacing = 0, Insets|int|string|array $padding = 0): static
     {
         return new static($title, $spacing, $padding);
     }
@@ -41,14 +49,9 @@ class Tab extends Container
         return 'tab';
     }
 
-    protected function shape(): array
-    {
-        return ['padding' => $this->padding];
-    }
-
     protected function made(): array
     {
-        return ['title' => $this->title, 'spacing' => $this->spacing];
+        return ['title' => $this->title, 'spacing' => $this->spacing, 'padding' => $this->padding];
     }
 
     protected function setters(): array
@@ -56,6 +59,7 @@ class Tab extends Container
         return parent::setters() + [
             'title' => fn (TKColumn $p, string $v) => $p->parent()->setTitle($p->name(), $v),
             'spacing' => fn (TKColumn $p, int $v) => $p->setSpacing($v),
+            'padding' => fn (TKColumn $p, Insets $v) => $p->setPadding($v),
         ];
     }
 }

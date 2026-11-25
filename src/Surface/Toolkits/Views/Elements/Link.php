@@ -2,6 +2,7 @@
 
 namespace Surface\Toolkits\Views\Elements;
 
+use Surface\NutsAndBolts\Color;
 use Surface\Contracts\Toolkits\UI\TKLink;
 use Surface\Contracts\Toolkits\UI\TKPrimitive;
 use Surface\Contracts\Toolkits\Styling\FontSpec;
@@ -46,6 +47,14 @@ class Link extends Element
     }
 
     /**
+     * The link's colour; null is the toolkit's own link colour.
+     */
+    public function color(?Color $color): static
+    {
+        return $this->set('color', $color);
+    }
+
+    /**
      * As a label's: a font cannot be taken off, so losing one builds the link again.
      */
     protected function shape(): array
@@ -65,12 +74,13 @@ class Link extends Element
             'url' => fn (TKLink $p, string $v) => $p->setUrl($v),
             'textAlign' => fn (TKLink $p, TextAlignment $v) => $p->setAlignment($v),
             'font' => fn (TKLink $p, FontSpec $v) => $p->setFont($v),
+            'color' => fn (TKLink $p, ?Color $v) => $p->setTextColor($v),
         ];
     }
 
     protected function defaults(): array
     {
-        return parent::defaults() + ['textAlign' => TextAlignment::LEFT];
+        return parent::defaults() + ['textAlign' => TextAlignment::LEFT, 'color' => null];
     }
 
     protected function valueOf(string $prop): mixed

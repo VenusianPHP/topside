@@ -4,6 +4,7 @@ namespace Surface\Toolkits\Views;
 
 use Closure;
 use Throwable;
+use Surface\Toolkits\Navigation\Navigator;
 use Surface\Toolkits\Views\Elements\Element;
 use Surface\Toolkits\Views\Elements\Children;
 use Surface\Toolkits\Views\Elements\ComponentElement;
@@ -30,8 +31,9 @@ final class Mounter
 {
     /**
      * @param (Closure(class-string<Component>): Component)|null $make builds a component; the container by default
+     * @param Navigator|null $navigator the window's navigation, given to every component it builds
      */
-    public function __construct(private ?Closure $make = null)
+    public function __construct(private ?Closure $make = null, private readonly ?Navigator $navigator = null)
     {
         $this->make ??= static fn (string $class): Component => app($class);
     }
@@ -157,7 +159,7 @@ final class Mounter
             return $this->fillOrRemove($node, $element);
         }
 
-        $component = ($this->make)($element->class)->assign($element->assigned());
+        $component = ($this->make)($element->class)->mountedWith($this->navigator)->assign($element->assigned());
         $root = $this->describe($component, $element);
 
         $node = new Mounted($this->buildPrimitive($parent, $element, $root), $element);

@@ -46,7 +46,9 @@ use Surface\Contracts\Toolkits\UI\TKTabView as TabViewContract;
 use Venusian\Topside\Tests\Fakes\UI\FakeSplitView;
 use Surface\Contracts\Toolkits\UI\TKSplitView as SplitViewContract;
 use Venusian\Topside\Tests\Fakes\UI\FakeGrid;
+use Venusian\Topside\Tests\Fakes\UI\FakeOverlay;
 use Surface\Contracts\Toolkits\UI\TKGrid as GridContract;
+use Surface\Contracts\Toolkits\UI\TKOverlay as OverlayContract;
 use Venusian\Topside\Tests\Fakes\UI\FakeTextArea;
 use Surface\Contracts\Toolkits\UI\TKTextArea as TextAreaContract;
 use Venusian\Topside\Tests\Fakes\UI\FakeListView;
@@ -97,6 +99,7 @@ class FakeDriver extends ToolkitAdapterDriver
         TabViewContract::class => FakeTabView::class,
         SplitViewContract::class => FakeSplitView::class,
         GridContract::class => FakeGrid::class,
+        OverlayContract::class => FakeOverlay::class,
         TextAreaContract::class => FakeTextArea::class,
         ListViewContract::class => FakeListView::class,
         CollectionViewContract::class => FakeCollectionView::class,

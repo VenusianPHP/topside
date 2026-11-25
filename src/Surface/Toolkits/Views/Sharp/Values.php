@@ -11,6 +11,8 @@ use ReflectionNamedType;
 use ReflectionUnionType;
 use InvalidArgumentException;
 use Surface\NutsAndBolts\Color;
+use Surface\Contracts\Toolkits\UI\Insets;
+use Surface\Contracts\Toolkits\UI\Corners;
 use Surface\Toolkits\Menus\Shortcut;
 use Surface\Toolkits\Menus\MenuException;
 use Surface\Contracts\Toolkits\Styling\FontSpec;
@@ -18,7 +20,8 @@ use Surface\Contracts\Toolkits\Styling\FontWeight;
 
 /**
  * An attribute's text as the PHP value its type takes: spacing="12" is the integer 12,
- * align="center" is Align::CENTER, background="#80808024" a colour, font="15 bold" a font.
+ * align="center" is Align::CENTER, background="#80808024" a colour, font="15 bold" a font,
+ * padding="40 16" insets (one to four values, as CSS writes them).
  *
  * @internal
  */
@@ -62,6 +65,12 @@ final class Values
             }
             if ($name === Shortcut::class) {
                 return self::shortcut($text);
+            }
+            if ($name === Insets::class) {
+                return self::insets($text);
+            }
+            if ($name === Corners::class) {
+                return self::corners($text);
             }
         }
 
@@ -117,6 +126,28 @@ final class Values
         }
 
         return '\\'.Shortcut::class.'::of('.var_export($text, true).')';
+    }
+
+    private static function insets(string $text): string
+    {
+        try {
+            Insets::of($text);
+        } catch (InvalidArgumentException $e) {
+            throw new InvalidArgumentException("'{$text}' is not one to four sizes like '16', '40 16', '40 16 8' or '40 16 8 0'", previous: $e);
+        }
+
+        return '\\'.Insets::class.'::of('.var_export($text, true).')';
+    }
+
+    private static function corners(string $text): string
+    {
+        try {
+            Corners::of($text);
+        } catch (InvalidArgumentException $e) {
+            throw new InvalidArgumentException("'{$text}' is not one to four radii like '12' or '0 0 14 14'", previous: $e);
+        }
+
+        return '\\'.Corners::class.'::of('.var_export($text, true).')';
     }
 
     private static function day(string $text): string

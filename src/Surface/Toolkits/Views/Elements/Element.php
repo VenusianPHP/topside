@@ -3,11 +3,16 @@
 namespace Surface\Toolkits\Views\Elements;
 
 use Closure;
+use InvalidArgumentException;
 use Surface\NutsAndBolts\Color;
 use Surface\Toolkits\Views\ViewException;
 use Surface\Contracts\Toolkits\UI\Align;
+use Surface\Contracts\Toolkits\UI\Cursor;
+use Surface\Contracts\Toolkits\UI\Corners;
+use Surface\Contracts\Toolkits\UI\Insets;
 use Surface\Contracts\Toolkits\UI\TKPrimitive;
 use Surface\Contracts\Toolkits\UI\TKPrimitiveGroup;
+use Surface\Contracts\Toolkits\UI\TKTransition;
 
 /**
  * A description of one primitive: what a view's render() returns, built fresh each time.
@@ -92,6 +97,23 @@ abstract class Element
         return $this->set('visible', ! $hidden);
     }
 
+    /**
+     * Play $transition each time it is shown: appear="move-right", or appear="move-right 0.4"
+     * with its time in seconds. Null shows it at once.
+     */
+    public function appear(?TKTransition $transition, float $seconds = TKTransition::DEFAULT_SECONDS): static
+    {
+        return $this->set('appear', [$transition, $seconds]);
+    }
+
+    /**
+     * Play $transition backwards each time it is hidden, then hide it. Null hides it at once.
+     */
+    public function disappear(?TKTransition $transition, float $seconds = TKTransition::DEFAULT_SECONDS): static
+    {
+        return $this->set('disappear', [$transition, $seconds]);
+    }
+
     public function enabled(bool $enabled = true): static
     {
         return $this->set('enabled', $enabled);
@@ -141,9 +163,63 @@ abstract class Element
         return $this->set('opacity', $opacity);
     }
 
-    public function cornerRadius(float $radius): static
+    /**
+     * How round its corners are: one radius for all four, or one to four as CSS writes them,
+     * '0 0 14 14' being square on top and round at the bottom.
+     *
+     * @param Corners|float|int|string|list<int|float> $radius
+     * @throws ViewException When a radius is negative or the value unreadable.
+     */
+    public function cornerRadius(Corners|float|int|string|array $radius): static
     {
-        return $this->set('cornerRadius', $radius);
+        try {
+            return $this->set('cornerRadius', Corners::of($radius));
+        } catch (InvalidArgumentException $e) {
+            throw new ViewException("A corner radius: {$e->getMessage()}", previous: $e);
+        }
+    }
+
+    /**
+     * Cut what is inside at its edge and its corner radius.
+     */
+    public function clip(bool $clip = true): static
+    {
+        return $this->set('clip', $clip);
+    }
+
+    /**
+     * Space kept outside it, as CSS writes it: '12', '12 0', '12 0 8', '12 0 8 4'.
+     *
+     * @param Insets|int|string|list<int> $margin
+     * @throws ViewException When a side is negative or the value unreadable.
+     */
+    public function margin(Insets|int|string|array $margin): static
+    {
+        return $this->set('margin', self::insetsOf($margin, 'margin'));
+    }
+
+    /**
+     * The pointer's shape over it; null is the toolkit's own.
+     */
+    public function cursor(?Cursor $cursor): static
+    {
+        return $this->set('cursor', $cursor);
+    }
+
+    /**
+     * Text shown when the pointer rests on it.
+     */
+    public function tooltip(?string $tooltip): static
+    {
+        return $this->set('tooltip', $tooltip === '' ? null : $tooltip);
+    }
+
+    /**
+     * A line round its edge: border="1 #33333380". A null colour is the toolkit's own.
+     */
+    public function border(int $width, ?Color $color = null): static
+    {
+        return $this->set('border', [$width, $color]);
     }
 
     public function has(string $prop): bool
@@ -233,6 +309,13 @@ abstract class Element
 
         $props = array_unique([...array_keys($this->props + ($before?->props ?? [])), ...$this->tracked()]);
 
+        // A primitive just built takes its visibility before its transitions, so starting
+        // hidden plays nothing; one already there takes them first, so a change of both plays
+        // the new one.
+        $transitions = array_values(array_intersect(['appear', 'disappear'], $props));
+        $rest = array_values(array_diff($props, $transitions));
+        $props = is_null($before) ? [...$rest, ...$transitions] : [...$transitions, ...$rest];
+
         foreach ($props as $prop) {
             $now = $this->valueOf($prop);
             $was = is_null($before) ? $this->initial($prop) : $before->valueOf($prop);
@@ -285,6 +368,8 @@ abstract class Element
     {
         return [
             'visible' => fn (TKPrimitive $p, bool $v) => $p->setVisible($v),
+            'appear' => fn (TKPrimitive $p, array $v) => $p->appear(...$v),
+            'disappear' => fn (TKPrimitive $p, array $v) => $p->disappear(...$v),
             'enabled' => fn (TKPrimitive $p, bool $v) => $p->setEnabled($v),
             'fill' => fn (TKPrimitive $p, array $v) => $p->fill(...$v),
             'align' => fn (TKPrimitive $p, array $v) => $p->align(...$v),
@@ -292,7 +377,12 @@ abstract class Element
             'span' => static fn () => null, // the grid reads it, in settle()
             'background' => fn (TKPrimitive $p, ?Color $v) => $p->setBackground($v),
             'opacity' => fn (TKPrimitive $p, float $v) => $p->setOpacity($v),
-            'cornerRadius' => fn (TKPrimitive $p, float $v) => $p->setCornerRadius($v),
+            'cornerRadius' => fn (TKPrimitive $p, Corners $v) => $p->setCornerRadius($v),
+            'clip' => fn (TKPrimitive $p, bool $v) => $p->setClip($v),
+            'margin' => fn (TKPrimitive $p, Insets $v) => $p->setMargin($v),
+            'cursor' => fn (TKPrimitive $p, ?Cursor $v) => $p->setCursor($v),
+            'tooltip' => fn (TKPrimitive $p, ?string $v) => $p->setTooltip($v),
+            'border' => fn (TKPrimitive $p, array $v) => $p->setBorder(...$v),
         ];
     }
 
@@ -305,6 +395,8 @@ abstract class Element
     {
         return [
             'visible' => true,
+            'appear' => [null, TKTransition::DEFAULT_SECONDS],
+            'disappear' => [null, TKTransition::DEFAULT_SECONDS],
             'enabled' => true,
             'fill' => [false, false],
             'align' => [Align::FILL, Align::FILL],
@@ -312,7 +404,12 @@ abstract class Element
             'span' => 1,
             'background' => null,
             'opacity' => 1.0,
-            'cornerRadius' => 0.0,
+            'cornerRadius' => Corners::none(),
+            'clip' => false,
+            'margin' => Insets::none(),
+            'cursor' => null,
+            'tooltip' => null,
+            'border' => [0, null],
         ];
     }
 
@@ -377,6 +474,20 @@ abstract class Element
         }
 
         return $spliced;
+    }
+
+    /**
+     * One to four values read as CSS reads them.
+     *
+     * @throws ViewException When a side is negative or the value unreadable.
+     */
+    protected static function insetsOf(Insets|int|string|array $value, string $what): Insets
+    {
+        try {
+            return Insets::of($value);
+        } catch (InvalidArgumentException $e) {
+            throw new ViewException("A {$what}: {$e->getMessage()}", previous: $e);
+        }
     }
 
     /**

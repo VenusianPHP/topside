@@ -2,6 +2,7 @@
 
 namespace Surface\Toolkits\Views\Elements;
 
+use Surface\Contracts\Toolkits\UI\Insets;
 use Surface\Contracts\Toolkits\UI\TKScrollView;
 use Surface\Contracts\Toolkits\UI\TKPrimitive;
 use Surface\Contracts\Toolkits\UI\TKPrimitiveGroup;
@@ -16,22 +17,25 @@ use Surface\Contracts\Toolkits\UI\TKPrimitiveGroup;
  */
 class ScrollView extends Container
 {
+    protected readonly Insets $padding;
+
     final public function __construct(
         protected readonly int $spacing = 0,
-        protected readonly int $padding = 0,
+        Insets|int|string|array $padding = 0,
         protected readonly bool $horizontal = false,
         protected readonly bool $vertical = true,
     ) {
+        $this->padding = self::insetsOf($padding, 'padding');
         $this->fill();
     }
 
     /**
      * @param int $spacing between one child and the next
-     * @param int $padding around them all, scrolled with them
+     * @param Insets|int|string|list<int> $padding around them all, scrolled with them, as CSS writes it
      * @param bool $horizontal across as well
      * @param bool $vertical up and down
      */
-    public static function make(int $spacing = 0, int $padding = 0, bool $horizontal = false, bool $vertical = true): static
+    public static function make(int $spacing = 0, Insets|int|string|array $padding = 0, bool $horizontal = false, bool $vertical = true): static
     {
         return new static($spacing, $padding, $horizontal, $vertical);
     }
