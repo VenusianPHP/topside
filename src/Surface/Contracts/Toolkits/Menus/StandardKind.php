@@ -25,6 +25,7 @@ enum StandardKind: string
     case CUT = 'cut';
     case COPY = 'copy';
     case PASTE = 'paste';
+    case PASTE_AND_MATCH_STYLE = 'paste-and-match-style';
     case SELECT_ALL = 'select-all';
 
     /**
@@ -32,7 +33,7 @@ enum StandardKind: string
      */
     public function isEdit(): bool
     {
-        return in_array($this, [self::UNDO, self::REDO, self::CUT, self::COPY, self::PASTE, self::SELECT_ALL], true);
+        return in_array($this, [self::UNDO, self::REDO, self::CUT, self::COPY, self::PASTE, self::PASTE_AND_MATCH_STYLE, self::SELECT_ALL], true);
     }
 
     /**

@@ -8,10 +8,18 @@ class FakeSession extends ToolkitSession
 {
     public int $bootstraps = 0;
 
+    /** @var list<\Surface\Contracts\Toolkits\Styling\ColorScheme> each scheme applied, in order */
+    public array $schemes = [];
+
     protected function bootstrapToolkitLibrary(): void
     {
         $this->bootstraps++;
         $this->application = new FakeToolkit();
+    }
+
+    protected function applyColorScheme(\Surface\Contracts\Toolkits\Styling\ColorScheme $scheme): void
+    {
+        $this->schemes[] = $scheme;
     }
 
     public function application(): FakeToolkit

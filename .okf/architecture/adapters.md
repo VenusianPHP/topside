@@ -5,7 +5,7 @@ description: How a toolkit package plugs in - a provider that registers without 
 resource: src/Surface/Toolkits/
 tags: [topside, toolkits, adapters]
 status: draft
-generated: { by: claude-opus/5.5, at: 2026-11-21T18:58:43Z }
+generated: { by: claude-opus/5.5, at: 2026-11-26T05:40:00Z }
 sources:
   - id: provider
     resource: src/Surface/Toolkits/ToolkitAdapterServiceProvider.php
@@ -45,6 +45,7 @@ The window is the fifth: see [window lifecycle](/architecture/window-lifecycle.m
 # Session
 
 * `connect()` builds the toolkit once per process, connects it, and joins the event loop when the app runs.
+* Right after the toolkit is built, `applyColorScheme(ColorScheme)` gets `toolkits.color_scheme` (`colorScheme()` reads it). Optional: an adapter overrides it with its toolkit's app-wide light/dark setting; the default does nothing, which is the system's scheme.
 * `joinLoop()` hands the loop's descriptor to `wakeDescriptor()`, registers a `ToolkitPump` as the loop's sleeper (the toolkit's wait becomes the loop's sleep), and delivers mail posted before the join.
 * `pump($ns)` calls the toolkit's `pump()`, then `settle()` on every open window: what a toolkit has no callback for (GTK's resizes, Raven's activation) is compared there.
 * `post()`, `postLatest($key)` (latest per pump), `forgetLatest($key)`, `flushLatest()`; `resizedKey($window)` is the one key resize mail collapses under.

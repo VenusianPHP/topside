@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 use Surface\Toolkits\EventLoop\ToolkitPump;
 use Surface\Toolkits\ToolkitSession;
+use Surface\Toolkits\ToolkitException;
+use Surface\Contracts\Toolkits\Styling\ColorScheme;
 use Venusian\Topside\Tests\Fakes\FakeDriver;
 use Venusian\Topside\Tests\Fakes\FakeLoop;
 use Venusian\Topside\Tests\Fakes\FakeSession;
@@ -30,6 +32,31 @@ it('starts the toolkit library on the first connect and never again', function (
         ->and($session->application())->toBe($toolkit)
         ->and($toolkit->connects)->toBe(2)
         ->and($toolkit->disconnects)->toBe(1);
+});
+
+it('applies the configured colour scheme once, as the toolkit starts', function (string $configured, ColorScheme $applied): void {
+    test()->app['config']->set('toolkits.color_scheme', $configured);
+    $session = session();
+
+    $session->connect();
+    $session->disconnect();
+    $session->connect();
+
+    expect($session->schemes)->toBe([$applied])
+        ->and($session->colorScheme())->toBe($applied);
+})->with([
+    ['system', ColorScheme::SYSTEM],
+    ['dark', ColorScheme::DARK],
+    ['light', ColorScheme::LIGHT],
+]);
+
+it('applies the system scheme when none is configured, and refuses one it does not know', function (): void {
+    test()->app['config']->set('toolkits.color_scheme', null);
+    expect(session()->colorScheme())->toBe(ColorScheme::SYSTEM);
+
+    test()->app['config']->set('toolkits.color_scheme', 'sepia');
+    expect(fn () => session()->connect())
+        ->toThrow(ToolkitException::class, "toolkits.color_scheme is 'system', 'dark' or 'light', got 'sepia'.");
 });
 
 it('connects and disconnects only once each', function (): void {

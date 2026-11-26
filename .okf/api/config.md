@@ -5,7 +5,7 @@ description: config/toolkits.php and config/presentation.php keys - which toolki
 resource: config/toolkits.php
 tags: [topside, config]
 status: draft
-generated: { by: claude-opus/5.5, at: 2026-11-22T19:07:34Z }
+generated: { by: claude-opus/5.5, at: 2026-11-26T05:40:00Z }
 sources:
   - id: toolkits
     resource: config/toolkits.php
@@ -22,6 +22,7 @@ Merged by `TopsideServiceProvider`: `toolkits` from `config/toolkits.php`, `main
 | Key | Default | Meaning |
 |---|---|---|
 | `toolkits.default` | `env('TOOLKIT_DRIVER', 'null')` | the toolkit that runs: a name an adapter's provider registered (`appkit`, `qt`, `gtk`, `raven`); `null` refuses ("No default toolkit set") |
+| `toolkits.color_scheme` | `system` | the colours every window is drawn in: `system`, `dark` or `light` (`Contracts\Toolkits\Styling\ColorScheme`); null is `system`, any other value is refused as the session starts. The session hands it to the adapter's `applyColorScheme()` once, as the toolkit starts |
 | `toolkits.windows.default_menu` | `null` | the name of the menu profile a window shows when nothing gives it another; null for none (no adapter shows a bar yet) |
 | `toolkits.windows.menus` | `[]` | menu profiles by name: each a `MenuBar` with no callbacks; see [Menu definitions](/architecture/menus.md) |
 | `main.presentation.mode` | `toolkit` | the build the app opens |

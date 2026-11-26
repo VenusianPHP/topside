@@ -5,7 +5,7 @@ description: The values an author writes a menu bar with - MenuBar, Menu, Item, 
 resource: src/Surface/Toolkits/Menus/
 tags: [topside, toolkits, menus]
 status: draft
-generated: { by: claude-opus/5.5, at: 2026-11-22T19:07:34Z }
+generated: { by: claude-opus/5.5, at: 2026-11-26T05:40:00Z }
 sources:
   - id: node
     resource: src/Surface/Toolkits/Menus/Node.php
@@ -81,7 +81,7 @@ An exception that leaves a signal listener leaves the event loop's `run()` (prob
 
 # Standard items
 
-`StandardItem::labelOn($mac, $app)` and `shortcutOn($mac)` give what a platform shows: the override, else the platform's own. `isReplaced()` is true once it has an id or a callback. `StandardKind` says which kinds act on text, on the window, or exist only on macOS.[^standard]
+`StandardItem::labelOn($mac, $app)` and `shortcutOn($mac)` give what a platform shows: the override, else the platform's own. `isReplaced()` is true once it has an id or a callback. `StandardKind` says which kinds act on text, on the window, or exist only on macOS.[^standard] `Standard::pasteAndMatchStyle()` is an edit kind: "Paste and Match Style", Cmd+Alt+Shift+V on macOS and Ctrl+Shift+V elsewhere; a toolkit whose text widgets hold plain text only runs its paste for it. `Standard::editMenu()` does not hold it.
 
 # Profiles
 

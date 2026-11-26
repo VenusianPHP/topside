@@ -5,6 +5,20 @@ return [
 
     /*
     |----------------------------------------------------------------------
+    | Color Scheme
+    |----------------------------------------------------------------------
+    |
+    | The colours every window is drawn in: 'system' follows the system's
+    | light or dark choice; 'dark' and 'light' hold whatever it is. Each
+    | toolkit applies it through its own app-wide setting as it starts.
+    |
+    | Supported: "system", "dark", "light"
+    |
+    */
+    'color_scheme' => 'system',
+
+    /*
+    |----------------------------------------------------------------------
     | Windows
     |----------------------------------------------------------------------
     |

@@ -8,6 +8,7 @@ use ReflectionClass;
 use RuntimeException;
 use ReflectionException;
 use Surface\Contracts\Toolkits\Toolkit;
+use Surface\Contracts\Toolkits\Styling\ColorScheme;
 use Voyager\Contracts\Core\FrameworkCore;
 use Psr\Container\NotFoundExceptionInterface;
 use Psr\Container\ContainerExceptionInterface;
@@ -248,8 +249,29 @@ abstract class ToolkitSession implements ToolkitSessionContract
         if (! $this->initialized) {
             $this->bootstrapToolkitLibrary();
             $this->initialized = true;
+            $this->applyColorScheme($this->colorScheme());
         }
     }
+
+    /**
+     * The colour scheme toolkits.color_scheme names: system until set.
+     *
+     * @throws ToolkitException When it names none.
+     */
+    public function colorScheme(): ColorScheme
+    {
+        $name = config('toolkits.color_scheme') ?? ColorScheme::SYSTEM->value;
+
+        return ColorScheme::tryFrom((string) $name) ?? throw new ToolkitException(
+            "toolkits.color_scheme is 'system', 'dark' or 'light', got '{$name}'."
+        );
+    }
+
+    /**
+     * Draw every window of the application in $scheme, once, as the toolkit starts. The
+     * toolkit's own app-wide setting; nothing by default, which is the system's scheme.
+     */
+    protected function applyColorScheme(ColorScheme $scheme): void {}
 
     /**
      * Make $fd part of the toolkit's wait: readable ends the sleep.

@@ -21,6 +21,7 @@ it('gives each standard item its platform label', function (StandardItem $item, 
     [fn () => About::item(id: 'about'), 'About My App', 'About My App'],
     [fn () => Standard::closeWindow(), 'Close Window', 'Close'],
     [fn () => Standard::copy(), 'Copy', 'Copy'],
+    [fn () => Standard::pasteAndMatchStyle(), 'Paste and Match Style', 'Paste and Match Style'],
     [fn () => Standard::quit()->label('Leave'), 'Leave', 'Leave'],
 ]);
 
@@ -34,6 +35,7 @@ it('gives each standard item its platform shortcut', function (StandardItem $ite
     [fn () => Standard::minimize(), 'Cmd+M', null],
     [fn () => Standard::redo(), 'Cmd+Shift+Z', 'Ctrl+Shift+Z'],
     [fn () => Standard::selectAll(), 'Cmd+A', 'Ctrl+A'],
+    [fn () => Standard::pasteAndMatchStyle(), 'Cmd+Alt+Shift+V', 'Ctrl+Shift+V'],
     [fn () => Standard::showAll(), null, null],
     [fn () => Standard::quit()->shortcut(Shortcut::primary('W')), 'Cmd+W', 'Ctrl+W'],
     [fn () => Standard::quit()->shortcut(null), null, null],
@@ -73,6 +75,8 @@ it('lets mail or a callback replace what a kind does', function (): void {
 
 it('says which kinds the toolkit runs by itself', function (): void {
     expect(StandardKind::COPY->isEdit())->toBeTrue()
+        ->and(StandardKind::PASTE_AND_MATCH_STYLE->isEdit())->toBeTrue()
+        ->and(StandardKind::PASTE_AND_MATCH_STYLE->isNative())->toBeTrue()
         ->and(StandardKind::COPY->isNative())->toBeTrue()
         ->and(StandardKind::MINIMIZE->isWindow())->toBeTrue()
         ->and(StandardKind::HIDE->isMacOnly())->toBeTrue()

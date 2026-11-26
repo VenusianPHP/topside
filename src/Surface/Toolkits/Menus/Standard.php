@@ -89,6 +89,15 @@ final class Standard
         return new StandardItem(StandardKind::PASTE);
     }
 
+    /**
+     * Pastes the clipboard's text in the style of the text around it. Where a text widget only
+     * holds plain text, that is its paste.
+     */
+    public static function pasteAndMatchStyle(): StandardItem
+    {
+        return new StandardItem(StandardKind::PASTE_AND_MATCH_STYLE);
+    }
+
     public static function selectAll(): StandardItem
     {
         return new StandardItem(StandardKind::SELECT_ALL);

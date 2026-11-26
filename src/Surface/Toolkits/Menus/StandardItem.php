@@ -107,6 +107,7 @@ final readonly class StandardItem extends Node
             StandardKind::CUT => 'Cut',
             StandardKind::COPY => 'Copy',
             StandardKind::PASTE => 'Paste',
+            StandardKind::PASTE_AND_MATCH_STYLE => 'Paste and Match Style',
             StandardKind::SELECT_ALL => 'Select All',
         };
     }
@@ -136,6 +137,7 @@ final readonly class StandardItem extends Node
             StandardKind::CUT => Shortcut::primary('X'),
             StandardKind::COPY => Shortcut::primary('C'),
             StandardKind::PASTE => Shortcut::primary('V'),
+            StandardKind::PASTE_AND_MATCH_STYLE => $mac ? Shortcut::primary('V')->alt()->shift() : Shortcut::primary('V')->shift(),
             StandardKind::SELECT_ALL => Shortcut::primary('A'),
             default => null,
         };

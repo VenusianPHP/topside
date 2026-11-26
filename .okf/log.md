@@ -2,6 +2,8 @@
 
 ## 2026-11-26
 
+* **Update**: [Config](/api/config.md), [Adapters](/architecture/adapters.md), [Menu definitions](/architecture/menus.md): `toolkits.color_scheme` (`system`, `dark`, `light`; `ColorScheme`), handed to the adapter's optional `applyColorScheme()` once as the toolkit starts; `StandardKind::PASTE_AND_MATCH_STYLE` and `Standard::pasteAndMatchStyle()`. 718 tests on NTS and ZTS.
+
 * **Update**: [Views](/architecture/views.md): `Component::mounted()`, called once before a page's first render, where it starts what it loads. 712 tests on NTS and ZTS.
 * **Update**: [Primitives](/architecture/primitives.md), [Sharp](/architecture/sharp.md): a scroll view reports scrolling (`scrollPosition()`, `watchScroll()`, `ViewScrolled`; `ScrollView::onScroll()`, `@scroll` in Sharp), as text areas and item views do. 710 tests on NTS and ZTS; checked against all four toolkits.
 * **Update**: [Primitives](/architecture/primitives.md), [Window lifecycle](/architecture/window-lifecycle.md): `ButtonStyle::HELP` (the toolkit's help button; AppKit's round "?", DEFAULT elsewhere) and `ButtonStyle::framed()`; `ToolkitPoweredWindow::browse($url)` opens an http or https address in the default browser through the adapter's `openUrl()`. 708 tests on NTS and ZTS.
