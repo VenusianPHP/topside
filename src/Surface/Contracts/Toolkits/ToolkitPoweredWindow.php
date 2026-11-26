@@ -96,5 +96,24 @@ interface ToolkitPoweredWindow
      */
     public function confirmClose(bool $on = true): static;
 
+    /**
+     * Show $alert modal to this window, with the toolkit's own alert. Returns at once with an
+     * id; the answer is posted later as Mail\Windows\AlertAnswered under it.
+     *
+     * @throws \RuntimeException When the window is closed or already shows an alert.
+     */
+    public function alert(\Surface\Contracts\Toolkits\Dialogs\Alert $alert): string;
+
+    /**
+     * Whether an alert from alert() is open on this window, not yet answered.
+     */
+    public function isAlerting(): bool;
+
+    /**
+     * Open a web address in the default browser, with the toolkit's own call.
+     *
+     * @throws \InvalidArgumentException When the address is not an http or https one with a host.
+     */
+    public function browse(string $url): void;
 
 }

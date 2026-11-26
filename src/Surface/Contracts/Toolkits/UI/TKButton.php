@@ -5,6 +5,7 @@ namespace Surface\Contracts\Toolkits\UI;
 use Surface\Contracts\Toolkits\UI\ButtonRole;
 use Surface\Contracts\Toolkits\UI\ButtonStyle;
 use Surface\Contracts\Toolkits\UI\TKPrimitive;
+use Surface\Contracts\Toolkits\UI\Insets;
 use Surface\Contracts\Toolkits\Styling\FontSpec;
 use Surface\Contracts\Toolkits\Styling\TextAlignment;
 use Surface\NutsAndBolts\Color;
@@ -60,7 +61,7 @@ interface TKButton extends TKPrimitive
     public function setAlignment(TextAlignment $alignment): static;
 
     /**
-     * An image before the label: a file, absolute or under resources/. Null removes it.
+     * An image beside the label (setIconPosition() says which side): a file, absolute or under resources/. Null removes it.
      * @param string|null $file
      * @return $this
      */
@@ -72,7 +73,7 @@ interface TKButton extends TKPrimitive
     public function icon(): ?string;
 
     /**
-     * A symbol before the label, by the name the toolkit knows it by: an SF Symbol on AppKit,
+     * A symbol beside the label, by the name the toolkit knows it by: an SF Symbol on AppKit,
      * a theme icon on GTK and Qt, one of Raven's own icons. An icon file wins over it.
      * @param string|null $name
      * @return $this
@@ -83,6 +84,18 @@ interface TKButton extends TKPrimitive
      * @return string|null
      */
     public function symbol(): ?string;
+
+    /**
+     * Which side of the label the icon or symbol sits on; LEADING until set.
+     * @param IconPosition $position
+     * @return $this
+     */
+    public function setIconPosition(IconPosition $position): static;
+
+    /**
+     * @return IconPosition
+     */
+    public function iconPosition(): IconPosition;
 
     /**
      * DEFAULT: Return clicks it. CANCEL: Esc clicks it. Null removes the role. Where the
@@ -96,4 +109,19 @@ interface TKButton extends TKPrimitive
      * @return ButtonRole|null
      */
     public function role(): ?ButtonRole;
+
+    /**
+     * Space between the button's edge and its label and icon, each side its own (an int is
+     * every side; a string or list is one to four values in CSS order). None set: the
+     * toolkit's own button padding. Where a toolkit cannot inset a side on its own, it
+     * shows what it can and says so in its adapter.
+     * @param Insets|int|string|list<int> $padding
+     * @return $this
+     */
+    public function setPadding(Insets|int|string|array $padding): static;
+
+    /**
+     * @return Insets
+     */
+    public function padding(): Insets;
 }

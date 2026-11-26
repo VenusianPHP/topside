@@ -13,6 +13,8 @@ use Surface\Contracts\Toolkits\ToolkitPoweredWindow;
 use Surface\Contracts\Toolkits\Mail\Windows\WindowClosed;
 use Surface\Contracts\Toolkits\Mail\Windows\WindowResized;
 use Surface\Contracts\Toolkits\Mail\Windows\WindowCloseRequested;
+use Surface\Contracts\Toolkits\Mail\Windows\AlertAnswered;
+use Surface\Contracts\Toolkits\Dialogs\Alert;
 use Surface\Contracts\Toolkits\Mail\Views\FocusLost;
 use Surface\Contracts\Toolkits\Mail\Views\FocusGained;
 use Surface\Contracts\Toolkits\UI\TKPrimitiveGroup as GroupContract;
@@ -27,6 +29,8 @@ use Surface\Contracts\Toolkits\UI\TKPrimitiveGroup as GroupContract;
  *  - a resize                             → resized($width, $height)
  *  - the focus came, or went              → gainedFocus(), lostFocus(), in that callback
  *  - after every pump                     → settle(), for what the toolkit has no callback for
+ *  - alert()                              → showAlert(), and its answer → alertAnswered()
+ *  - browse()                             → openUrl(), once the address is checked
  */
 abstract class ToolkitWindow implements ToolkitPoweredWindow
 {
@@ -47,6 +51,9 @@ abstract class ToolkitWindow implements ToolkitPoweredWindow
      * close() runs: its own close request goes through while the window confirms close.
      */
     protected bool $closing = false;
+
+    /** The id of the alert open on the window; null when none is. */
+    private ?string $alert_id = null;
 
     public function __construct(
         protected readonly string $name,
@@ -78,6 +85,18 @@ abstract class ToolkitWindow implements ToolkitPoweredWindow
      * false afterwards.
      */
     abstract protected function releaseNative(): void;
+
+    /**
+     * Show $alert with the toolkit's own alert, modal to the window, without waiting for it.
+     * Its answer goes to alertAnswered(): the button's index, the cancel index for Esc or
+     * the alert's own close. A part of $alert the toolkit's alert has no place for is left out.
+     */
+    abstract protected function showAlert(Alert $alert): void;
+
+    /**
+     * Open $url, an http or https address, in the default browser with the toolkit's own call.
+     */
+    abstract protected function openUrl(string $url): void;
 
     /**
      * Put the content container's native in the window's content area, filling it.
@@ -266,6 +285,69 @@ abstract class ToolkitWindow implements ToolkitPoweredWindow
     }
 
     /**
+     * @throws ToolkitException When the window is closed or already shows an alert.
+     */
+    public function alert(Alert $alert): string
+    {
+        if (! $this->isOpen()) {
+            throw new ToolkitException("Window '{$this->name}' is closed: it can show no alert.");
+        }
+        if (! is_null($this->alert_id)) {
+            throw new ToolkitException("Window '{$this->name}' already shows an alert: it can show one at a time.");
+        }
+
+        $id = bin2hex(random_bytes(8));
+        $this->alert_id = $id;
+        try {
+            $this->showAlert($alert);
+        } catch (\Throwable $e) {
+            $this->alert_id = null;
+            throw $e;
+        }
+
+        return $id;
+    }
+
+    public function isAlerting(): bool
+    {
+        return ! is_null($this->alert_id);
+    }
+
+    /**
+     * @throws \InvalidArgumentException When the address is not an http or https one with a host.
+     */
+    public function browse(string $url): void
+    {
+        $scheme = strtolower((string) parse_url($url, PHP_URL_SCHEME));
+        if (! in_array($scheme, ['http', 'https'], true) || (string) parse_url($url, PHP_URL_HOST) === '') {
+            throw new \InvalidArgumentException("'{$url}' is not an http or https address with a host.");
+        }
+
+        $this->openUrl($url);
+    }
+
+    /**
+     * The toolkit's alert was answered: post AlertAnswered under its id. Nothing when no
+     * alert is open, as for an answer that comes after the window closed.
+     */
+    protected function alertAnswered(int $button, bool $suppressed = false): void
+    {
+        if (is_null($id = $this->alert_id)) {
+            return;
+        }
+
+        $this->alert_id = null;
+        $this->session->post(new AlertAnswered($this->name, $id, $button, $suppressed));
+    }
+
+    /**
+     * The window closes with its alert still open: take the toolkit's alert down, while the
+     * native window is whole. An answer it gives meanwhile is not posted; the alert is
+     * answered -1.
+     */
+    protected function closeAlert(): void {}
+
+    /**
      * End of a pump. Override for what the toolkit reports no callback for (activation, size).
      */
     public function settle(): void {}
@@ -309,7 +391,8 @@ abstract class ToolkitWindow implements ToolkitPoweredWindow
     protected function beforeClose(): void {}
 
     /**
-     * The one close path, while the native window still lives: the content tree goes, the
+     * The one close path, while the native window still lives: an open alert is answered -1,
+     * the content tree goes, the
      * session stops tracking the window (and drops a resize not yet sent), the native window
      * is dropped, WindowClosed is posted and the driver forgets the name. Safe to call twice.
      */
@@ -319,6 +402,11 @@ abstract class ToolkitWindow implements ToolkitPoweredWindow
             return;
         }
 
+        if (! is_null($id = $this->alert_id)) {
+            $this->alert_id = null;
+            $this->closeAlert();
+            $this->session->post(new AlertAnswered($this->name, $id, -1));
+        }
         $this->beforeClose();
         app(MenuManager::class)->closed($this->name);
         $this->removeContent();

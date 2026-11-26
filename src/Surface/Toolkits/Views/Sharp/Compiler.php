@@ -20,6 +20,7 @@ use Surface\Toolkits\Views\Elements\Checkbox;
 use Surface\Toolkits\Views\Elements\ToggleButton;
 use Surface\Toolkits\Views\Elements\Children;
 use Surface\Toolkits\Views\Elements\ComponentElement;
+use Surface\Contracts\Toolkits\Styling\TextRun;
 
 /**
  * Turns a template into a Component class: render() builds the same elements a hand-written
@@ -228,7 +229,15 @@ final class Compiler
             }
         }
 
-        if (! is_null($content = self::CONTENT[$tag->target] ?? null)) {
+        if ($tag->target === Label::class && $this->hasRuns($node)) {
+            if (isset($arguments['text'])) {
+                $this->fail("<{$node->value}> has both a text attribute and text inside: use one", $node->line);
+            }
+            $runs = '$__r'.(++$this->serial);
+            $this->out->at($node->line, "{$runs} = {$this->runs($node)};");
+            $arguments['text'] = '\\'.TextRun::class."::join({$runs})";
+            $calls[] = "->runs({$runs})";
+        } elseif (! is_null($content = self::CONTENT[$tag->target] ?? null)) {
             $text = $this->text($node);
             if (! is_null($text) && isset($arguments[$content])) {
                 $this->fail("<{$node->value}> has both a {$content} attribute and text inside: use one", $node->line);
@@ -394,6 +403,104 @@ final class Compiler
         }
 
         return implode(' . ', $parts);
+    }
+
+    /** The tags a label's text may hold, and the one attribute a <span> takes. */
+    private const array RUN_TAGS = ['b', 'i', 'span'];
+
+    /**
+     * True when a label holds a tag: its text is then runs, of <b>, <i> and <span>.
+     */
+    private function hasRuns(Node $node): bool
+    {
+        foreach ($node->children as $child) {
+            if ($child->type === NodeType::TAG) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * A label's content as a list of TextRuns: text and {{ }} take the look of the tags round
+     * them, <b> bold, <i> italic, <span color="#rrggbb"> (or :color) a colour. Runs of white
+     * space are one space, and the ends are trimmed, as for plain text.
+     */
+    private function runs(Node $node): string
+    {
+        /** @var list<array{string, bool, bool, ?string, bool}> code, bold, italic, colour, literal */
+        $pieces = [];
+        $this->collectRuns($node, $node->children, false, false, null, $pieces);
+
+        while ($pieces !== [] && $pieces[0][4] && trim($pieces[0][0]) === '') {
+            array_shift($pieces);
+        }
+        while ($pieces !== [] && $pieces[count($pieces) - 1][4] && trim($pieces[count($pieces) - 1][0]) === '') {
+            array_pop($pieces);
+        }
+        if ($pieces !== [] && $pieces[0][4]) {
+            $pieces[0][0] = ltrim($pieces[0][0], ' ');
+        }
+        $last = count($pieces) - 1;
+        if ($last >= 0 && $pieces[$last][4]) {
+            $pieces[$last][0] = rtrim($pieces[$last][0], ' ');
+        }
+
+        /** @var list<array{list<string>, bool, bool, ?string}> $runs the parts of each run and its look */
+        $runs = [];
+        foreach ($pieces as [$value, $bold, $italic, $color, $literal]) {
+            $code = $literal ? var_export(self::decoded($value), true) : $value;
+            $end = count($runs) - 1;
+            if ($end >= 0 && $runs[$end][1] === $bold && $runs[$end][2] === $italic && $runs[$end][3] === $color) {
+                $runs[$end][0][] = $code;
+            } else {
+                $runs[] = [[$code], $bold, $italic, $color];
+            }
+        }
+
+        $made = array_map(static function (array $run): string {
+            [$parts, $bold, $italic, $color] = $run;
+            $look = ($bold ? ', bold: true' : '').($italic ? ', italic: true' : '').(is_null($color) ? '' : ", color: {$color}");
+
+            return 'new \\'.TextRun::class.'('.implode(' . ', $parts).$look.')';
+        }, $runs);
+
+        return '['.implode(', ', $made).']';
+    }
+
+    /**
+     * @param list<Node> $nodes
+     * @param list<array{string, bool, bool, ?string, bool}> $pieces
+     */
+    private function collectRuns(Node $label, array $nodes, bool $bold, bool $italic, ?string $color, array &$pieces): void
+    {
+        foreach ($nodes as $node) {
+            if ($node->type === NodeType::TEXT) {
+                $pieces[] = [preg_replace('/[ \t\n]+/', ' ', $node->value), $bold, $italic, $color, true];
+                continue;
+            }
+            if ($node->type === NodeType::ECHO) {
+                $pieces[] = ['(string) '.$this->expression($node->value, $node->line), $bold, $italic, $color, false];
+                continue;
+            }
+            if ($node->type !== NodeType::TAG || ! in_array($node->value, self::RUN_TAGS, true)) {
+                $this->fail("<{$label->value}> holds text, {{ }}, <b>, <i> and <span color=\"...\">: for a choice of text use {{ \$x ? 'a' : 'b' }}", $node->line);
+            }
+
+            $inner = $color;
+            foreach ($node->attributes as $attribute) {
+                if ($node->value !== 'span' || $attribute->name !== 'color' || $attribute->prefix === '@') {
+                    $this->fail("<{$node->value}> in a label takes ".($node->value === 'span' ? 'only color' : 'no attributes'), $attribute->line);
+                }
+                $inner = $this->value($attribute, new \ReflectionParameter([TextRun::class, '__construct'], 'color')->getType());
+            }
+            if ($node->value === 'span' && $node->attributes === []) {
+                $this->fail('<span> in a label needs a color', $node->line);
+            }
+
+            $this->collectRuns($label, $node->children, $bold || $node->value === 'b', $italic || $node->value === 'i', $inner, $pieces);
+        }
     }
 
     /**

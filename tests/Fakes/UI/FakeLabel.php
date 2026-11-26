@@ -16,6 +16,11 @@ class FakeLabel extends TKLabel
         $this->record('applyText', $text);
     }
 
+    protected function applyRuns(array $runs): void
+    {
+        $this->record('applyRuns', $runs);
+    }
+
     protected function applyWrap(bool $wrap): void
     {
         $this->record('applyWrap', $wrap);

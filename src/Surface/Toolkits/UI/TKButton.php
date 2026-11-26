@@ -4,9 +4,12 @@ namespace Surface\Toolkits\UI;
 
 use Surface\NutsAndBolts\Color;
 use Surface\Contracts\Toolkits\UI\Cursor;
+use Surface\Contracts\Toolkits\UI\Insets;
+use Surface\Toolkits\ToolkitException;
 use Surface\Contracts\Toolkits\UI\Placement;
 use Surface\Contracts\Toolkits\UI\ButtonRole;
 use Surface\Contracts\Toolkits\UI\ButtonStyle;
+use Surface\Contracts\Toolkits\UI\IconPosition;
 use Surface\Contracts\Toolkits\Styling\FontSpec;
 use Surface\Contracts\Toolkits\ToolkitPoweredWindow;
 use Surface\Contracts\Toolkits\Styling\TextAlignment;
@@ -31,6 +34,10 @@ abstract class TKButton extends TKPrimitive implements PrimitiveContract
     private ?string $icon = null;
 
     private ?string $symbol = null;
+
+    private IconPosition $icon_position = IconPosition::LEADING;
+
+    private ?Insets $padding = null;
 
     /**
      * The label is known before the native is built, so it is built with it.
@@ -134,6 +141,21 @@ abstract class TKButton extends TKPrimitive implements PrimitiveContract
         return $this->symbol;
     }
 
+    public function setIconPosition(IconPosition $position): static
+    {
+        $this->guardLive();
+
+        $this->icon_position = $position;
+        $this->applyIconPosition($position);
+
+        return $this;
+    }
+
+    public function iconPosition(): IconPosition
+    {
+        return $this->icon_position;
+    }
+
     public function setRole(?ButtonRole $role): static
     {
         $this->guardLive();
@@ -147,6 +169,24 @@ abstract class TKButton extends TKPrimitive implements PrimitiveContract
     public function role(): ?ButtonRole
     {
         return $this->role;
+    }
+
+    /**
+     * @throws ToolkitException When removed, or the padding is not 1-4 points at least 0.
+     */
+    public function setPadding(Insets|int|string|array $padding): static
+    {
+        $this->guardLive();
+
+        $this->padding = $this->insets($padding, 'padding');
+        $this->applyPadding($this->padding);
+
+        return $this;
+    }
+
+    public function padding(): Insets
+    {
+        return $this->padding ?? Insets::none();
     }
 
     /**
@@ -172,6 +212,11 @@ abstract class TKButton extends TKPrimitive implements PrimitiveContract
     abstract protected function applyLabel(string $label): void;
 
     /**
+     * The padding changed; none (Insets::none()) gives the toolkit's own button padding back.
+     */
+    abstract protected function applyPadding(Insets $padding): void;
+
+    /**
      * DEFAULT restores the toolkit's own button. LINK is borderless, in the link colour unless
      * setTextColor() chose one; its pointer comes through applyCursor().
      */
@@ -190,6 +235,11 @@ abstract class TKButton extends TKPrimitive implements PrimitiveContract
      * Both as set: show $file when there is one, else the toolkit's symbol $symbol, else none.
      */
     protected function applyIcon(?string $file, ?string $symbol): void {}
+
+    /**
+     * Where the toolkit puts a button's icon on one side only, it stays there.
+     */
+    protected function applyIconPosition(IconPosition $position): void {}
 
     protected function applyRole(?ButtonRole $role): void {}
 }

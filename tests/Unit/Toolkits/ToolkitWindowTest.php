@@ -151,3 +151,109 @@ it('removes its content tree when it closes', function (): void {
     $this->window->close();
     $this->window->close();
 });
+
+describe('alerts', function (): void {
+    it('shows an alert without waiting, and posts nothing until it is answered', function (): void {
+        $alert = new Surface\Contracts\Toolkits\Dialogs\Alert('Clear it?', buttons: ['Clear', 'Cancel']);
+        $id = $this->window->alert($alert);
+
+        expect($id)->toMatch('/^[0-9a-f]{16}$/')
+            ->and($this->window->shown_alert)->toBe($alert)
+            ->and($this->window->isAlerting())->toBeTrue()
+            ->and(outbox())->toBe([]);
+    });
+
+    it('posts the answer under the alert\'s id and window, once', function (): void {
+        $id = $this->window->alert(new Surface\Contracts\Toolkits\Dialogs\Alert('Clear it?', buttons: ['Clear', 'Cancel']));
+        $this->window->nativeAlertAnswered(1, true);
+        $this->window->nativeAlertAnswered(0);
+
+        $mail = outbox();
+        expect(mailNames($mail))->toBe(['AlertAnswered'])
+            ->and($mail[0]->window())->toBe('main')
+            ->and($mail[0]->id)->toBe($id)
+            ->and($mail[0]->button)->toBe(1)
+            ->and($mail[0]->suppressed)->toBeTrue()
+            ->and($mail[0]->name())->toBe('window.alert-answered.main')
+            ->and($this->window->isAlerting())->toBeFalse();
+    });
+
+    it('shows one alert at a time', function (): void {
+        $this->window->alert(new Surface\Contracts\Toolkits\Dialogs\Alert('First'));
+
+        expect(fn () => $this->window->alert(new Surface\Contracts\Toolkits\Dialogs\Alert('Second')))
+            ->toThrow(Surface\Toolkits\ToolkitException::class, "Window 'main' already shows an alert: it can show one at a time.");
+    });
+
+    it('shows another once the first is answered', function (): void {
+        $first = $this->window->alert(new Surface\Contracts\Toolkits\Dialogs\Alert('First'));
+        $this->window->nativeAlertAnswered(0);
+
+        expect($this->window->alert(new Surface\Contracts\Toolkits\Dialogs\Alert('Second')))->not->toBe($first);
+    });
+
+    it('is free to show another when the toolkit fails to show one', function (): void {
+        $this->window->fail_alert = true;
+        expect(fn () => $this->window->alert(new Surface\Contracts\Toolkits\Dialogs\Alert('First')))->toThrow(RuntimeException::class, 'native alert failed')
+            ->and($this->window->isAlerting())->toBeFalse();
+    });
+
+    it('shows no alert once closed', function (): void {
+        $this->window->userClose();
+
+        expect(fn () => $this->window->alert(new Surface\Contracts\Toolkits\Dialogs\Alert('Late')))
+            ->toThrow(Surface\Toolkits\ToolkitException::class, "Window 'main' is closed: it can show no alert.");
+    });
+
+    it('takes its alert down and answers it -1 when it closes first', function (): void {
+        $id = $this->window->alert(new Surface\Contracts\Toolkits\Dialogs\Alert('Clear it?'));
+        $this->window->userClose();
+        $this->window->nativeAlertAnswered(0);
+
+        $mail = outbox();
+        expect(mailNames($mail))->toBe(['AlertAnswered', 'WindowClosed'])
+            ->and($mail[0]->id)->toBe($id)
+            ->and($mail[0]->button)->toBe(-1)
+            ->and($mail[0]->suppressed)->toBeFalse()
+            ->and($this->window->steps)->toBe(['bootstrap', 'showAlert', 'closeAlert', 'beforeClose', 'removeContent', 'releaseNative']);
+    });
+});
+
+describe('an alert', function (): void {
+    it('takes 1 to 3 buttons, the last one cancelling when none is named', function (): void {
+        $alert = new Surface\Contracts\Toolkits\Dialogs\Alert('Save?', buttons: ['Save', 'Don\'t Save', 'Cancel']);
+
+        expect($alert->cancel)->toBe(2)
+            ->and($alert->default)->toBe(0)
+            ->and(fn () => new Surface\Contracts\Toolkits\Dialogs\Alert('No', buttons: []))->toThrow(InvalidArgumentException::class, 'An alert takes 1 to 3 buttons, not 0 buttons.')
+            ->and(fn () => new Surface\Contracts\Toolkits\Dialogs\Alert('No', buttons: ['a', 'b', 'c', 'd']))->toThrow(InvalidArgumentException::class, 'An alert takes 1 to 3 buttons, not 4 buttons.');
+    });
+
+    it('refuses a default or cancel outside its buttons', function (): void {
+        expect(fn () => new Surface\Contracts\Toolkits\Dialogs\Alert('No', buttons: ['OK'], default: 1))->toThrow(InvalidArgumentException::class, 'Alert default 1 is outside its 1 buttons.')
+            ->and(fn () => new Surface\Contracts\Toolkits\Dialogs\Alert('No', buttons: ['OK'], cancel: -1))->toThrow(InvalidArgumentException::class, 'Alert cancel -1 is outside its 1 buttons.')
+            ->and(fn () => new Surface\Contracts\Toolkits\Dialogs\Alert('No', buttons: ['a' => 'OK']))->toThrow(InvalidArgumentException::class, 'Alert buttons must be a list.');
+    });
+});
+
+describe('browse', function (): void {
+    it('hands an http or https address to the toolkit', function (): void {
+        $this->window->browse('https://example.com/page?a=1');
+        $this->window->browse('HTTP://example.com');
+
+        expect($this->window->opened)->toBe(['https://example.com/page?a=1', 'HTTP://example.com']);
+    });
+
+    it('refuses an address that is not http or https with a host', function (string $url): void {
+        expect(fn () => $this->window->browse($url))
+            ->toThrow(InvalidArgumentException::class, "'{$url}' is not an http or https address with a host.")
+            ->and($this->window->opened)->toBe([]);
+    })->with(['file:///etc/hosts', 'mailto:a@example.com', 'https://', 'example.com', '']);
+});
+
+describe('button styles', function (): void {
+    it('frames DEFAULT and HELP, not BORDERLESS or LINK', function (): void {
+        expect(array_map(fn (Surface\Contracts\Toolkits\UI\ButtonStyle $s) => [$s->value, $s->framed()], Surface\Contracts\Toolkits\UI\ButtonStyle::cases()))
+            ->toBe([['default', true], ['borderless', false], ['link', false], ['help', true]]);
+    });
+});

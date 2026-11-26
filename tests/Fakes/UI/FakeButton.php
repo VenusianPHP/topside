@@ -46,8 +46,18 @@ class FakeButton extends TKButton
         $this->record('applyIcon', $file, $symbol);
     }
 
+    protected function applyIconPosition(\Surface\Contracts\Toolkits\UI\IconPosition $position): void
+    {
+        $this->record('applyIconPosition', $position);
+    }
+
     protected function applyRole(?\Surface\Contracts\Toolkits\UI\ButtonRole $role): void
     {
         $this->record('applyRole', $role);
+    }
+
+    protected function applyPadding(\Surface\Contracts\Toolkits\UI\Insets $padding): void
+    {
+        $this->record('applyPadding', $padding);
     }
 }

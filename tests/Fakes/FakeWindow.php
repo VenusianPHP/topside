@@ -3,6 +3,7 @@
 namespace Venusian\Topside\Tests\Fakes;
 
 use RuntimeException;
+use Surface\Contracts\Toolkits\Dialogs\Alert;
 use Surface\Contracts\Toolkits\UI\TKColumn as ColumnContract;
 use Surface\Toolkits\ToolkitWindow;
 
@@ -28,6 +29,12 @@ class FakeWindow extends ToolkitWindow
     public bool $fail_close = false;
 
     protected ?object $window = null;
+
+    /** The alert the toolkit shows; null when none. */
+    public ?Alert $shown_alert = null;
+
+    /** Makes the next showAlert() fail, as a toolkit error would. */
+    public bool $fail_alert = false;
 
     public function present(): static
     {
@@ -140,6 +147,36 @@ class FakeWindow extends ToolkitWindow
     protected function unmountContent(ColumnContract $content): void
     {
         $this->mounted = null;
+    }
+
+    protected function showAlert(Alert $alert): void
+    {
+        $this->steps[] = 'showAlert';
+        if ($this->fail_alert) {
+            throw new RuntimeException('native alert failed');
+        }
+        $this->shown_alert = $alert;
+    }
+
+    /** The user answered the toolkit's alert: a button, or Esc as the cancel index. */
+    public function nativeAlertAnswered(int $button, bool $suppressed = false): void
+    {
+        $this->shown_alert = null;
+        $this->alertAnswered($button, $suppressed);
+    }
+
+    /** @var list<string> addresses openUrl() was given */
+    public array $opened = [];
+
+    protected function openUrl(string $url): void
+    {
+        $this->opened[] = $url;
+    }
+
+    protected function closeAlert(): void
+    {
+        $this->steps[] = 'closeAlert';
+        $this->shown_alert = null;
     }
 
     protected function beforeClose(): void

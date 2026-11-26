@@ -5,7 +5,7 @@ description: Components that describe a window's content from their state, and t
 resource: src/Surface/Toolkits/Views/
 tags: [topside, toolkits, views, components]
 status: draft
-generated: { by: claude-opus/5.5, at: 2026-11-25T15:20:00Z }
+generated: { by: claude-opus/5.5, at: 2026-11-25T19:15:51Z }
 sources:
   - id: component
     resource: src/Surface/Toolkits/Views/Component.php
@@ -25,7 +25,9 @@ sources:
 
 `Navigator::go($route)` calls the route's controller method, which calls `View::render(SomeView::class, $props)`. A name that is no class is a [Sharp](/architecture/sharp.md) template. `PresentationTreeManager::render()` builds the component through the container, sets `$props` on its public properties (`Component::assign()`; an unknown name throws `ViewException`), and hands it to `PresentationTreeDriver::render()`. The driver removes the view on screen, then mounts the new one into the window's content column, `root`, made in `boot()`.[^driver]
 
-A navigator belongs to the window that shows routes, not to the application. `PresentationTreeDriver::navigator()` makes it once and keeps it as long as the presentation, so the current route and the back and forward history last across views. The driver mounts each view with it: `MountedView` gives it to the page (`Component::mountedWith()`) and to its `Mounter`, which gives it to every component it builds inside, however deep. A component reaches it with `$this->navigator()`, with nothing passed down through props; one that is not mounted throws `ViewException`. Asking the container for `Navigator` gives the same one (a binding to the driver's, not a singleton), so `ToolkitApplication::activate()`, controllers and services share the window's history. Before this, nothing bound `Navigator`, so every `app(Navigator::class)` was a new one: routing worked, but `current()` was always null and history never lasted.[^driver]
+A navigator belongs to the window that shows routes, not to the application. `PresentationTreeDriver::navigator()` makes it once and keeps it as long as the presentation, so the current route and the back and forward history last across views. The driver mounts each view with a `Mount` (the navigator, the window, and a refresh): `MountedView` gives it to the page (`Component::mountedIn()`) and to its `Mounter`, which gives it to every component it builds inside, however deep. A component reaches the navigator with `$this->navigator()`, with nothing passed down through props; one that is not mounted throws `ViewException`. Asking the container for `Navigator` gives the same one (a binding to the driver's, not a singleton), so `ToolkitApplication::activate()`, controllers and services share the window's history. 
+
+The same mount gives a component `$this->window()`, the window it is in (to set its title, for one), and `$this->refresh()`, which shows the view again after its state changed outside a handler: a request or a download that came back on the event loop. The driver renders the view again only while it is the view on screen and no handler or render is under way (one that is ends with the view shown anyway); off screen, or not mounted, it does nothing. `mounted()` is called once on the page's component as it is put on screen, before its first render: the place to start what it loads; a view that puts another on screen there is not shown. `$this->alert(Alert, $answered)` asks the window for an alert through the mount; the driver holds the handler under the alert's id and runs it with the `AlertAnswered`, then renders the view again, as after a click. A handler whose view left the screen is dropped. Before this, nothing bound `Navigator`, so every `app(Navigator::class)` was a new one: routing worked, but `current()` was always null and history never lasted.[^driver]
 
 # A component
 

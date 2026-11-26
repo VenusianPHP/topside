@@ -9,6 +9,9 @@ use RuntimeException;
  * Web content in a view: a page by URL, or HTML with the base URL it resolves against (and
  * the origin its frames see). Posts WebViewLoaded and WebViewFailed as the engine reports them;
  * url(), title() and isLoading() are the engine's last report.
+ *
+ * A toolkit with no web engine still makes one: supported() is false, it shows nothing, and
+ * every load posts WebViewFailed, so the view can offer something else (a link out).
  */
 interface TKWebView extends TKPrimitive
 {
@@ -53,4 +56,10 @@ interface TKWebView extends TKPrimitive
      * @return $this
      */
     public function stop(): static;
+
+    /**
+     * Whether this toolkit has a web engine to show pages with.
+     * @return bool
+     */
+    public function supported(): bool;
 }

@@ -21,6 +21,19 @@ interface TKColumn extends TKPrimitiveGroup
     public function setSpacing(int $spacing): static;
 
     /**
+     * Every child the same length along the axis, whatever its own size. Where the toolkit
+     * has no such layout, each child keeps its own length.
+     * @param bool $on
+     * @return $this
+     */
+    public function setHomogeneous(bool $on = true): static;
+
+    /**
+     * @return bool
+     */
+    public function isHomogeneous(): bool;
+
+    /**
      * Space between the edge and the children.
      * @return Insets
      */

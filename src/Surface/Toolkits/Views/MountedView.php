@@ -3,12 +3,14 @@
 namespace Surface\Toolkits\Views;
 
 use Closure;
-use Surface\Toolkits\Navigation\Navigator;
 use Surface\Contracts\Toolkits\UI\TKPrimitiveGroup;
 use Surface\Contracts\Toolkits\Mail\PrimitiveMail;
 use Surface\Contracts\Toolkits\Mail\Views\Toggled;
+use Surface\Contracts\Toolkits\Mail\Views\ViewScrolled;
 use Surface\Contracts\Toolkits\Mail\Views\ButtonClicked;
 use Surface\Contracts\Toolkits\Mail\Views\GroupClicked;
+use Surface\Contracts\Toolkits\Mail\Views\WebViewFailed;
+use Surface\Contracts\Toolkits\Mail\Views\WebViewLoaded;
 use Surface\Contracts\Toolkits\Mail\Views\DateChanged;
 use Surface\Contracts\Toolkits\Mail\Views\TextChanged;
 use Surface\Contracts\Toolkits\Mail\Views\TextSubmitted;
@@ -38,18 +40,18 @@ final class MountedView
     private bool $mounted = false;
 
     /**
-     * @param Navigator|null $navigator the window's navigation: the component and every one
-     *        inside it get it from navigator(); a $mounter given here should be made with it too
+     * @param Mount|null $mount what the view is mounted in: the component and every one inside
+     *        it get it; a $mounter given here should be made with it too
      */
     public function __construct(
         public readonly Component $component,
         TKPrimitiveGroup $host,
-        ?Navigator $navigator = null,
+        ?Mount $mount = null,
         private ?Mounter $mounter = null,
     ) {
         $this->host = new Mounted($host);
-        $this->mounter ??= new Mounter(navigator: $navigator);
-        $component->mountedWith($navigator);
+        $this->mounter ??= new Mounter(mount: $mount);
+        $component->mountedIn($mount);
     }
 
     /**
@@ -66,6 +68,7 @@ final class MountedView
         $this->mounter->reconcile($this->host, [$root]);
         $this->handlers = $this->mounter->handlers($this->host);
         $this->mounted = true;
+        $this->mounter->settled();
     }
 
     /**
@@ -97,7 +100,9 @@ final class MountedView
      * Which handler a piece of mail runs: ButtonClicked and GroupClicked run onClick(), Toggled onToggle(),
      * SelectionChanged, DateChanged, ValueChanged, TabSelected and SplitMoved onChange(), TextChanged onChange(), TextSubmitted
      * onSubmit(); a table's and a tree's selection onSelect(), a tree's node onExpand(), what
-     * is activated onActivate(), an item's action onAction().
+     * is activated onActivate(), an item's action onAction(),
+     * a web view's WebViewLoaded onLoaded() and WebViewFailed onFailed(), a scroll view's
+     * ViewScrolled onScroll().
      */
     private static function event(PrimitiveMail $mail): ?string
     {
@@ -112,6 +117,9 @@ final class MountedView
             $mail instanceof NodeExpanded => 'expand',
             $mail instanceof ItemActivated, $mail instanceof NodeActivated => 'activate',
             $mail instanceof ItemActionClicked => 'action',
+            $mail instanceof WebViewLoaded => 'loaded',
+            $mail instanceof WebViewFailed => 'failed',
+            $mail instanceof ViewScrolled => 'scroll',
             default => null,
         };
     }

@@ -3,6 +3,8 @@
 namespace Surface\Toolkits\Views\Elements;
 
 use Closure;
+use Surface\Contracts\Toolkits\UI\IconPosition;
+use Surface\Contracts\Toolkits\UI\Insets;
 use Surface\NutsAndBolts\Color;
 use Surface\Contracts\Toolkits\UI\TKButton;
 use Surface\Contracts\Toolkits\UI\ButtonRole;
@@ -83,11 +85,20 @@ class Button extends Element
     }
 
     /**
-     * A symbol before the label, by the toolkit's own name for it (an SF Symbol on AppKit).
+     * A symbol beside the label, by the toolkit's own name for it (an SF Symbol on AppKit).
      */
     public function symbol(?string $name): static
     {
         return $this->set('symbol', $name === '' ? null : $name);
+    }
+
+    /**
+     * Which side of the label the icon or symbol sits on: iconPosition="trailing" puts it
+     * after the label.
+     */
+    public function iconPosition(IconPosition $position): static
+    {
+        return $this->set('iconPosition', $position);
     }
 
     /**
@@ -96,6 +107,17 @@ class Button extends Element
     public function role(?ButtonRole $role): static
     {
         return $this->set('role', $role);
+    }
+
+    /**
+     * Space between the button's edge and its label and icon: padding="8 16", one to four
+     * values in CSS order. Not set: the toolkit's own button padding.
+     *
+     * @param Insets|int|string|list<int> $padding
+     */
+    public function padding(Insets|int|string|array $padding): static
+    {
+        return $this->set('padding', self::insetsOf($padding, 'padding'));
     }
 
     /**
@@ -121,7 +143,9 @@ class Button extends Element
             'textAlign' => fn (TKButton $p, TextAlignment $v) => $p->setAlignment($v),
             'icon' => fn (TKButton $p, ?string $v) => $p->setIcon(Image::path($v)),
             'symbol' => fn (TKButton $p, ?string $v) => $p->setSymbol($v),
+            'iconPosition' => fn (TKButton $p, IconPosition $v) => $p->setIconPosition($v),
             'role' => fn (TKButton $p, ?ButtonRole $v) => $p->setRole($v),
+            'padding' => fn (TKButton $p, Insets $v) => $p->setPadding($v),
         ];
     }
 
@@ -133,7 +157,9 @@ class Button extends Element
             'textAlign' => TextAlignment::CENTER,
             'icon' => null,
             'symbol' => null,
+            'iconPosition' => IconPosition::LEADING,
             'role' => null,
+            'padding' => Insets::none(),
         ];
     }
 

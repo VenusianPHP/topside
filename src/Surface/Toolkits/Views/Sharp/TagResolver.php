@@ -40,6 +40,7 @@ use Surface\Toolkits\Views\Elements\Tab;
 use Surface\Toolkits\Views\Elements\SplitView;
 use Surface\Toolkits\Views\Elements\Grid;
 use Surface\Toolkits\Views\Elements\Overlay;
+use Surface\Toolkits\Views\Elements\WebView;
 
 /**
  * What a tag means:
@@ -85,6 +86,7 @@ final class TagResolver
         'CollectionView' => CollectionView::class,
         'Table' => Table::class,
         'Tree' => Tree::class,
+        'WebView' => WebView::class,
     ];
 
     /** @var array<string, list<string>>|null sharp files under resources/, by file name */

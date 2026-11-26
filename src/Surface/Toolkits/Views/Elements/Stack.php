@@ -39,6 +39,15 @@ abstract class Stack extends Container
     }
 
     /**
+     * Every child the same length along the axis, whatever its own size: homogeneous, as GTK
+     * names it.
+     */
+    public function homogeneous(bool $on = true): static
+    {
+        return $this->set('homogeneous', $on);
+    }
+
+    /**
      * Where along the axis the children gather when there is room to spare. Done with a
      * spacer before (END), after (none needed for START) or on both sides (CENTER): the same
      * on every toolkit, since every toolkit shares spare room among the children that fill.
@@ -67,7 +76,13 @@ abstract class Stack extends Container
         return parent::setters() + [
             'spacing' => fn (ColumnContract|RowContract $p, int $v) => $p->setSpacing($v),
             'padding' => fn (ColumnContract|RowContract $p, Insets $v) => $p->setPadding($v),
+            'homogeneous' => fn (ColumnContract|RowContract $p, bool $v) => $p->setHomogeneous($v),
         ];
+    }
+
+    protected function defaults(): array
+    {
+        return parent::defaults() + ['homogeneous' => false];
     }
 
     /**

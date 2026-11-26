@@ -64,6 +64,9 @@ abstract class TKPrimitive implements PrimitiveContract
     /** The floor minSize() set; [0, 0] until set. */
     private array $minimum_size = [0, 0];
 
+    /** The ceiling maxSize() set; [0, 0] (none) until set. */
+    private array $maximum_size = [0, 0];
+
     /** What fill() set, horizontal then vertical; neither until set. */
     private array $fills = [false, false];
 
@@ -170,6 +173,24 @@ abstract class TKPrimitive implements PrimitiveContract
                 ? $this->applyVisible(true, $this->appear, $this->appear_seconds)
                 : $this->applyVisible(false, $this->disappear, $this->disappear_seconds);
             $this->parent?->childVisibilityChanged($this);
+        }
+
+        return $this;
+    }
+
+    /**
+     * Play the appear transition now, as when it is shown: for a primitive just added to a
+     * window already on screen. Nothing when it is hidden, has no appear transition, or its
+     * time is 0.
+     *
+     * @throws ToolkitException When removed.
+     */
+    public function playAppear(): static
+    {
+        $this->guardLive();
+
+        if ($this->visible && ! is_null($this->appear) && $this->appear_seconds > 0.0) {
+            $this->applyVisible(true, $this->appear, $this->appear_seconds);
         }
 
         return $this;
@@ -403,6 +424,26 @@ abstract class TKPrimitive implements PrimitiveContract
     }
 
     /**
+     * As minSize(): the container first, then the primitive.
+     *
+     * @throws ToolkitException When removed, or either is negative.
+     */
+    public function maxSize(int $width, int $height): static
+    {
+        $this->guardLive();
+
+        if ($width < 0 || $height < 0) {
+            throw new ToolkitException("A maximum size is 0 (none) or more each way, got {$width}x{$height} for '{$this->path()}'.");
+        }
+
+        $this->maximum_size = [$width, $height];
+        $this->parent?->childLayoutChanged($this);
+        $this->applyMaxSize($width, $height);
+
+        return $this;
+    }
+
+    /**
      * As fill(): the container first, then the primitive.
      */
     public function align(Align $horizontal, Align $vertical = Align::FILL): static
@@ -580,6 +621,17 @@ abstract class TKPrimitive implements PrimitiveContract
     protected function minimumSize(): array
     {
         return $this->minimum_size;
+    }
+
+    /**
+     * The ceiling maxSize() set, 0 for none that way, for a container that places its
+     * children itself.
+     *
+     * @return array{int, int}
+     */
+    protected function maximumSize(): array
+    {
+        return $this->maximum_size;
     }
 
     /**
@@ -762,6 +814,12 @@ abstract class TKPrimitive implements PrimitiveContract
     abstract protected function applyAlign(Align $horizontal, Align $vertical): void;
 
     abstract protected function applyMinSize(int $width, int $height): void;
+
+    /**
+     * 0 is no ceiling that way. Does nothing until an adapter overrides it: a toolkit with no
+     * native ceiling lets the view grow as before.
+     */
+    protected function applyMaxSize(int $width, int $height): void {}
 
     /**
      * Space outside the native. Nothing until the adapter can keep it natively; a toolkit

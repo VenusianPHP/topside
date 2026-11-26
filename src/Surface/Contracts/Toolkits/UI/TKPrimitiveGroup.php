@@ -208,12 +208,13 @@ interface TKPrimitiveGroup extends TKPrimitive
     //  */
     // public function video(string $name, ?string $file = null): TKVideo;
 
-    // /**
-    //  * @param string $name
-    //  * @return TKWebView
-    //  * @throws RuntimeException When the engine has no web engine.
-    //  */
-    // public function webView(string $name): TKWebView;
+    /**
+     * A web view. Made on every toolkit: where there is no web engine its supported() is
+     * false, it shows nothing, and each load posts WebViewFailed.
+     * @param string $name
+     * @return TKWebView
+     */
+    public function webView(string $name): TKWebView;
 
     /**
      * @param string $name

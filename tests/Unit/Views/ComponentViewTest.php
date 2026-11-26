@@ -171,6 +171,30 @@ describe('handlers', function (): void {
     });
 });
 
+describe('a view put on screen', function (): void {
+    it('is told once, before it is first shown, with its window there', function (): void {
+        View::render(Venusian\Topside\Tests\Fakes\Views\OpeningView::class);
+        $view = Presentation::driver()->view()->component;
+
+        expect(at('label1')->text())->toBe('loading')
+            ->and($view->opened)->toBe(1)
+            ->and($view->renders)->toBe(1)
+            ->and($view->had_window)->toBeTrue();
+
+        rerender();
+        expect($view->opened)->toBe(1);
+    });
+
+    it('is not shown when it put another view on screen instead', function (): void {
+        ScriptedView::$describe = fn () => Label::make('Elsewhere');
+        View::render(Venusian\Topside\Tests\Fakes\Views\OpeningView::class, ['leave' => true]);
+
+        expect(Presentation::driver()->view()->component)->toBeInstanceOf(ScriptedView::class)
+            ->and(at('label1')->text())->toBe('Elsewhere')
+            ->and(array_map(fn ($c) => $c->name(), screen()->children()))->toBe(['label1']);
+    });
+});
+
 describe('changing what is on screen', function (): void {
     it('sets back a default a render no longer asks for', function (): void {
         $view = scripted(fn (ScriptedView $v) => Label::make('x')->hidden($v->state['hidden'] ?? true));

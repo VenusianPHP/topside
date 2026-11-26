@@ -2,7 +2,10 @@
 
 namespace Surface\Toolkits\Views\Elements;
 
+use Closure;
 use Surface\Contracts\Toolkits\UI\Insets;
+use Surface\Contracts\Toolkits\Mail\Views\ViewScrolled;
+use Surface\Contracts\Toolkits\Styling\ScrollPosition;
 use Surface\Contracts\Toolkits\UI\TKScrollView;
 use Surface\Contracts\Toolkits\UI\TKPrimitive;
 use Surface\Contracts\Toolkits\UI\TKPrimitiveGroup;
@@ -51,6 +54,19 @@ class ScrollView extends Container
     }
 
     /**
+     * Run $handler when the user scrolls, with where the view is and the ViewScrolled mail:
+     * $position->y + $position->height is 1.0 at the bottom.
+     *
+     *     <ScrollView @scroll="fn ($at) => $at->y + $at->height > 0.9 ? $this->more() : null">
+     *
+     * @param Closure(ScrollPosition, ViewScrolled): mixed $handler
+     */
+    public function onScroll(Closure $handler): static
+    {
+        return $this->set('watchScroll', true)->on('scroll', static fn (ViewScrolled $mail) => $handler($mail->position, $mail));
+    }
+
+    /**
      * A scroll view scrolls one container: the column the children are put in.
      */
     public function children(): array
@@ -67,6 +83,12 @@ class ScrollView extends Container
     {
         return parent::setters() + [
             'scroll' => fn (TKScrollView $p, array $v) => $p->setScrollbars(...$v),
+            'watchScroll' => fn (TKScrollView $p, bool $v) => $p->watchScroll($v),
         ];
+    }
+
+    protected function defaults(): array
+    {
+        return parent::defaults() + ['watchScroll' => false];
     }
 }

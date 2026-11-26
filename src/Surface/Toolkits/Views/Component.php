@@ -2,10 +2,13 @@
 
 namespace Surface\Toolkits\Views;
 
+use Closure;
 use ReflectionClass;
+use Surface\Contracts\Toolkits\Dialogs\Alert;
 use ReflectionProperty;
 use Surface\Toolkits\Menus\MenuBar;
 use Surface\Toolkits\Navigation\Navigator;
+use Surface\Contracts\Toolkits\ToolkitPoweredWindow;
 use Surface\Toolkits\Views\Elements\Element;
 use Surface\Toolkits\Views\Elements\ComponentElement;
 
@@ -26,10 +29,24 @@ use Surface\Toolkits\Views\Elements\ComponentElement;
  */
 abstract class Component
 {
-    /** The navigation of the window this is mounted in; set when it is mounted. */
-    private ?Navigator $navigator = null;
+    /** What this is mounted in; set when it is mounted. */
+    private ?Mount $mount = null;
 
     abstract public function render(): Element;
+
+    /**
+     * Called once, as the view is put on screen and before it is first shown: start what the
+     * view loads here (a request, a timer). What it sets is in the first render; what comes
+     * back later calls refresh(). The window and its navigation are there already. A
+     * component used inside another is not called.
+     *
+     *     protected function mounted(): void
+     *     {
+     *         $this->loading = true;
+     *         $this->library->search($this->query, fn (array $found) => $this->show($found));
+     *     }
+     */
+    public function mounted(): void {}
 
     /**
      * The navigation of the window this component is on screen in: the same one for the page
@@ -44,15 +61,72 @@ abstract class Component
      */
     public function navigator(): Navigator
     {
-        return $this->navigator ?? throw new ViewException(static::class.' is not mounted in a window, so it has no navigator.');
+        return $this->mount?->navigator ?? throw new ViewException(static::class.' is not mounted in a window, so it has no navigator.');
     }
 
     /**
-     * @internal The window's navigation, given when the component is mounted.
+     * The window this component is on screen in, the same one for the page and every
+     * component inside it:
+     *
+     *     $this->window()->setTitle($this->story->title);
+     *
+     * @throws ViewException When the component is not mounted in a window.
      */
-    public function mountedWith(?Navigator $navigator): static
+    public function window(): ToolkitPoweredWindow
     {
-        $this->navigator = $navigator;
+        return $this->mount?->window ?? throw new ViewException(static::class.' is not mounted in a window.');
+    }
+
+    /**
+     * Show the view again after its state changed outside a handler: work that finished on
+     * the event loop, a request that came back. A handler needs no call, the view is shown
+     * again after it anyway; neither does render(), which only reads the state.
+     *
+     *     $request->then(function (array $days): void {
+     *         $this->days = $days;
+     *         $this->refresh();
+     *     });
+     *
+     * Nothing happens once the view is off screen, or for a component not mounted.
+     */
+    public function refresh(): void
+    {
+        if (! is_null($refresh = $this->mount?->refresh)) {
+            $refresh();
+        }
+    }
+
+    /**
+     * Show $alert modal to the window, with the toolkit's own alert, and run $answered with
+     * its answer, the same as a handler: the view is shown again after it. The answer is
+     * AlertAnswered: $answer->button is the index of the button, the cancel index for Esc.
+     *
+     *     $this->alert(new Alert('Clear your key?', buttons: ['Clear', 'Cancel']), function (AlertAnswered $answer): void {
+     *         if ($answer->button === 0) {
+     *             $this->clear();
+     *         }
+     *     });
+     *
+     * $answered does not run once the view is off screen.
+     *
+     * @param Closure(\Surface\Contracts\Toolkits\Mail\Windows\AlertAnswered): void $answered
+     * @return string the alert's id, the one its AlertAnswered carries
+     * @throws ViewException When the component is not mounted in a window.
+     * @throws \RuntimeException When the window already shows an alert.
+     */
+    public function alert(Alert $alert, Closure $answered): string
+    {
+        $show = $this->mount?->alert ?? throw new ViewException(static::class.' is not mounted in a window, so it can show no alert.');
+
+        return $show($alert, $answered);
+    }
+
+    /**
+     * @internal What the component is mounted in, given when it is mounted.
+     */
+    public function mountedIn(?Mount $mount): static
+    {
+        $this->mount = $mount;
 
         return $this;
     }

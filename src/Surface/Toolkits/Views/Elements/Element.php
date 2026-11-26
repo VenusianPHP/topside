@@ -146,6 +146,15 @@ abstract class Element
     }
 
     /**
+     * The most it grows to, 0 for no limit that way: fill() and align(Align::CENTER) together
+     * give a column no wider than this, centred in a wider room.
+     */
+    public function maxSize(int $width, int $height): static
+    {
+        return $this->set('maxSize', [$width, $height]);
+    }
+
+    /**
      * How many of a Grid's columns it takes. Elsewhere it changes nothing.
      */
     public function span(int $columns): static
@@ -374,6 +383,7 @@ abstract class Element
             'fill' => fn (TKPrimitive $p, array $v) => $p->fill(...$v),
             'align' => fn (TKPrimitive $p, array $v) => $p->align(...$v),
             'minSize' => fn (TKPrimitive $p, array $v) => $p->minSize(...$v),
+            'maxSize' => fn (TKPrimitive $p, array $v) => $p->maxSize(...$v),
             'span' => static fn () => null, // the grid reads it, in settle()
             'background' => fn (TKPrimitive $p, ?Color $v) => $p->setBackground($v),
             'opacity' => fn (TKPrimitive $p, float $v) => $p->setOpacity($v),
@@ -401,6 +411,7 @@ abstract class Element
             'fill' => [false, false],
             'align' => [Align::FILL, Align::FILL],
             'minSize' => [0, 0],
+            'maxSize' => [0, 0],
             'span' => 1,
             'background' => null,
             'opacity' => 1.0,

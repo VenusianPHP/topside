@@ -19,7 +19,18 @@ sources:
 
 # Contract
 
-`ToolkitPoweredWindow`: `name()`, `present()`, `setTitle()`, `native()` (the toolkit's own window object or handle), `size()` (the content area), `isOpen()`, `post($mail)`, `close()`, `confirmClose($on)`, `column()` (makes the content container, once), `content()`, `primitiveFor($contract)`, `setInitialFocus()`, `focused()`, and `contentRemoved()` (called by the content container's `remove()`).[^contract]
+`ToolkitPoweredWindow`: `name()`, `present()`, `setTitle()`, `native()` (the toolkit's own window object or handle), `size()` (the content area), `isOpen()`, `post($mail)`, `close()`, `confirmClose($on)`, `column()` (makes the content container, once), `content()`, `primitiveFor($contract)`, `setInitialFocus()`, `focused()`, `contentRemoved()` (called by the content container's `remove()`), and `alert(Alert)` / `isAlerting()`, and `browse($url)`: an http or https address with a host (anything else throws `InvalidArgumentException`) opened in the default browser by the adapter's `openUrl()`, the toolkit's own call (AppKit `NSWorkspace::openURL`, Qt `QDesktopServices::openUrl`, GTK `GtkUriLauncher::launch`, Raven `Ropen_url`); the bridge-era `Desktop::browse()`, on the window so GTK gets its parent.[^contract]
+
+# Alerts
+
+`alert(Alert $alert): string` shows the toolkit's own alert, modal to the window, and returns an id at once; one alert at a time (a second, or one on a closed window, throws). `Alert` (`Surface\Contracts\Toolkits\Dialogs`): `message`, `detail`, 1 to 3 `buttons` in order, `default` (Return), `cancel` (Esc and the alert's own close; null is the last), `AlertStyle` Info/Warning/Critical, a `suppression` check box label, a `title`. A part the toolkit's alert has no place for is left out, never drawn another way. The answer is `AlertAnswered(window, id, button, suppressed)`: the button's index, the cancel index for Esc, -1 when the window closed first.
+
+| Toolkit | Native | Esc when default = cancel | Style | Suppression | Title |
+|---|---|---|---|---|---|
+| AppKit | `NSAlert` sheet | no button (AppKit: one key equivalent a button) | yes | yes | no |
+| Qt | `QMessageBox`, window-modal; on macOS Qt shows an `NSAlert` sheet | macOS: no button (Qt matches AppKit); elsewhere the escape button | icon | `QCheckBox` | window title |
+| GTK | `GtkAlertDialog::choose()` | the cancel button | no | no | no |
+| Raven | `Rdialog_open`, laid out as `Rmessage_box` | the cancel button (Raven's 0) | no | Raven check box | no |
 
 # Base class
 
@@ -32,11 +43,12 @@ sources:
 | the native window is gone | `closed()`, the one close path, safe to call twice: `beforeClose()`, the content tree removed, the session stops tracking the window (dropping a resize not yet sent), `releaseNative()`, `WindowClosed` posted, the driver forgets the name |
 | the content area changed size | `resized($w, $h)`: one `WindowResized` per pump, the last size |
 | after every pump | `settle()`, empty unless the adapter compares something there; then `settleFocus()`: the window's focus is the deepest shown primitive whose `hasFocus()` says so, and a change posts `FocusLost` (old, unless removed) then `FocusGained` (new) |
+| `alert()` | the adapter's `showAlert()` shows it without waiting; its answer calls `alertAnswered($button, $suppressed)`, which posts `AlertAnswered` once. Closing with it open: `closeAlert()` takes the toolkit's alert down while the window is whole, and `AlertAnswered` -1 is posted before `WindowClosed` |
 | `present()` | the adapter shows the window, then `focusInitial()`: the `setInitialFocus()` primitive takes the focus through its own `focus()` |
 
 # Adapter hooks
 
-`bootstrapWindow()`, `isOpen()`, `closeNative()`, `releaseNative()`, `mountContent()` / `unmountContent()` (the content column's native into and out of the content area); optional `beforeClose()` and `settle()`. Plus the contract's `present()`, `setTitle()`, `native()`, `size()`.
+`bootstrapWindow()`, `isOpen()`, `closeNative()`, `releaseNative()`, `mountContent()` / `unmountContent()` (the content column's native into and out of the content area); `showAlert()`, `openUrl()`; optional `beforeClose()`, `closeAlert()` and `settle()`. Plus the contract's `present()`, `setTitle()`, `native()`, `size()`.
 
 # Checked
 

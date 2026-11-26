@@ -262,6 +262,25 @@ interface TKPrimitive
     public function minSize(int $width, int $height): static;
 
     /**
+     * The ceiling the toolkit never grows the view past; 0 is no ceiling that way. A view
+     * that fills is as big as its room up to this, and sits by its alignment in the room
+     * left over: fill and align center give a column no wider than this, centred.
+     * @param int $width
+     * @param int $height
+     * @return $this
+     * @throws RuntimeException When either is negative.
+     */
+    public function maxSize(int $width, int $height): static;
+
+    /**
+     * Play the appear transition now, as when the view is shown: for one just added to a
+     * window already on screen. The toolkit is told it appears, though it was already
+     * visible. Nothing when it is hidden or has no appear transition.
+     * @return $this
+     */
+    public function playAppear(): static;
+
+    /**
      * Space kept outside the view, between it and what is around it; its background does not
      * reach into it. A toolkit that cannot keep space around one view keeps none.
      * @param Insets|int|string|list<int> $margin one to four values, as CSS takes them

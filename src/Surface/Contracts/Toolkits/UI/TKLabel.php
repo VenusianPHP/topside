@@ -4,6 +4,7 @@ namespace Surface\Contracts\Toolkits\UI;
 
 use Surface\Contracts\Toolkits\UI\TKPrimitive;
 use Surface\Contracts\Toolkits\Styling\FontSpec;
+use Surface\Contracts\Toolkits\Styling\TextRun;
 use Surface\Contracts\Toolkits\Styling\TextAlignment;
 use Surface\NutsAndBolts\Color;
 
@@ -22,6 +23,20 @@ interface TKLabel extends TKPrimitive
      * @return $this
      */
     public function setText(string $text): static;
+
+    /**
+     * The text as runs, each bold, italic or coloured on its own; text() is their text joined.
+     * setText() makes the label one plain run again. Where the toolkit cannot show a run's
+     * look, it shows the run as the label's own.
+     * @param list<TextRun> $runs
+     * @return $this
+     */
+    public function setRuns(array $runs): static;
+
+    /**
+     * @return list<TextRun> the runs setRuns() set; one plain run of text() after setText()
+     */
+    public function runs(): array;
 
     /**
      * Wrap at the allocated width instead of growing.

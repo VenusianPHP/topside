@@ -110,6 +110,11 @@ trait FakeNative
         $this->record('applyMinSize', $width, $height);
     }
 
+    protected function applyMaxSize(int $width, int $height): void
+    {
+        $this->record('applyMaxSize', $width, $height);
+    }
+
     protected function applyMargin(Insets $margin): void
     {
         $this->record('applyMargin', $margin);

@@ -6,6 +6,7 @@ use Surface\NutsAndBolts\Color;
 use Surface\Contracts\Toolkits\UI\TKLabel;
 use Surface\Contracts\Toolkits\UI\TKPrimitive;
 use Surface\Contracts\Toolkits\Styling\FontSpec;
+use Surface\Contracts\Toolkits\Styling\TextRun;
 use Surface\Contracts\Toolkits\UI\TKPrimitiveGroup;
 use Surface\Contracts\Toolkits\Styling\TextAlignment;
 
@@ -29,6 +30,17 @@ class Label extends Element
     public function kind(): string
     {
         return 'label';
+    }
+
+    /**
+     * The text as runs, each bold, italic or coloured on its own. In a template, write them
+     * inside the label: <Label><b>Today:</b> it rains, <span color="#888888">mostly</span>.</Label>
+     *
+     * @param list<TextRun> $runs
+     */
+    public function runs(array $runs): static
+    {
+        return $this->set('runs', array_values($runs));
     }
 
     /**
@@ -77,7 +89,10 @@ class Label extends Element
     protected function setters(): array
     {
         return parent::setters() + [
-            'text' => fn (TKLabel $p, string $v) => $p->setText($v),
+            // Runs set the text too, so text already shown is left alone: setText() would make
+            // the label one plain run again, whichever of the two is applied first.
+            'text' => fn (TKLabel $p, string $v) => $p->text() === $v ? $p : $p->setText($v),
+            'runs' => fn (TKLabel $p, array $v) => $v === [] ? $p->setText($p->text()) : $p->setRuns($v),
             'wrap' => fn (TKLabel $p, bool $v) => $p->setWrap($v),
             'textAlign' => fn (TKLabel $p, TextAlignment $v) => $p->setAlignment($v),
             'font' => fn (TKLabel $p, FontSpec $v) => $p->setFont($v),
@@ -88,6 +103,7 @@ class Label extends Element
     protected function defaults(): array
     {
         return parent::defaults() + [
+            'runs' => [],
             'wrap' => false,
             'textAlign' => TextAlignment::LEFT,
             'color' => null,

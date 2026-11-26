@@ -40,4 +40,9 @@ trait FakeStackChildren
     {
         $this->record('applyPadding', $padding);
     }
+
+    protected function applyHomogeneous(bool $on): void
+    {
+        $this->record('applyHomogeneous', $on);
+    }
 }

@@ -2,9 +2,11 @@
 
 namespace Surface\Toolkits\UI;
 
+use Surface\Toolkits\ToolkitException;
 use Surface\NutsAndBolts\Color;
 use Surface\Contracts\Toolkits\UI\Placement;
 use Surface\Contracts\Toolkits\Styling\FontSpec;
+use Surface\Contracts\Toolkits\Styling\TextRun;
 use Surface\Contracts\Toolkits\ToolkitPoweredWindow;
 use Surface\Contracts\Toolkits\Styling\TextAlignment;
 use Surface\Contracts\Toolkits\UI\TKLabel as PrimitiveContract;
@@ -21,6 +23,9 @@ abstract class TKLabel extends TKPrimitive implements PrimitiveContract
      * own button centres it.
      */
     protected TextAlignment $alignment = TextAlignment::LEFT;
+
+    /** @var list<TextRun> what setRuns() set; empty while the text is one plain run */
+    private array $runs = [];
 
     /**
      * The text is known before the native is built, so it is built with it.
@@ -45,9 +50,33 @@ abstract class TKLabel extends TKPrimitive implements PrimitiveContract
         $this->guardLive();
 
         $this->text = $text;
+        $this->runs = [];
         $this->applyText($text);
 
         return $this;
+    }
+
+    public function setRuns(array $runs): static
+    {
+        $this->guardLive();
+
+        foreach ($runs as $run) {
+            if (! $run instanceof TextRun) {
+                throw new ToolkitException("A label's runs are TextRuns, got ".get_debug_type($run)." for '{$this->path()}'.");
+            }
+        }
+
+        $runs = array_values($runs);
+        $this->text = TextRun::join($runs);
+        $this->runs = $runs;
+        $this->applyRuns($runs);
+
+        return $this;
+    }
+
+    public function runs(): array
+    {
+        return $this->runs === [] ? [new TextRun($this->text)] : $this->runs;
     }
 
     public function setWrap(bool $wrap): static
@@ -85,6 +114,17 @@ abstract class TKLabel extends TKPrimitive implements PrimitiveContract
     }
 
     abstract protected function applyText(string $text): void;
+
+    /**
+     * Show the runs, each with its own look over the label's font and colour. Until an
+     * adapter overrides it, the label shows their text plainly.
+     *
+     * @param list<TextRun> $runs
+     */
+    protected function applyRuns(array $runs): void
+    {
+        $this->applyText(TextRun::join($runs));
+    }
 
     /**
      * True wraps at the allocated width instead of growing.

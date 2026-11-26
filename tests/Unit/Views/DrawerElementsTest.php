@@ -212,3 +212,45 @@ describe('in Sharp', function (): void {
         'a click on a label' => ['<Label @click="go">x</Label>', 'has no @click'],
     ]);
 });
+
+describe('an element inserted into a view on screen', function (): void {
+    it('plays its appear transition; the first render plays nothing', function (): void {
+        sharp(<<<'S'
+            <Overlay>
+                <Column appear="move-right 0.5"><Label>page</Label></Column>
+                @foreach ($drawers as $d)
+                    <Column :key="$d" appear="move-right 0.5"><Label>{{ $d }}</Label></Column>
+                @endforeach
+                <Button @click="push">push</Button>
+            </Overlay>
+            S, <<<'S'
+            public array $drawers = ['a'];
+
+            public function push(): void
+            {
+                $this->drawers[] = 'b';
+            }
+            S);
+
+        $page = at('overlay1.column1');
+        $first = at('overlay1.column2');
+
+        click(at('overlay1.button3'));
+        $inserted = at('overlay1.'.childNames('overlay1')[2]);
+
+        expect(childNames('overlay1'))->toHaveCount(4)
+            ->and(drawerToldWith($page, 'applyVisible'))->toBe([])
+            ->and(drawerToldWith($first, 'applyVisible'))->toBe([])
+            ->and(drawerToldWith($inserted, 'applyVisible'))->toBe([[true, TKTransition::MOVE_RIGHT, 0.5]]);
+    });
+
+    it('plays nothing for one inserted hidden, or with no appear transition', function (): void {
+        $hidden = screen()->column('hidden')->appear(TKTransition::MOVE_RIGHT, 0.5)->setVisible(false);
+        $plain = screen()->column('plain');
+        $hidden->playAppear();
+        $plain->playAppear();
+
+        expect(drawerToldWith($hidden, 'applyVisible'))->toBe([[false, null, 0.0]])
+            ->and(drawerToldWith($plain, 'applyVisible'))->toBe([]);
+    });
+});

@@ -23,4 +23,18 @@ interface TKScrollView extends TKPrimitiveGroup
      * @return TKPrimitiveGroup|null
      */
     public function content(): ?TKPrimitiveGroup;
+
+    /**
+     * Where the view is: the visible rect as fractions of the scrolled container.
+     */
+    public function scrollPosition(): \Surface\Contracts\Toolkits\Styling\ScrollPosition;
+
+    /**
+     * While on, the user's scrolls post Mail\Views\ViewScrolled, the latest per pump.
+     *
+     * @return $this
+     */
+    public function watchScroll(bool $on = true): static;
+
+    public function isWatchingScroll(): bool;
 }

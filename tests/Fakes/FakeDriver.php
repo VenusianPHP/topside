@@ -39,6 +39,8 @@ use Venusian\Topside\Tests\Fakes\UI\FakeSegmentedControl;
 use Surface\Contracts\Toolkits\UI\TKSegmentedControl as SegmentedControlContract;
 use Venusian\Topside\Tests\Fakes\UI\FakeImage;
 use Surface\Contracts\Toolkits\UI\TKImage as ImageContract;
+use Venusian\Topside\Tests\Fakes\UI\FakeWebView;
+use Surface\Contracts\Toolkits\UI\TKWebView as WebViewContract;
 use Venusian\Topside\Tests\Fakes\UI\FakeScrollView;
 use Surface\Contracts\Toolkits\UI\TKScrollView as ScrollViewContract;
 use Venusian\Topside\Tests\Fakes\UI\FakeTabView;
@@ -95,6 +97,7 @@ class FakeDriver extends ToolkitAdapterDriver
         ToggleButtonContract::class => FakeToggleButton::class,
         SegmentedControlContract::class => FakeSegmentedControl::class,
         ImageContract::class => FakeImage::class,
+        WebViewContract::class => FakeWebView::class,
         ScrollViewContract::class => FakeScrollView::class,
         TabViewContract::class => FakeTabView::class,
         SplitViewContract::class => FakeSplitView::class,

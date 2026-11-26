@@ -4,7 +4,6 @@ namespace Surface\Toolkits\Views;
 
 use Closure;
 use Throwable;
-use Surface\Toolkits\Navigation\Navigator;
 use Surface\Toolkits\Views\Elements\Element;
 use Surface\Toolkits\Views\Elements\Children;
 use Surface\Toolkits\Views\Elements\ComponentElement;
@@ -31,9 +30,12 @@ final class Mounter
 {
     /**
      * @param (Closure(class-string<Component>): Component)|null $make builds a component; the container by default
-     * @param Navigator|null $navigator the window's navigation, given to every component it builds
+     * @param Mount|null $mount what the view is mounted in, given to every component it builds
      */
-    public function __construct(private ?Closure $make = null, private readonly ?Navigator $navigator = null)
+    /** True once the view's first render is done. */
+    private bool $inserting = false;
+
+    public function __construct(private ?Closure $make = null, private readonly ?Mount $mount = null)
     {
         $this->make ??= static fn (string $class): Component => app($class);
     }
@@ -153,13 +155,37 @@ final class Mounter
 
     private function build(Mounted $parent, Element $element): Mounted
     {
+        $node = $this->buildNode($parent, $element);
+
+        // Inserted into a view already on screen: it comes in as it would be shown. The first
+        // render of a view plays nothing.
+        if ($this->inserting) {
+            $node->primitive->playAppear();
+        }
+
+        return $node;
+    }
+
+    /**
+     * A view's first render is done: what is built from now on is inserted, and plays its
+     * appear transition.
+     *
+     * @internal
+     */
+    public function settled(): void
+    {
+        $this->inserting = true;
+    }
+
+    private function buildNode(Mounted $parent, Element $element): Mounted
+    {
         if (! $element instanceof ComponentElement) {
             $node = new Mounted($this->buildPrimitive($parent, $element, $element), $element);
 
             return $this->fillOrRemove($node, $element);
         }
 
-        $component = ($this->make)($element->class)->mountedWith($this->navigator)->assign($element->assigned());
+        $component = ($this->make)($element->class)->mountedIn($this->mount)->assign($element->assigned());
         $root = $this->describe($component, $element);
 
         $node = new Mounted($this->buildPrimitive($parent, $element, $root), $element);

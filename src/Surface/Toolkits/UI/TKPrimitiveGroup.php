@@ -28,6 +28,7 @@ use Surface\Contracts\Toolkits\UI\TKSlider as SliderContract;
 use Surface\Contracts\Toolkits\UI\TKToggleButton as ToggleButtonContract;
 use Surface\Contracts\Toolkits\UI\TKSegmentedControl as SegmentedControlContract;
 use Surface\Contracts\Toolkits\UI\TKImage as ImageContract;
+use Surface\Contracts\Toolkits\UI\TKWebView as WebViewContract;
 use Surface\Contracts\Toolkits\UI\TKGrid as GridContract;
 use Surface\Contracts\Toolkits\UI\TKScrollView as ScrollViewContract;
 use Surface\Contracts\Toolkits\UI\TKSplitView as SplitViewContract;
@@ -154,6 +155,11 @@ abstract class TKPrimitiveGroup extends TKPrimitive implements PrimitiveContract
     public function image(string $name, ?string $file = null): ImageContract
     {
         return $this->create(ImageContract::class, $name, $file);
+    }
+
+    public function webView(string $name): WebViewContract
+    {
+        return $this->create(WebViewContract::class, $name);
     }
 
     public function column(string $name, int $spacing = 0, Insets|int $padding = 0): ColumnContract

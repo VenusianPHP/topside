@@ -147,6 +147,37 @@ describe('in a view', function (): void {
         expect(screenShape())->toBe($composed);
     });
 
+    it('tells a scroll handler where the view is, and watches only while there is one', function (): void {
+        $seen = new ArrayObject();
+        $view = scripted(fn (Venusian\Topside\Tests\Fakes\Views\ScriptedView $v) => ($v->state['watch'] ?? true)
+            ? ScrollView::make()->with(Label::make('one'))->onScroll(fn ($at, $mail) => $seen->append([$at->y, $at->height, $mail::class]))
+            : ScrollView::make()->with(Label::make('one')));
+        $scroll = at('scrollView1');
+
+        expect($scroll->isWatchingScroll())->toBeTrue();
+        $scroll->nativeScrolledTo(0.25);
+        $scroll->nativeScrolledTo(0.75);
+        deliverPosted();
+        expect($seen->getArrayCopy())->toBe([[0.75, 0.25, Surface\Contracts\Toolkits\Mail\Views\ViewScrolled::class]])
+            ->and($scroll->scrollPosition()->y)->toBe(0.75);
+
+        $view->state['watch'] = false;
+        rerender();
+        expect($scroll->isWatchingScroll())->toBeFalse();
+        $scroll->nativeScrolledTo(0.5);
+        deliverPosted();
+        expect($seen)->toHaveCount(1);
+    });
+
+    it('takes @scroll in Sharp', function (): void {
+        $page = sharp('<ScrollView @scroll="fn ($at) => $this->at = $at->y"><Label>a</Label></ScrollView>', 'public float $at = 0.0;');
+
+        at('scrollView1')->nativeScrolledTo(0.5);
+        deliverPosted();
+
+        expect($page->at)->toBe(0.5);
+    });
+
     it('scrolls any number of children, and fills unless told not to', function (): void {
         sharp('<Column><ScrollView><Label>a</Label><Label>b</Label></ScrollView><ScrollView fill="false" /></Column>');
         [$first, $second] = root()->children();

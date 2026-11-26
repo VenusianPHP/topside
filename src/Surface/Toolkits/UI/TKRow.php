@@ -3,6 +3,7 @@
 namespace Surface\Toolkits\UI;
 
 use Surface\Toolkits\UI\Concerns\LinesUpChildren;
+use Surface\Toolkits\UI\Concerns\SharesLengthEvenly;
 use Surface\Contracts\Toolkits\UI\TKRow as PrimitiveContract;
 
 /**
@@ -12,4 +13,5 @@ use Surface\Contracts\Toolkits\UI\TKRow as PrimitiveContract;
 abstract class TKRow extends TKGroup implements PrimitiveContract
 {
     use LinesUpChildren;
+    use SharesLengthEvenly;
 }
