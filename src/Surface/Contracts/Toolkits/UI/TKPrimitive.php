@@ -180,7 +180,8 @@ interface TKPrimitive
     public function size(): array;
 
     /**
-     * Opt in to (or out of) ViewResized mail for this view.
+     * Opt in to (or out of) ViewResized mail for this view: posted as the toolkit lays it out
+     * at a new size, the latest per pump, never with a width or height of 0.
      * @param bool $on
      * @return $this
      */

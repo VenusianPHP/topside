@@ -24,4 +24,14 @@ class FakeDropdown extends TKDropdown
         $this->record('applySelected', $index);
         $this->chosen($index);
     }
+
+    protected function applyIcons(array $icons): void
+    {
+        $this->record('applyIcons', array_map(fn (int $i): ?array => $this->iconOf($i), array_keys($this->options())));
+    }
+
+    protected function applyIconOnly(bool $on): void
+    {
+        $this->record('applyIconOnly', $on);
+    }
 }

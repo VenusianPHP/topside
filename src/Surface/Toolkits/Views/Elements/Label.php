@@ -52,6 +52,15 @@ class Label extends Element
     }
 
     /**
+     * True: one line, cut at the end with "…" when the text is wider than the room it is
+     * given; a long text never widens what holds it. Wins over wrap().
+     */
+    public function truncate(bool $truncate = true): static
+    {
+        return $this->set('truncate', $truncate);
+    }
+
+    /**
      * How lines sit inside the label's own width; align() places the label itself.
      */
     public function textAlign(TextAlignment $alignment): static
@@ -94,6 +103,7 @@ class Label extends Element
             'text' => fn (TKLabel $p, string $v) => $p->text() === $v ? $p : $p->setText($v),
             'runs' => fn (TKLabel $p, array $v) => $v === [] ? $p->setText($p->text()) : $p->setRuns($v),
             'wrap' => fn (TKLabel $p, bool $v) => $p->setWrap($v),
+            'truncate' => fn (TKLabel $p, bool $v) => $p->setTruncate($v),
             'textAlign' => fn (TKLabel $p, TextAlignment $v) => $p->setAlignment($v),
             'font' => fn (TKLabel $p, FontSpec $v) => $p->setFont($v),
             'color' => fn (TKLabel $p, ?Color $v) => $p->setTextColor($v),
@@ -105,6 +115,7 @@ class Label extends Element
         return parent::defaults() + [
             'runs' => [],
             'wrap' => false,
+            'truncate' => false,
             'textAlign' => TextAlignment::LEFT,
             'color' => null,
         ];

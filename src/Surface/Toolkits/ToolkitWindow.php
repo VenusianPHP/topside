@@ -15,6 +15,8 @@ use Surface\Contracts\Toolkits\Mail\Windows\WindowResized;
 use Surface\Contracts\Toolkits\Mail\Windows\WindowCloseRequested;
 use Surface\Contracts\Toolkits\Mail\Windows\AlertAnswered;
 use Surface\Contracts\Toolkits\Dialogs\Alert;
+use Surface\Contracts\Toolkits\Dialogs\SaveRequest;
+use Surface\Contracts\Toolkits\Mail\Windows\SaveAnswered;
 use Surface\Contracts\Toolkits\Mail\Views\FocusLost;
 use Surface\Contracts\Toolkits\Mail\Views\FocusGained;
 use Surface\Contracts\Toolkits\UI\TKPrimitiveGroup as GroupContract;
@@ -30,6 +32,7 @@ use Surface\Contracts\Toolkits\UI\TKPrimitiveGroup as GroupContract;
  *  - the focus came, or went              → gainedFocus(), lostFocus(), in that callback
  *  - after every pump                     → settle(), for what the toolkit has no callback for
  *  - alert()                              → showAlert(), and its answer → alertAnswered()
+ *  - saveFile()                           → showSave(), and its answer → saveAnswered()
  *  - browse()                             → openUrl(), once the address is checked
  */
 abstract class ToolkitWindow implements ToolkitPoweredWindow
@@ -54,6 +57,9 @@ abstract class ToolkitWindow implements ToolkitPoweredWindow
 
     /** The id of the alert open on the window; null when none is. */
     private ?string $alert_id = null;
+
+    /** The id of the save panel open on the window; null when none is. */
+    private ?string $save_id = null;
 
     public function __construct(
         protected readonly string $name,
@@ -92,6 +98,13 @@ abstract class ToolkitWindow implements ToolkitPoweredWindow
      * the alert's own close. A part of $alert the toolkit's alert has no place for is left out.
      */
     abstract protected function showAlert(Alert $alert): void;
+
+    /**
+     * Show the toolkit's own save panel for $request, modal to the window, without waiting for
+     * it. Its answer goes to saveAnswered(): the chosen path, or null when the user cancelled.
+     * A part of $request the toolkit's panel has no place for is left out.
+     */
+    abstract protected function showSave(SaveRequest $request): void;
 
     /**
      * Open $url, an http or https address, in the default browser with the toolkit's own call.
@@ -285,16 +298,11 @@ abstract class ToolkitWindow implements ToolkitPoweredWindow
     }
 
     /**
-     * @throws ToolkitException When the window is closed or already shows an alert.
+     * @throws ToolkitException When the window is closed or already shows an alert or a save panel.
      */
     public function alert(Alert $alert): string
     {
-        if (! $this->isOpen()) {
-            throw new ToolkitException("Window '{$this->name}' is closed: it can show no alert.");
-        }
-        if (! is_null($this->alert_id)) {
-            throw new ToolkitException("Window '{$this->name}' already shows an alert: it can show one at a time.");
-        }
+        $this->guardAsking('alert');
 
         $id = bin2hex(random_bytes(8));
         $this->alert_id = $id;
@@ -311,6 +319,48 @@ abstract class ToolkitWindow implements ToolkitPoweredWindow
     public function isAlerting(): bool
     {
         return ! is_null($this->alert_id);
+    }
+
+    /**
+     * @throws ToolkitException When the window is closed or already shows an alert or a save panel.
+     */
+    public function saveFile(SaveRequest $request): string
+    {
+        $this->guardAsking('save panel');
+
+        $id = bin2hex(random_bytes(8));
+        $this->save_id = $id;
+        try {
+            $this->showSave($request);
+        } catch (\Throwable $e) {
+            $this->save_id = null;
+            throw $e;
+        }
+
+        return $id;
+    }
+
+    public function isSaving(): bool
+    {
+        return ! is_null($this->save_id);
+    }
+
+    /**
+     * A window asks one thing at a time: an alert or a save panel.
+     *
+     * @throws ToolkitException When the window is closed or already asks something.
+     */
+    private function guardAsking(string $what): void
+    {
+        if (! $this->isOpen()) {
+            throw new ToolkitException("Window '{$this->name}' is closed: it can show no {$what}.");
+        }
+        if (! is_null($this->alert_id)) {
+            throw new ToolkitException("Window '{$this->name}' already shows an alert: it can show one at a time.");
+        }
+        if (! is_null($this->save_id)) {
+            throw new ToolkitException("Window '{$this->name}' already shows a save panel: it can show one at a time.");
+        }
     }
 
     /**
@@ -346,6 +396,27 @@ abstract class ToolkitWindow implements ToolkitPoweredWindow
      * answered -1.
      */
     protected function closeAlert(): void {}
+
+    /**
+     * The toolkit's save panel was answered: post SaveAnswered under its id, with the chosen
+     * path or null for a cancel. Nothing when no panel is open, as for an answer that comes
+     * after the window closed.
+     */
+    protected function saveAnswered(?string $path): void
+    {
+        if (is_null($id = $this->save_id)) {
+            return;
+        }
+
+        $this->save_id = null;
+        $this->session->post(new SaveAnswered($this->name, $id, $path === '' ? null : $path));
+    }
+
+    /**
+     * The window closes with its save panel still open: take the panel down, while the native
+     * window is whole. An answer it gives meanwhile is not posted; the panel is answered null.
+     */
+    protected function closeSave(): void {}
 
     /**
      * End of a pump. Override for what the toolkit reports no callback for (activation, size).
@@ -392,6 +463,7 @@ abstract class ToolkitWindow implements ToolkitPoweredWindow
 
     /**
      * The one close path, while the native window still lives: an open alert is answered -1,
+     * an open save panel null,
      * the content tree goes, the
      * session stops tracking the window (and drops a resize not yet sent), the native window
      * is dropped, WindowClosed is posted and the driver forgets the name. Safe to call twice.
@@ -406,6 +478,11 @@ abstract class ToolkitWindow implements ToolkitPoweredWindow
             $this->alert_id = null;
             $this->closeAlert();
             $this->session->post(new AlertAnswered($this->name, $id, -1));
+        }
+        if (! is_null($id = $this->save_id)) {
+            $this->save_id = null;
+            $this->closeSave();
+            $this->session->post(new SaveAnswered($this->name, $id, null));
         }
         $this->beforeClose();
         app(MenuManager::class)->closed($this->name);

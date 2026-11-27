@@ -32,8 +32,9 @@ A window or primitive posts through the session (`ToolkitWindow::post()`); the s
 | `WindowClosed` | `window.closed.{window}` | `ToolkitWindow::closed()` |
 | `WindowRightClicked` | `window.right-clicked.{window}` | nothing yet |
 | `AlertAnswered` | `window.alert-answered.{window}` | `ToolkitWindow::alertAnswered()`, and `closed()` with -1; carries `id`, `button`, `suppressed` |
+| `SaveAnswered` | `window.save-answered.{window}` | `ToolkitWindow::saveAnswered()`, and `closed()` with null; carries `id`, `path` (null for a cancel) |
 
-`LoadSignals` quits the app on `window.closed.{app.name}`, and hands every `PrimitiveMail` to the presentation driver, which runs the on-screen view's handler for it (see [Views](/architecture/views.md)), and every `AlertAnswered` to the driver's `answered()`, which runs the handler the view gave with that alert.[^signals]
+`LoadSignals` quits the app on `window.closed.{app.name}`, and hands every `PrimitiveMail` to the presentation driver, which runs the on-screen view's handler for it (see [Views](/architecture/views.md)), and every `AlertAnswered` and `SaveAnswered` to the driver's `answered()`, which runs the handler the view gave with that alert or save panel.[^signals]
 
 # Menu mail
 
@@ -48,6 +49,10 @@ A window or primitive posts through the session (`ToolkitWindow::post()`); the s
 | `ButtonClicked` | `view.clicked.{window}.{path}` | `TKButton::clicked()`, which each adapter calls from its native click; nothing once removed or while disabled |
 | `WebViewLoaded` | `view.web.loaded.{window}.{path}` | `TKWebView::loaded($url)`, which an adapter calls when its engine finished a page; nothing once removed |
 | `WebViewFailed` | `view.web.failed.{window}.{path}` | `TKWebView::failed($url, $reason)`, from the engine's failure, or at once on a load where `supported()` is false (reason `TKWebView::NO_ENGINE`); nothing once removed |
+| `VideoPlaying` | `view.video.playing.{window}.{path}` | `TKVideo::playing()`, which an adapter calls when its player starts; once per start, nothing once removed |
+| `VideoPaused` | `view.video.paused.{window}.{path}` | `TKVideo::paused()`, when the player stops short of the end; once per stop, nothing once removed |
+| `VideoEnded` | `view.video.ended.{window}.{path}` | `TKVideo::ended()`, when the media plays to its end (never for a looping one); nothing once removed |
+| `VideoFailed` | `view.video.failed.{window}.{path}` | `TKVideo::failed($reason)`, from the player's failure (`source` is what it was given), or at once on a source where `supported()` is false (reason `TKVideo::NO_PLAYER`); nothing once removed |
 | `GroupClicked` | `view.group-clicked.{window}.{path}` | `TKPrimitiveGroup::groupClicked(x, y)`, which an adapter calls from its native click on a clickable group; nothing unless clickable, while disabled, or once removed |
 | `FocusGained` | `view.focus-gained.{window}.{path}` | `ToolkitWindow::settleFocus()` after a pump, when the window's focus moved to this primitive (any move, `focus()` from code included) |
 | `Toggled` | `view.toggled.{window}.{path}` | `toggled()` of `TKCheckbox`, `TKToggle` and `TKToggleButton`, which each adapter calls from its native signal; carries `on`. Nothing for a change made from code, once removed, or while disabled |
@@ -64,7 +69,9 @@ A window or primitive posts through the session (`ToolkitWindow::post()`); the s
 | `ViewScrolled` | `view.scrolled.{window}.{path}` | a watched text area or item view, the latest per pump; carries `position` |
 | `FocusLost` | `view.focus-lost.{window}.{path}` | `ToolkitWindow::settleFocus()`, for the primitive the focus moved off; not for a removed one |
 
-Also declared, posted by nothing yet (their primitives are not built): `RightClicked`, `ScrollChanged`, `ViewResized`.
+`ViewResized` (`view.resized.{window}.{path}`, carrying `width` and `height`) is posted by `TKPrimitive::sizeChanged()` for a view that watches its size, the latest per pump, once per new size, never with a 0 side.
+
+Also declared, posted by nothing yet (their primitives are not built): `RightClicked`, `ScrollChanged`.
 
 [^mail]: Toolkit mail contracts
 [^signals]: LoadSignals

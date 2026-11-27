@@ -129,6 +129,48 @@ describe('the primitives', function (): void {
 
         expect(takePosted())->toBe([])->and($menu->selected())->toBe(0);
     });
+
+    it('holds an icon for each option, the file before the symbol, and none past the list', function (): void {
+        $menu = screen()->dropdown('kind', ['All', 'Images', 'Audio']);
+        $menu->setIcons([['symbol' => 'magnifyingglass'], null, ['file' => '/a/audio.png', 'symbol' => '']]);
+
+        expect($menu->icons())->toBe([['file' => null, 'symbol' => 'magnifyingglass'], null, ['file' => '/a/audio.png', 'symbol' => null]])
+            ->and($menu->calls)->toContain(['applyIcons', [[['file' => null, 'symbol' => 'magnifyingglass'], null, ['file' => '/a/audio.png', 'symbol' => null]]]]);
+
+        $menu->setIcons([['symbol' => 'magnifyingglass']]);
+        expect($menu->calls[array_key_last($menu->calls)])->toBe(['applyIcons', [[['file' => null, 'symbol' => 'magnifyingglass'], null, null]]]);
+    });
+
+    it('gives rebuilt options their icons again', function (): void {
+        $menu = screen()->dropdown('kind', ['All', 'Images']);
+        $menu->setIcons([['symbol' => 'magnifyingglass'], ['symbol' => 'photo']]);
+        $menu->calls = [];
+
+        $menu->setOptions(['All', 'Images', 'Videos']);
+
+        expect($menu->hooks())->toBe(['applyOptions', 'applyIcons'])
+            ->and($menu->calls[1])->toBe(['applyIcons', [[['file' => null, 'symbol' => 'magnifyingglass'], ['file' => null, 'symbol' => 'photo'], null]]]);
+    });
+
+    it('refuses icons that are not a list of file and symbol entries', function (): void {
+        $menu = screen()->dropdown('kind', ['All']);
+
+        expect(fn () => $menu->setIcons(['a' => null]))->toThrow(ToolkitException::class, 'a list, one for each option')
+            ->and(fn () => $menu->setIcons(['photo']))->toThrow(ToolkitException::class, "null or ['file' => ?string, 'symbol' => ?string]")
+            ->and(fn () => $menu->setIcons([['name' => 'photo']]))->toThrow(ToolkitException::class, "for 'root.kind'")
+            ->and(fn () => $menu->setIcons([['symbol' => 7]]))->toThrow(ToolkitException::class, "null or ['file'");
+    });
+
+    it('tells the native once when it turns icon-only, and once when it turns back', function (): void {
+        $menu = screen()->dropdown('kind', ['All']);
+
+        $menu->setIconOnly();
+        $menu->setIconOnly();
+        $menu->setIconOnly(false);
+
+        expect($menu->isIconOnly())->toBeFalse()
+            ->and(array_values(array_filter($menu->calls, fn (array $c): bool => $c[0] === 'applyIconOnly')))->toBe([['applyIconOnly', [true]], ['applyIconOnly', [false]]]);
+    });
 });
 
 describe('the elements', function (): void {
@@ -192,5 +234,20 @@ describe('the elements', function (): void {
         $menu->calls = [];
         rerender();
         expect($menu->hooks())->toBe(['applyOptions']);
+    });
+
+    it('gives the dropdown its icons and makes it icon-only, and drops both when a render leaves them out', function (): void {
+        $view = scripted(fn (ScriptedView $v) => ($v->state['icons'] ?? true)
+            ? Dropdown::make(['All', 'Images'])->icons([['symbol' => 'magnifyingglass'], ['file' => 'media/image.png']])->iconOnly()
+            : Dropdown::make(['All', 'Images']));
+        $menu = at('dropdown1');
+
+        expect($menu->isIconOnly())->toBeTrue()
+            ->and($menu->icons())->toBe([['file' => null, 'symbol' => 'magnifyingglass'], ['file' => app()->basePath('resources/media/image.png'), 'symbol' => null]]);
+
+        $view->state['icons'] = false;
+        rerender();
+
+        expect($menu->isIconOnly())->toBeFalse()->and($menu->icons())->toBe([]);
     });
 });

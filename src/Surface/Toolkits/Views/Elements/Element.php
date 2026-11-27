@@ -13,6 +13,7 @@ use Surface\Contracts\Toolkits\UI\Insets;
 use Surface\Contracts\Toolkits\UI\TKPrimitive;
 use Surface\Contracts\Toolkits\UI\TKPrimitiveGroup;
 use Surface\Contracts\Toolkits\UI\TKTransition;
+use Surface\Contracts\Toolkits\Mail\Views\ViewResized;
 
 /**
  * A description of one primitive: what a view's render() returns, built fresh each time.
@@ -231,6 +232,18 @@ abstract class Element
         return $this->set('border', [$width, $color]);
     }
 
+    /**
+     * Run $handler when the toolkit lays the view out at a new size, with its width and height
+     * in points and the ViewResized mail: `@resized="fn ($width, $height) => ..."`. The view
+     * watches its size only while it has the handler.
+     *
+     * @param Closure(int, int, ViewResized): mixed $handler
+     */
+    public function onResized(Closure $handler): static
+    {
+        return $this->set('watchSize', true)->on('resized', static fn (ViewResized $mail) => $handler($mail->width, $mail->height, $mail));
+    }
+
     public function has(string $prop): bool
     {
         return array_key_exists($prop, $this->props);
@@ -393,6 +406,7 @@ abstract class Element
             'cursor' => fn (TKPrimitive $p, ?Cursor $v) => $p->setCursor($v),
             'tooltip' => fn (TKPrimitive $p, ?string $v) => $p->setTooltip($v),
             'border' => fn (TKPrimitive $p, array $v) => $p->setBorder(...$v),
+            'watchSize' => fn (TKPrimitive $p, bool $v) => $p->watchSize($v),
         ];
     }
 
@@ -421,6 +435,7 @@ abstract class Element
             'cursor' => null,
             'tooltip' => null,
             'border' => [0, null],
+            'watchSize' => false,
         ];
     }
 

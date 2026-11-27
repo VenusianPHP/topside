@@ -14,6 +14,7 @@ use Surface\Contracts\Toolkits\UI\Placement;
 use Surface\Contracts\Toolkits\UI\TKTransition;
 use Surface\Contracts\Toolkits\Menus\ContextMenu;
 use Surface\Contracts\Toolkits\ToolkitPoweredWindow;
+use Surface\Contracts\Toolkits\Mail\Views\ViewResized;
 use Surface\Contracts\Toolkits\UI\TKPrimitive as PrimitiveContract;
 
 /**
@@ -50,6 +51,9 @@ abstract class TKPrimitive implements PrimitiveContract
     private bool $clip = false;
 
     private bool $watching_size = false;
+
+    /** @var array{int, int}|null the size the last ViewResized carried, while watching */
+    private ?array $posted_size = null;
 
     private ?Insets $margin = null;
 
@@ -343,7 +347,11 @@ abstract class TKPrimitive implements PrimitiveContract
     public function watchSize(bool $on = true): static
     {
         $this->guardLive();
-        $this->watching_size = $on;
+        if ($on !== $this->watching_size) {
+            $this->watching_size = $on;
+            $this->posted_size = null;
+            $this->applyWatchSize($on);
+        }
 
         return $this;
     }
@@ -814,6 +822,33 @@ abstract class TKPrimitive implements PrimitiveContract
     abstract protected function applyAlign(Align $horizontal, Align $vertical): void;
 
     abstract protected function applyMinSize(int $width, int $height): void;
+
+    /**
+     * Start or stop hearing the native's resizes, with the toolkit's own callback where it
+     * has one; where it has none, the adapter compares the size after each pump. Either way
+     * it calls sizeChanged().
+     */
+    abstract protected function applyWatchSize(bool $on): void;
+
+    /**
+     * The native may have changed size: ViewResized, the latest per pump, while watching and
+     * when size() differs from the size last posted. A size with no width or no height (not
+     * laid out yet, or hidden) is not posted.
+     */
+    protected function sizeChanged(): void
+    {
+        if (! $this->watching_size || $this->removed) {
+            return;
+        }
+
+        $size = $this->size();
+        if ($size === $this->posted_size || in_array(0, $size, true)) {
+            return;
+        }
+
+        $this->posted_size = $size;
+        $this->window()->postLatest('view.resized.'.$this->uuid(), new ViewResized($this->window()->name(), $this->path(), $this->uuid(), $size[0], $size[1]));
+    }
 
     /**
      * 0 is no ceiling that way. Does nothing until an adapter overrides it: a toolkit with no

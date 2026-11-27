@@ -7,10 +7,15 @@ use Surface\Contracts\Toolkits\UI\TKPrimitiveGroup;
 use Surface\Contracts\Toolkits\Mail\PrimitiveMail;
 use Surface\Contracts\Toolkits\Mail\Views\Toggled;
 use Surface\Contracts\Toolkits\Mail\Views\ViewScrolled;
+use Surface\Contracts\Toolkits\Mail\Views\ViewResized;
 use Surface\Contracts\Toolkits\Mail\Views\ButtonClicked;
 use Surface\Contracts\Toolkits\Mail\Views\GroupClicked;
 use Surface\Contracts\Toolkits\Mail\Views\WebViewFailed;
 use Surface\Contracts\Toolkits\Mail\Views\WebViewLoaded;
+use Surface\Contracts\Toolkits\Mail\Views\VideoEnded;
+use Surface\Contracts\Toolkits\Mail\Views\VideoFailed;
+use Surface\Contracts\Toolkits\Mail\Views\VideoPaused;
+use Surface\Contracts\Toolkits\Mail\Views\VideoPlaying;
 use Surface\Contracts\Toolkits\Mail\Views\DateChanged;
 use Surface\Contracts\Toolkits\Mail\Views\TextChanged;
 use Surface\Contracts\Toolkits\Mail\Views\TextSubmitted;
@@ -101,8 +106,10 @@ final class MountedView
      * SelectionChanged, DateChanged, ValueChanged, TabSelected and SplitMoved onChange(), TextChanged onChange(), TextSubmitted
      * onSubmit(); a table's and a tree's selection onSelect(), a tree's node onExpand(), what
      * is activated onActivate(), an item's action onAction(),
-     * a web view's WebViewLoaded onLoaded() and WebViewFailed onFailed(), a scroll view's
-     * ViewScrolled onScroll().
+     * a web view's WebViewLoaded onLoaded() and WebViewFailed onFailed(), a video view's
+     * VideoPlaying onPlaying(), VideoPaused onPaused(), VideoEnded onEnded() and VideoFailed
+     * onFailed(), a scroll view's
+     * ViewScrolled onScroll(), and any view's ViewResized onResized().
      */
     private static function event(PrimitiveMail $mail): ?string
     {
@@ -118,8 +125,12 @@ final class MountedView
             $mail instanceof ItemActivated, $mail instanceof NodeActivated => 'activate',
             $mail instanceof ItemActionClicked => 'action',
             $mail instanceof WebViewLoaded => 'loaded',
-            $mail instanceof WebViewFailed => 'failed',
+            $mail instanceof WebViewFailed, $mail instanceof VideoFailed => 'failed',
+            $mail instanceof VideoPlaying => 'playing',
+            $mail instanceof VideoPaused => 'paused',
+            $mail instanceof VideoEnded => 'ended',
             $mail instanceof ViewScrolled => 'scroll',
+            $mail instanceof ViewResized => 'resized',
             default => null,
         };
     }

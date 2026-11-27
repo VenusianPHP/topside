@@ -21,7 +21,10 @@ use Surface\Contracts\Toolkits\UI\TKPrimitiveGroup;
  * is moved to its place, if it is not already there.
  *
  * A component used inside the view is matched the same way, by its class: a match keeps
- * the component instance (and so its state), takes the new props, and renders again.
+ * the component instance (and so its state), takes the new props, and renders again. A
+ * component may render another component as its root, and that one another: each is kept in
+ * the same way, by its class at its depth, and the primitive is built from the first root
+ * that is no component.
  *
  * Everything goes through the primitives' own factories and setters, so the toolkit's
  * concrete classes, from its driver's primitive map, do the work.
@@ -185,11 +188,12 @@ final class Mounter
             return $this->fillOrRemove($node, $element);
         }
 
-        $component = ($this->make)($element->class)->mountedIn($this->mount)->assign($element->assigned());
-        $root = $this->describe($component, $element);
+        $component = $this->component($element);
+        [$root, $inner] = $this->describe($component, $element);
 
         $node = new Mounted($this->buildPrimitive($parent, $element, $root), $element);
         $node->component = $component;
+        $node->inner = $inner;
         $node->rendered = $root;
 
         return $this->fillOrRemove($node, $root);
@@ -215,14 +219,15 @@ final class Mounter
     }
 
     /**
-     * A component still on screen: the parent's props again, then its render(). A root of
-     * the same shape is changed in place; another root replaces the primitive, keeping the
-     * component and its state.
+     * A component still on screen: the parent's props again, then its render(), and so on
+     * through the components it renders as its root. A root of the same shape is changed in
+     * place; another root replaces the primitive, keeping the components and their state.
      */
     private function renderAgain(Mounted $parent, Mounted $node, ComponentElement $element): Mounted
     {
         $node->component->assign($element->assigned());
-        $root = $this->describe($node->component, $element);
+        [$root, $inner] = $this->describe($node->component, $element, $node->inner);
+        $node->inner = $inner;
 
         $before = $node->rendered;
         if ($root->sameShape($before)) {
@@ -260,12 +265,43 @@ final class Mounter
     }
 
     /**
+     * The root the primitive is built from: what $component's render() describes, and when
+     * that is another component, what its render() describes, down to a root that is no
+     * component. Each component met on the way is one of $kept, the last render's, while the
+     * class at its depth is the same; from the first depth where it is not, each is new.
+     *
+     * @param list<Component> $kept the components the last render met, outermost first
+     * @return array{Element, list<Component>} the root, and the components met, outermost first
+     * @throws ViewException When a root is Children::slot().
+     */
+    private function describe(Component $component, ComponentElement $element, array $kept = []): array
+    {
+        $root = $this->rendered($component, $element);
+        $inner = [];
+
+        while ($root instanceof ComponentElement) {
+            $same = $kept[count($inner)] ?? null;
+            if (! is_null($same) && $same::class === $root->class) {
+                $next = $same->assign($root->assigned());
+            } else {
+                $next = $this->component($root);
+                $kept = [];
+            }
+            $inner[] = $next;
+            $root = $this->rendered($next, $root);
+        }
+
+        return [$root, $inner];
+    }
+
+    /**
      * What $component's render() describes, with the settings made where it is used laid
-     * over its root, and what it was given in place of Children::slot().
+     * over its root (those of the outer use first), and what it was given in place of
+     * Children::slot().
      *
      * @throws ViewException When the root itself is Children::slot().
      */
-    private function describe(Component $component, ComponentElement $element): Element
+    private function rendered(Component $component, ComponentElement $element): Element
     {
         $root = $component->render();
         if ($root instanceof Children) {
@@ -276,6 +312,14 @@ final class Mounter
         $root->fillSlot($element->slot());
 
         return $root;
+    }
+
+    /**
+     * A new instance of the component $element uses, in the view's mount, with its props.
+     */
+    private function component(ComponentElement $element): Component
+    {
+        return ($this->make)($element->class)->mountedIn($this->mount)->assign($element->assigned());
     }
 
     /**

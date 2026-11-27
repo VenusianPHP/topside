@@ -260,7 +260,7 @@
     "tag": {
       "patterns": [
         {
-          "match": "(</)(Column|Row|Overlay|Spacer|Children|Label|Button|Checkbox|Toggle|Dropdown|Link|TextInput|ComboBox|Datepicker|Separator|ProgressBar|Spinner|Slider|ToggleButton|SegmentedControl|Image|ScrollView|TabView|Tab|SplitView|Grid|TextArea|ListView|CollectionView|Table|Tree|WebView)\\s*(>)",
+          "match": "(</)(Column|Row|Flow|Overlay|Spacer|Children|Label|Button|Checkbox|Toggle|Dropdown|Link|TextInput|ComboBox|Datepicker|Separator|ProgressBar|Spinner|Slider|ToggleButton|SegmentedControl|Image|ScrollView|TabView|Tab|SplitView|Grid|TextArea|ListView|CollectionView|Table|Tree|WebView|Video|LazyColumn)\\s*(>)",
           "name": "meta.tag.sharp",
           "captures": {
             "1": {
@@ -290,7 +290,7 @@
           }
         },
         {
-          "begin": "(<)(Column|Row|Overlay|Spacer|Children|Label|Button|Checkbox|Toggle|Dropdown|Link|TextInput|ComboBox|Datepicker|Separator|ProgressBar|Spinner|Slider|ToggleButton|SegmentedControl|Image|ScrollView|TabView|Tab|SplitView|Grid|TextArea|ListView|CollectionView|Table|Tree|WebView)(?![\\w-])",
+          "begin": "(<)(Column|Row|Flow|Overlay|Spacer|Children|Label|Button|Checkbox|Toggle|Dropdown|Link|TextInput|ComboBox|Datepicker|Separator|ProgressBar|Spinner|Slider|ToggleButton|SegmentedControl|Image|ScrollView|TabView|Tab|SplitView|Grid|TextArea|ListView|CollectionView|Table|Tree|WebView|Video|LazyColumn)(?![\\w-])",
           "end": "(/?>)",
           "beginCaptures": {
             "1": {

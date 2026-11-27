@@ -54,6 +54,29 @@ class Dropdown extends Element
     }
 
     /**
+     * An icon for each option, by index: ['file' => ..., 'symbol' => ...], or null for none. The
+     * file shows when there is one (a path under resources/ as an Image's src, or absolute), else
+     * the symbol, by the toolkit's own name for it:
+     *
+     *     <Dropdown :options="['All', 'Images']" :icons="[['symbol' => 'magnifyingglass'], ['symbol' => 'photo']]" />
+     *
+     * @param list<array{file?: string|null, symbol?: string|null}|null> $icons
+     */
+    public function icons(array $icons): static
+    {
+        return $this->set('icons', $icons);
+    }
+
+    /**
+     * Shown as the selected option's icon alone, with no border: iconOnly. The list it opens
+     * still shows each option's icon and label.
+     */
+    public function iconOnly(bool $on = true): static
+    {
+        return $this->set('iconOnly', $on);
+    }
+
+    /**
      * The options and the selection are one setting: new options keep the selection only
      * while it is in range, so the selection is set after them, against what the primitive
      * holds.
@@ -75,6 +98,19 @@ class Dropdown extends Element
                     $p->select($selected);
                 }
             },
+            'icons' => fn (TKDropdown $p, array $v) => $p->setIcons(array_map(
+                static fn (mixed $icon): mixed => is_array($icon) && isset($icon['file']) ? ['file' => Image::path($icon['file'])] + $icon : $icon,
+                $v,
+            )),
+            'iconOnly' => fn (TKDropdown $p, bool $v) => $p->setIconOnly($v),
+        ];
+    }
+
+    protected function defaults(): array
+    {
+        return parent::defaults() + [
+            'icons' => [],
+            'iconOnly' => false,
         ];
     }
 

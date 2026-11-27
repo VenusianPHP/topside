@@ -200,13 +200,13 @@ interface TKPrimitiveGroup extends TKPrimitive
      */
     public function tree(string $name, array $columns, array $nodes = []): TKTree;
 
-    // /**
-    //  * @param string $name
-    //  * @param string|null $file media file
-    //  * @return TKVideo
-    //  * @throws RuntimeException When the engine has no media runtime.
-    //  */
-    // public function video(string $name, ?string $file = null): TKVideo;
+    /**
+     * A video view. Made on every toolkit: where there is no player its supported() is false,
+     * it shows nothing, and each source posts VideoFailed.
+     * @param string $name
+     * @return TKVideo
+     */
+    public function video(string $name): TKVideo;
 
     /**
      * A web view. Made on every toolkit: where there is no web engine its supported() is
@@ -231,6 +231,14 @@ interface TKPrimitiveGroup extends TKPrimitive
      * @return TKRow
      */
     public function row(string $name, int $spacing = 0, Insets|int $padding = 0): TKRow;
+
+    /**
+     * @param string $name
+     * @param int $spacing between children on a line, and between lines
+     * @param Insets|int $padding around the children
+     * @return TKFlow
+     */
+    public function flow(string $name, int $spacing = 0, Insets|int $padding = 0): TKFlow;
 
     /**
      * @param string $name

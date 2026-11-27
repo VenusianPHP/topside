@@ -46,6 +46,15 @@ interface TKLabel extends TKPrimitive
     public function setWrap(bool $wrap): static;
 
     /**
+     * One line, cut at the end with "…" where the text is wider than the label's room, and
+     * never wider than that room: a long text does not widen its container. While it
+     * truncates, the label is one line whatever setWrap() said.
+     * @param bool $truncate
+     * @return $this
+     */
+    public function setTruncate(bool $truncate): static;
+
+    /**
      * @param TextAlignment $alignment
      * @return $this
      */

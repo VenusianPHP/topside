@@ -20,6 +20,21 @@ class ToolkitAdapters
     }
 
     /**
+     * Make $class the primitive for $contract on the toolkit named $name: how a package that
+     * builds on a toolkit adds a kind of primitive to it.
+     *
+     * @param class-string $contract
+     * @param class-string $class
+     * @throws ReflectionException
+     */
+    public static function primitive(string $name, string $contract, string $class): void
+    {
+        /** @var ToolkitAdapterManager $mgr */
+        $mgr = app('toolkit-adapters');
+        $mgr->primitive($name, $contract, $class);
+    }
+
+    /**
      * @throws ReflectionException
      */
     public static function driver(?string $name = null): ToolkitAdapterDriver

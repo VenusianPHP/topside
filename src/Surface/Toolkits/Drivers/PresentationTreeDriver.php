@@ -16,6 +16,8 @@ use Surface\Contracts\Toolkits\ToolkitPoweredWindow;
 use Surface\Contracts\Toolkits\Mail\PrimitiveMail;
 use Surface\Contracts\Toolkits\Dialogs\Alert;
 use Surface\Contracts\Toolkits\Mail\Windows\AlertAnswered;
+use Surface\Contracts\Toolkits\Dialogs\SaveRequest;
+use Surface\Contracts\Toolkits\Mail\Windows\SaveAnswered;
 
 class PresentationTreeDriver extends ContentTreeDriver
 {
@@ -35,7 +37,7 @@ class PresentationTreeDriver extends ContentTreeDriver
     /** True while a handler runs or a view renders: a refresh() then is already covered. */
     protected bool $busy = false;
 
-    /** @var array<string, array{MountedView, \Closure}> each open alert's view and handler, by its id */
+    /** @var array<string, array{MountedView, \Closure}> each open alert's and save panel's view and handler, by its id */
     protected array $alerts = [];
 
     public function __construct(
@@ -87,6 +89,11 @@ class PresentationTreeDriver extends ContentTreeDriver
             $this->alerts[$id] = [$mounted, $answered];
 
             return $id;
+        }, function (SaveRequest $request, \Closure $answered) use (&$mounted): string {
+            $id = $this->window->saveFile($request);
+            $this->alerts[$id] = [$mounted, $answered];
+
+            return $id;
         });
         $mounted = $this->view = new MountedView($view, $this->root, $mount);
         $this->settle(function () use ($mounted, $view): void {
@@ -134,10 +141,10 @@ class PresentationTreeDriver extends ContentTreeDriver
     }
 
     /**
-     * Run the handler the on-screen view gave with the alert $mail answers, then render the
-     * view again, as deliver() does. Nothing for an alert of a view no longer on screen.
+     * Run the handler the on-screen view gave with the alert or save panel $mail answers, then
+     * render the view again, as deliver() does. Nothing for one of a view no longer on screen.
      */
-    public function answered(AlertAnswered $mail): void
+    public function answered(AlertAnswered|SaveAnswered $mail): void
     {
         if ($mail->window() !== $this->window?->name()) {
             return;

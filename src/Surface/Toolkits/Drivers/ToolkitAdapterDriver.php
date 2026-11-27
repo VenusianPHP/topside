@@ -5,6 +5,7 @@ namespace Surface\Toolkits\Drivers;
 use RuntimeException;
 use ReflectionException;
 use Surface\Toolkits\ToolkitSession;
+use Surface\Toolkits\ToolkitException;
 use Voyager\Contracts\Core\FrameworkCore;
 use Psr\Container\NotFoundExceptionInterface;
 use Psr\Container\ContainerExceptionInterface;
@@ -59,6 +60,20 @@ abstract class ToolkitAdapterDriver implements ToolkitAdapterContract
     public function primitiveFor(string $contract): ?string
     {
         return $this->primitives[$contract] ?? null;
+    }
+
+    /**
+     * @throws ToolkitException When $class does not implement $contract.
+     */
+    public function registerPrimitive(string $contract, string $class): static
+    {
+        if (! is_subclass_of($class, $contract)) {
+            throw new ToolkitException("{$class} does not implement {$contract}, so it cannot be this toolkit's primitive for it.");
+        }
+
+        $this->primitives[$contract] = $class;
+
+        return $this;
     }
 
     public function menuBar(?ToolkitPoweredWindow $window = null): ?TKMenuBar

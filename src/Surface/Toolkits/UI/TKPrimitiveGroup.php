@@ -9,6 +9,7 @@ use Surface\Contracts\Toolkits\Mail\Views\GroupClicked;
 use Surface\Contracts\Toolkits\UI\Insets;
 use Surface\Contracts\Toolkits\UI\Placement;
 use Surface\Contracts\Toolkits\UI\TKRow as RowContract;
+use Surface\Contracts\Toolkits\UI\TKFlow as FlowContract;
 use Surface\Contracts\Toolkits\UI\TKFixed as FixedContract;
 use Surface\Contracts\Toolkits\UI\TKOverlay as OverlayContract;
 use Surface\Contracts\Toolkits\UI\TKLabel as LabelContract;
@@ -29,6 +30,7 @@ use Surface\Contracts\Toolkits\UI\TKToggleButton as ToggleButtonContract;
 use Surface\Contracts\Toolkits\UI\TKSegmentedControl as SegmentedControlContract;
 use Surface\Contracts\Toolkits\UI\TKImage as ImageContract;
 use Surface\Contracts\Toolkits\UI\TKWebView as WebViewContract;
+use Surface\Contracts\Toolkits\UI\TKVideo as VideoContract;
 use Surface\Contracts\Toolkits\UI\TKGrid as GridContract;
 use Surface\Contracts\Toolkits\UI\TKScrollView as ScrollViewContract;
 use Surface\Contracts\Toolkits\UI\TKSplitView as SplitViewContract;
@@ -162,6 +164,11 @@ abstract class TKPrimitiveGroup extends TKPrimitive implements PrimitiveContract
         return $this->create(WebViewContract::class, $name);
     }
 
+    public function video(string $name): VideoContract
+    {
+        return $this->create(VideoContract::class, $name);
+    }
+
     public function column(string $name, int $spacing = 0, Insets|int $padding = 0): ColumnContract
     {
         return $this->create(ColumnContract::class, $name, $spacing, $padding);
@@ -170,6 +177,11 @@ abstract class TKPrimitiveGroup extends TKPrimitive implements PrimitiveContract
     public function row(string $name, int $spacing = 0, Insets|int $padding = 0): RowContract
     {
         return $this->create(RowContract::class, $name, $spacing, $padding);
+    }
+
+    public function flow(string $name, int $spacing = 0, Insets|int $padding = 0): FlowContract
+    {
+        return $this->create(FlowContract::class, $name, $spacing, $padding);
     }
 
     public function textArea(string $name, string $value = ''): TextAreaContract

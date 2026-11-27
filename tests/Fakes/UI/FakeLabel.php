@@ -26,6 +26,11 @@ class FakeLabel extends TKLabel
         $this->record('applyWrap', $wrap);
     }
 
+    protected function applyTruncate(bool $truncate): void
+    {
+        $this->record('applyTruncate', $truncate);
+    }
+
     protected function applyAlignment(TextAlignment $alignment): void
     {
         $this->record('applyAlignment', $alignment);

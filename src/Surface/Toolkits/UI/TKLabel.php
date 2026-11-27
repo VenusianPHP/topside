@@ -27,6 +27,12 @@ abstract class TKLabel extends TKPrimitive implements PrimitiveContract
     /** @var list<TextRun> what setRuns() set; empty while the text is one plain run */
     private array $runs = [];
 
+    /** What setWrap() set: an adapter reads it when truncation ends. */
+    private bool $wraps = false;
+
+    /** What setTruncate() set. */
+    private bool $truncates = false;
+
     /**
      * The text is known before the native is built, so it is built with it.
      */
@@ -82,9 +88,31 @@ abstract class TKLabel extends TKPrimitive implements PrimitiveContract
     public function setWrap(bool $wrap): static
     {
         $this->guardLive();
+
+        $this->wraps = $wrap;
         $this->applyWrap($wrap);
 
         return $this;
+    }
+
+    public function setTruncate(bool $truncate): static
+    {
+        $this->guardLive();
+
+        $this->truncates = $truncate;
+        $this->applyTruncate($truncate);
+
+        return $this;
+    }
+
+    public function wraps(): bool
+    {
+        return $this->wraps;
+    }
+
+    public function truncates(): bool
+    {
+        return $this->truncates;
     }
 
     public function setAlignment(TextAlignment $alignment): static
@@ -127,9 +155,17 @@ abstract class TKLabel extends TKPrimitive implements PrimitiveContract
     }
 
     /**
-     * True wraps at the allocated width instead of growing.
+     * True wraps at the allocated width instead of growing. While the label truncates it
+     * stays one line: an adapter keeps the wrap for when truncation ends (wraps()).
      */
     abstract protected function applyWrap(bool $wrap): void;
+
+    /**
+     * True: one line, cut at the end with "…" where the text is wider than the room the
+     * label is given, and asking for no more width than that room. False: the label is as
+     * wrap says again (wraps()), its text whole.
+     */
+    abstract protected function applyTruncate(bool $truncate): void;
 
     abstract protected function applyAlignment(TextAlignment $alignment): void;
 

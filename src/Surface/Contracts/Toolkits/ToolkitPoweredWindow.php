@@ -100,7 +100,7 @@ interface ToolkitPoweredWindow
      * Show $alert modal to this window, with the toolkit's own alert. Returns at once with an
      * id; the answer is posted later as Mail\Windows\AlertAnswered under it.
      *
-     * @throws \RuntimeException When the window is closed or already shows an alert.
+     * @throws \RuntimeException When the window is closed or already shows an alert or a save panel.
      */
     public function alert(\Surface\Contracts\Toolkits\Dialogs\Alert $alert): string;
 
@@ -108,6 +108,19 @@ interface ToolkitPoweredWindow
      * Whether an alert from alert() is open on this window, not yet answered.
      */
     public function isAlerting(): bool;
+
+    /**
+     * Ask where to save a file, with the toolkit's own save panel modal to this window. Returns
+     * at once with an id; the answer is posted later as Mail\Windows\SaveAnswered under it.
+     *
+     * @throws \RuntimeException When the window is closed or already shows an alert or a save panel.
+     */
+    public function saveFile(\Surface\Contracts\Toolkits\Dialogs\SaveRequest $request): string;
+
+    /**
+     * Whether a save panel from saveFile() is open on this window, not yet answered.
+     */
+    public function isSaving(): bool;
 
     /**
      * Open a web address in the default browser, with the toolkit's own call.

@@ -7,6 +7,7 @@ use Surface\Contracts\Toolkits\Mail\QuitRequested;
 use Surface\Contracts\Toolkits\Mail\PrimitiveMail;
 use Surface\Contracts\Toolkits\Mail\Menus\MenuMail;
 use Surface\Contracts\Toolkits\Mail\Windows\AlertAnswered;
+use Surface\Contracts\Toolkits\Mail\Windows\SaveAnswered;
 use Surface\Toolkits\Managers\MenuManager;
 use Surface\Toolkits\Menus\Runtime\MenuNodeActivated;
 use Surface\Toolkits\Managers\PresentationTreeManager;
@@ -30,8 +31,11 @@ class LoadSignals
             $app->make(PresentationTreeManager::class)->driver()->deliver($mail);
         });
 
-        // An alert's answer runs the handler the view gave with it.
+        // An alert's or a save panel's answer runs the handler the view gave with it.
         $app['signals']->listen(AlertAnswered::class, function (AlertAnswered $mail) use ($app): void {
+            $app->make(PresentationTreeManager::class)->driver()->answered($mail);
+        });
+        $app['signals']->listen(SaveAnswered::class, function (SaveAnswered $mail) use ($app): void {
             $app->make(PresentationTreeManager::class)->driver()->answered($mail);
         });
 

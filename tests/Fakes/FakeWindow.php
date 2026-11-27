@@ -165,6 +165,28 @@ class FakeWindow extends ToolkitWindow
         $this->alertAnswered($button, $suppressed);
     }
 
+    /** The save panel showSave() was given, until it is answered or closed. */
+    public ?\Surface\Contracts\Toolkits\Dialogs\SaveRequest $shown_save = null;
+
+    protected function showSave(\Surface\Contracts\Toolkits\Dialogs\SaveRequest $request): void
+    {
+        $this->steps[] = 'showSave';
+        $this->shown_save = $request;
+    }
+
+    /** The user answered the toolkit's save panel: a path, or null for Cancel. */
+    public function nativeSaveAnswered(?string $path): void
+    {
+        $this->shown_save = null;
+        $this->saveAnswered($path);
+    }
+
+    protected function closeSave(): void
+    {
+        $this->steps[] = 'closeSave';
+        $this->shown_save = null;
+    }
+
     /** @var list<string> addresses openUrl() was given */
     public array $opened = [];
 

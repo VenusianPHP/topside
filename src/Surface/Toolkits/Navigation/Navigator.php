@@ -3,6 +3,7 @@
 namespace Surface\Toolkits\Navigation;
 
 use ReflectionException;
+use Voyager\Pipeline\Pipeline;
 use Surface\Toolkits\Managers\MenuManager;
 use Surface\Toolkits\Navigation\ToolkitPageRoute as Route;
 
@@ -70,16 +71,23 @@ class Navigator
     }
 
     /**
+     * Make $name the current route and run its middleware, in order, round its controller. A
+     * middleware that does not pass the visit on puts on screen what the route shows instead;
+     * the route is the current one all the same.
      * @throws ReflectionException
      */
     protected function open(string $name, array $args): void
     {
+        $route = Route::named($name);
         [$controller, $action] = Route::find($name);
         [$this->current, $this->currentArgs] = [$name, $args];
 
         app(MenuManager::class)->navigating(
-            Route::named($name)->menuGiven(),
-            static fn () => app($controller)->{$action}(...$args),
+            $route->menuGiven(),
+            fn () => new Pipeline(app())
+                ->send(new Visit($name, $args, $this))
+                ->through($route->middlewareGiven())
+                ->then(static fn (Visit $visit) => app($controller)->{$action}(...$visit->args)),
         );
     }
 

@@ -9,5 +9,5 @@ it('colours every built-in tag of Sharp as a built-in', function (): void {
 
     preg_match('/^\(<\/\)\(([A-Za-z|]+)\)/', $grammar['repository']['tag']['patterns'][0]['match'], $found);
 
-    expect(explode('|', $found[1] ?? ''))->toEqualCanonicalizing(array_keys(TagResolver::ELEMENTS));
+    expect(explode('|', $found[1] ?? ''))->toEqualCanonicalizing([...array_keys(TagResolver::ELEMENTS), ...array_keys(TagResolver::COMPONENTS)]);
 });

@@ -28,7 +28,7 @@ A toolkit package (`jovian/venusian-appkit`, `-qt`, `-gtk`, `-raven`) supplies f
 | Piece | Topside base | The package supplies |
 |---|---|---|
 | Provider | `ToolkitAdapterServiceProvider` | three properties: `$toolkit` (the name `toolkits.default` selects), `$driver` (class), `$config` (its config file) |
-| Driver | `Drivers\ToolkitAdapterDriver` | the extension checks in its constructor, `instanceSession()`, `protected string $window` (its window class) and `protected array $primitives` (contract => class: the one place a toolkit names its column, row, fixed, label and button) |
+| Driver | `Drivers\ToolkitAdapterDriver` | the extension checks in its constructor, `instanceSession()`, `protected string $window` (its window class) and `protected array $primitives` (contract => class: the one place a toolkit names its column, row, fixed, label and button); `registerPrimitive($contract, $class)` replaces or adds one, refusing a class that does not implement the contract |
 | Session | `ToolkitSession` | `bootstrapToolkitLibrary()`: build the toolkit object once |
 | Toolkit | `Contracts\Toolkits\Toolkit` | `connect()`, `disconnect()`, `pump($budget_ns)`, `wakeDescriptor($fd)` |
 
@@ -55,3 +55,7 @@ The window is the fifth: see [window lifecycle](/architecture/window-lifecycle.m
 [^provider]: ToolkitAdapterServiceProvider
 [^driver]: ToolkitAdapterDriver
 [^session]: ToolkitSession
+
+## A primitive from another package
+
+A package that builds on a toolkit adds a kind of primitive to it without the toolkit's package knowing: its provider calls `ToolkitAdapters::primitive($toolkit, $contract, $class)`. `ToolkitAdapterManager` keeps it by toolkit name and hands it to that toolkit's driver through `registerPrimitive()` when the driver is made, or at once when it already is; a class that does not implement the contract is refused. A toolkit that has no class for a contract the group makes throws when one is asked for, so a package giving one is how a toolkit's own framework split out of its extension (AVKit beside AppKit) reaches its primitives.

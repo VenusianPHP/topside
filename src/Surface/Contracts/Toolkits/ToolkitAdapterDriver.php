@@ -27,4 +27,15 @@ interface ToolkitAdapterDriver
      * @return class-string|null
      */
     public function primitiveFor(string $contract): ?string;
+
+    /**
+     * Make $class this toolkit's primitive for $contract, in place of the one it has or where
+     * it has none: how a package that builds on the toolkit adds a kind of primitive to it.
+     *
+     * @param class-string $contract
+     * @param class-string $class
+     * @return $this
+     * @throws \RuntimeException When $class does not implement $contract.
+     */
+    public function registerPrimitive(string $contract, string $class): static;
 }

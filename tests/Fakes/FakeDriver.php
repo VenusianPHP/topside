@@ -4,6 +4,7 @@ namespace Venusian\Topside\Tests\Fakes;
 
 use Surface\Toolkits\Drivers\ToolkitAdapterDriver;
 use Surface\Contracts\Toolkits\UI\TKRow as RowContract;
+use Surface\Contracts\Toolkits\UI\TKFlow as FlowContract;
 use Surface\Contracts\Toolkits\UI\TKLabel as LabelContract;
 use Surface\Contracts\Toolkits\UI\TKButton as ButtonContract;
 use Surface\Contracts\Toolkits\UI\TKColumn as ColumnContract;
@@ -40,6 +41,8 @@ use Surface\Contracts\Toolkits\UI\TKSegmentedControl as SegmentedControlContract
 use Venusian\Topside\Tests\Fakes\UI\FakeImage;
 use Surface\Contracts\Toolkits\UI\TKImage as ImageContract;
 use Venusian\Topside\Tests\Fakes\UI\FakeWebView;
+use Venusian\Topside\Tests\Fakes\UI\FakeVideo;
+use Surface\Contracts\Toolkits\UI\TKVideo as VideoContract;
 use Surface\Contracts\Toolkits\UI\TKWebView as WebViewContract;
 use Venusian\Topside\Tests\Fakes\UI\FakeScrollView;
 use Surface\Contracts\Toolkits\UI\TKScrollView as ScrollViewContract;
@@ -81,6 +84,7 @@ class FakeDriver extends ToolkitAdapterDriver
     protected array $primitives = [
         ColumnContract::class => FakeColumn::class,
         RowContract::class => FakeRow::class,
+        FlowContract::class => \Venusian\Topside\Tests\Fakes\UI\FakeFlow::class,
         LabelContract::class => FakeLabel::class,
         ButtonContract::class => FakeButton::class,
         CheckboxContract::class => FakeCheckbox::class,
@@ -98,6 +102,7 @@ class FakeDriver extends ToolkitAdapterDriver
         SegmentedControlContract::class => FakeSegmentedControl::class,
         ImageContract::class => FakeImage::class,
         WebViewContract::class => FakeWebView::class,
+        VideoContract::class => FakeVideo::class,
         ScrollViewContract::class => FakeScrollView::class,
         TabViewContract::class => FakeTabView::class,
         SplitViewContract::class => FakeSplitView::class,

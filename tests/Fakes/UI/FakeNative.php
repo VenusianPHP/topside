@@ -42,9 +42,24 @@ trait FakeNative
         return false;
     }
 
+    /** @var array{int, int} what size() answers: nativeResized() changes it */
+    public array $native_size = [0, 0];
+
     public function size(): array
     {
-        return [0, 0];
+        return $this->native_size;
+    }
+
+    /** The toolkit laid the native out at a new size. */
+    public function nativeResized(int $width, int $height): void
+    {
+        $this->native_size = [$width, $height];
+        $this->sizeChanged();
+    }
+
+    protected function applyWatchSize(bool $on): void
+    {
+        $this->record('applyWatchSize', $on);
     }
 
     protected function record(string $hook, mixed ...$args): void

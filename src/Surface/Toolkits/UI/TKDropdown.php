@@ -22,6 +22,11 @@ abstract class TKDropdown extends TKPrimitive implements PrimitiveContract
 
     private int $selected;
 
+    /** @var list<array{file: string|null, symbol: string|null}|null> */
+    private array $icons = [];
+
+    private bool $icon_only = false;
+
     /**
      * The options and the selection are known before the native is built, so it is built
      * with them. Every refusal comes before a native exists.
@@ -66,6 +71,9 @@ abstract class TKDropdown extends TKPrimitive implements PrimitiveContract
             default => 0,
         };
         $this->applyOptions($this->options, $this->selected);
+        if ($this->icons !== []) {
+            $this->applyIcons($this->icons);
+        }
 
         return $this;
     }
@@ -97,6 +105,57 @@ abstract class TKDropdown extends TKPrimitive implements PrimitiveContract
     }
 
     /**
+     * @throws ToolkitException When removed, or the icons are not a list of entries with a file
+     *                          and a symbol (each a string or null), or null.
+     */
+    public function setIcons(array $icons): static
+    {
+        $this->guardLive();
+
+        $this->icons = self::guardIcons($icons, $this->path());
+        $this->applyIcons($this->icons);
+
+        return $this;
+    }
+
+    public function icons(): array
+    {
+        return $this->icons;
+    }
+
+    /**
+     * @throws ToolkitException When removed.
+     */
+    public function setIconOnly(bool $on = true): static
+    {
+        $this->guardLive();
+
+        if ($on !== $this->icon_only) {
+            $this->icon_only = $on;
+            $this->applyIconOnly($on);
+        }
+
+        return $this;
+    }
+
+    public function isIconOnly(): bool
+    {
+        return $this->icon_only;
+    }
+
+    /**
+     * The icon option $index shows: its file when there is one, else its symbol; null for none.
+     *
+     * @return array{file: string|null, symbol: string|null}|null
+     */
+    protected function iconOf(int $index): ?array
+    {
+        $icon = $this->icons[$index] ?? null;
+
+        return is_null($icon) || (is_null($icon['file']) && is_null($icon['symbol'])) ? null : $icon;
+    }
+
+    /**
      * The user chose option $index: record it and post SelectionChanged. Nothing when it is
      * the selection already held, out of range, from a dropdown that is going, or while it
      * or a container above it is disabled.
@@ -125,6 +184,34 @@ abstract class TKDropdown extends TKPrimitive implements PrimitiveContract
     }
 
     /**
+     * Each entry null, or an array of a file and a symbol, each a string or null; an empty
+     * string is null.
+     *
+     * @return list<array{file: string|null, symbol: string|null}|null>
+     * @throws ToolkitException When not such a list.
+     */
+    private static function guardIcons(array $icons, string $where): array
+    {
+        if (! array_is_list($icons)) {
+            throw new ToolkitException("A dropdown's icons are a list, one for each option, for '{$where}'.");
+        }
+
+        return array_map(static function (mixed $icon) use ($where): ?array {
+            if (is_null($icon)) {
+                return null;
+            }
+            $known = ['file' => null, 'symbol' => null];
+            if (! is_array($icon) || array_diff_key($icon, $known) !== []
+                || array_filter($icon, static fn (mixed $v): bool => ! is_null($v) && ! is_string($v)) !== []) {
+                throw new ToolkitException("A dropdown's icon is null or ['file' => ?string, 'symbol' => ?string], for '{$where}'.");
+            }
+            $icon += $known;
+
+            return ['file' => $icon['file'] === '' ? null : $icon['file'], 'symbol' => $icon['symbol'] === '' ? null : $icon['symbol']];
+        }, $icons);
+    }
+
+    /**
      * @throws ToolkitException When outside the options.
      */
     private function guardIndex(int $index, string $where): int
@@ -148,4 +235,18 @@ abstract class TKDropdown extends TKPrimitive implements PrimitiveContract
      * @param int $index an option's index
      */
     abstract protected function applySelected(int $index): void;
+
+    /**
+     * Give each of the native's items its icon, by index: iconOf() says which, null for none.
+     * Also called after applyOptions() while there are icons, so rebuilt items get theirs.
+     *
+     * @param list<array{file: string|null, symbol: string|null}|null> $icons
+     */
+    abstract protected function applyIcons(array $icons): void;
+
+    /**
+     * True: no border, and the selected option's icon alone on its face. False: the toolkit's
+     * own dropdown, with the selected option's label.
+     */
+    abstract protected function applyIconOnly(bool $on): void;
 }

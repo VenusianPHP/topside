@@ -5,6 +5,7 @@ namespace Surface\Toolkits\Views;
 use Closure;
 use ReflectionClass;
 use Surface\Contracts\Toolkits\Dialogs\Alert;
+use Surface\Contracts\Toolkits\Dialogs\SaveRequest;
 use ReflectionProperty;
 use Surface\Toolkits\Menus\MenuBar;
 use Surface\Toolkits\Navigation\Navigator;
@@ -119,6 +120,31 @@ abstract class Component
         $show = $this->mount?->alert ?? throw new ViewException(static::class.' is not mounted in a window, so it can show no alert.');
 
         return $show($alert, $answered);
+    }
+
+    /**
+     * Ask where to save a file, with the toolkit's own save panel modal to the window, and run
+     * $answered with the answer, the same as a handler: the view is shown again after it. The
+     * answer is SaveAnswered: $answer->path is the chosen path, null when the user cancelled.
+     *
+     *     $this->saveFile(new SaveRequest('Nebula.jpg'), function (SaveAnswered $answer): void {
+     *         if (! is_null($answer->path)) {
+     *             copy($this->picture, $answer->path);
+     *         }
+     *     });
+     *
+     * $answered does not run once the view is off screen.
+     *
+     * @param Closure(\Surface\Contracts\Toolkits\Mail\Windows\SaveAnswered): void $answered
+     * @return string the panel's id, the one its SaveAnswered carries
+     * @throws ViewException When the component is not mounted in a window.
+     * @throws \RuntimeException When the window already shows an alert or a save panel.
+     */
+    public function saveFile(SaveRequest $request, Closure $answered): string
+    {
+        $show = $this->mount?->save ?? throw new ViewException(static::class.' is not mounted in a window, so it can show no save panel.');
+
+        return $show($request, $answered);
     }
 
     /**

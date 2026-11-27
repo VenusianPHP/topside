@@ -56,6 +56,16 @@ describe('the same view as composition', function (): void {
         expect(screenShape())->toBe($composed);
     });
 
+    it('gives a dropdown its icons and makes it icon-only', function (): void {
+        sharp(<<<'S'
+            <Dropdown :options="['All', 'Images']" :icons="[['symbol' => 'magnifyingglass'], ['symbol' => 'photo']]" iconOnly />
+            S);
+        $menu = screen()->children()[0];
+
+        expect($menu->isIconOnly())->toBeTrue()
+            ->and($menu->icons())->toBe([['file' => null, 'symbol' => 'magnifyingglass'], ['file' => null, 'symbol' => 'photo']]);
+    });
+
     it('changes only what a click changed', function (): void {
         $view = sharp(<<<'S'
             <Column>

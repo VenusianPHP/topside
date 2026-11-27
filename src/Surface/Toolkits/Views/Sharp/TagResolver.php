@@ -10,6 +10,7 @@ use RecursiveDirectoryIterator;
 use Surface\Toolkits\Views\Component;
 use Surface\Toolkits\Views\ViewException;
 use Surface\Toolkits\Views\Elements\Row;
+use Surface\Toolkits\Views\Elements\Flow;
 use Surface\Toolkits\Views\Elements\Label;
 use Surface\Toolkits\Views\Elements\Column;
 use Surface\Toolkits\Views\Elements\Button;
@@ -41,11 +42,14 @@ use Surface\Toolkits\Views\Elements\SplitView;
 use Surface\Toolkits\Views\Elements\Grid;
 use Surface\Toolkits\Views\Elements\Overlay;
 use Surface\Toolkits\Views\Elements\WebView;
+use Surface\Toolkits\Views\Elements\Video;
+use Surface\Toolkits\Views\Components\LazyColumn;
 
 /**
  * What a tag means:
  *
- *  1. A built-in name is that element, and so that TK primitive. These names are reserved.
+ *  1. A built-in name is that element, and so that TK primitive, or a component topside ships
+ *     (COMPONENTS). These names are reserved.
  *  2. A Component class of that name in App\Views.
  *  3. A kebab-case sharp file anywhere under resources/: <ImageCarousel> is image-carousel.sharp.php.
  *
@@ -57,6 +61,7 @@ final class TagResolver
     public const array ELEMENTS = [
         'Column' => Column::class,
         'Row' => Row::class,
+        'Flow' => Flow::class,
         'Overlay' => Overlay::class,
         'Spacer' => Spacer::class,
         'Children' => Children::class,
@@ -87,6 +92,16 @@ final class TagResolver
         'Table' => Table::class,
         'Tree' => Tree::class,
         'WebView' => WebView::class,
+        'Video' => Video::class,
+    ];
+
+    /**
+     * Components topside ships, by their reserved tag names.
+     *
+     * @var array<string, class-string<Component>>
+     */
+    public const array COMPONENTS = [
+        'LazyColumn' => LazyColumn::class,
     ];
 
     /** @var array<string, list<string>>|null sharp files under resources/, by file name */
@@ -113,6 +128,12 @@ final class TagResolver
             return new Tag($name, TagKind::ELEMENT, $class->getName(), $class, $class->getFileName());
         }
 
+        if (isset(self::COMPONENTS[$name])) {
+            $class = new ReflectionClass(self::COMPONENTS[$name]);
+
+            return new Tag($name, TagKind::COMPONENT, $class->getName(), $class, (string) $class->getFileName());
+        }
+
         if (! preg_match('/^[A-Z][A-Za-z0-9]*$/D', $name)) {
             $meant = str_replace('-', '', ucwords($name, '-'));
             throw new ViewException("<{$name}> is not a tag: tags are PascalCase, like <{$meant}>");
@@ -134,7 +155,7 @@ final class TagResolver
         }
 
         $looked = [...(is_null($this->namespace) ? [] : ["no component {$this->namespace}\\{$name}"]), "no {$kebab}.sharp.php under resources/"];
-        throw new ViewException("Unknown tag <{$name}>: not a built-in (".implode(', ', array_keys(self::ELEMENTS)).'), '.implode(', ', $looked));
+        throw new ViewException("Unknown tag <{$name}>: not a built-in (".implode(', ', [...array_keys(self::ELEMENTS), ...array_keys(self::COMPONENTS)]).'), '.implode(', ', $looked));
     }
 
     /**
